@@ -238,6 +238,8 @@ typedef enum {
 } hw_type_t;
 
 typedef enum {
+	HWC_NONE,
+
 	HWC_GPIOA,
 	HWC_GPIOB,
 	HWC_GPIOC,
@@ -286,9 +288,122 @@ typedef enum {
 	HWC_INVALID = 0x7FFFFFFF,
 } hw_clock_id_t;
 
+/*
+
+DMA1_Stream0_IRQHandler,        // DMA1 Stream 0
+DMA1_Stream1_IRQHandler,        // DMA1 Stream 1
+DMA1_Stream2_IRQHandler,        // DMA1 Stream 2
+DMA1_Stream3_IRQHandler,        // DMA1 Stream 3
+DMA1_Stream4_IRQHandler,        // DMA1 Stream 4
+DMA1_Stream5_IRQHandler,        // DMA1 Stream 5
+DMA1_Stream6_IRQHandler,        // DMA1 Stream 6
+
+ADC_IRQHandler, // ADC1
+
+CAN1_TX_IRQHandler,     // CAN1 TX
+CAN1_RX0_IRQHandler,    // CAN1 RX0
+CAN1_RX1_IRQHandler,    // CAN1 RX1
+CAN1_SCE_IRQHandler,    // CAN1 SCE
+
+EXTI9_5_IRQHandler,     // External Line[9:5]s
+TIM1_BRK_TIM9_IRQHandler,       // TIM1 Break and TIM9
+TIM1_UP_TIM10_IRQHandler,       // TIM1 Update and TIM10
+TIM1_TRG_COM_TIM11_IRQHandler,  // TIM1 Trigger and Commutation and TIM11
+TIM1_CC_IRQHandler,     // TIM1 Capture Compare
+TIM2_IRQHandler,        // TIM2
+TIM3_IRQHandler,        // TIM3
+TIM4_IRQHandler,        // TIM4
+I2C1_EV_IRQHandler,     // I2C1 Event
+I2C1_ER_IRQHandler,     // I2C1 Error
+I2C2_EV_IRQHandler,     // I2C2 Event
+I2C2_ER_IRQHandler,     // I2C2 Error
+RTC_Alarm_IRQHandler,   // RTC Alarm (A and B) through EXTI Line
+OTG_FS_WKUP_IRQHandler, // USB OTG FS Wakeup through EXTI line
+TIM8_BRK_TIM12_IRQHandler,      // TIM8 Break and TIM12
+TIM8_UP_TIM13_IRQHandler,       // TIM8 Update and TIM13
+TIM8_TRG_COM_TIM14_IRQHandler,  // TIM8 Trigger and Commutation and TIM14
+TIM8_CC_IRQHandler,     // TIM8 Capture Compare
+DMA1_Stream7_IRQHandler,        // DMA1 Stream7
+FSMC_IRQHandler,        // FSMC
+SDIO_IRQHandler,        // SDIO
+TIM5_IRQHandler,        // TIM5
+SPI3_IRQHandler,        // SPI3
+UART4_IRQHandler,       // UART4
+UART5_IRQHandler,       // UART5
+TIM6_DAC_IRQHandler,    // TIM6 and DAC1&2 underrun errors
+TIM7_IRQHandler,        // TIM7
+DMA2_Stream0_IRQHandler,        // DMA2 Stream 0
+DMA2_Stream1_IRQHandler,        // DMA2 Stream 1
+DMA2_Stream2_IRQHandler,        // DMA2 Stream 2
+DMA2_Stream3_IRQHandler,        // DMA2 Stream 3
+DMA2_Stream4_IRQHandler,        // DMA2 Stream 4
+ETH_IRQHandler, // Ethernet
+ETH_WKUP_IRQHandler,    // Ethernet Wakeup through EXTI line
+CAN2_TX_IRQHandler,     // CAN2 TX
+CAN2_RX0_IRQHandler,    // CAN2 RX0
+CAN2_RX1_IRQHandler,    // CAN2 RX1
+CAN2_SCE_IRQHandler,    // CAN2 SCE
+OTG_FS_IRQHandler,      // USB OTG FS
+DMA2_Stream5_IRQHandler,        // DMA2 Stream 5
+DMA2_Stream6_IRQHandler,        // DMA2 Stream 6
+DMA2_Stream7_IRQHandler,        // DMA2 Stream 7
+USART6_IRQHandler,      // USART6
+I2C3_EV_IRQHandler,     // I2C3 event
+I2C3_ER_IRQHandler,     // I2C3 error
+OTG_HS_EP1_OUT_IRQHandler,      // USB OTG HS End Point 1 Out
+OTG_HS_EP1_IN_IRQHandler,       // USB OTG HS End Point 1 In
+OTG_HS_WKUP_IRQHandler, // USB OTG HS Wakeup through EXTI
+OTG_HS_IRQHandler,      // USB OTG HS
+DCMI_IRQHandler,        // DCMI
+0,      // CRYP crypto
+HASH_RNG_IRQHandler,    // Hash and Rng
+FPU_IRQHandler // FPU
+
+*/
+
+
+
+typedef enum {
+	HWI_NONE,
+
+	HWI_EXTI0 = EXTI0_IRQn,
+	HWI_EXTI1 = EXTI1_IRQn,
+	HWI_EXTI2 = EXTI2_IRQn,
+	HWI_EXTI3 = EXTI3_IRQn,
+	HWI_EXTI4 = EXTI4_IRQn,
+	HWI_EXTI9_5 = EXTI9_5_IRQn,
+	HWI_EXTI15_10 = EXTI15_10_IRQn,
+	HWI_DMA1_STREAM0,
+	HWI_DMA1_STREAM1,
+	HWI_DMA1_STREAM2,
+	HWI_DMA1_STREAM3,
+	HWI_DMA1_STREAM4,
+	HWI_DMA1_STREAM5,
+	HWI_DMA1_STREAM6,
+	HWI_DMA1_STREAM7,
+	HWI_DMA2_STREAM0,
+	HWI_DMA2_STREAM1,
+	HWI_DMA2_STREAM2,
+	HWI_DMA2_STREAM3,
+	HWI_DMA2_STREAM4,
+	HWI_DMA2_STREAM5,
+	HWI_DMA2_STREAM6,
+	HWI_DMA2_STREAM7,
+	HWI_I2C1,
+	HWI_I2C2,
+	HWI_I2C3,
+	HWI_SPI1,
+	HWI_SPII2S2,
+	HWI_SPII2S3,
+
+	HWI_COUNT,
+	HWI_INVALID = 0x7FFFFFFF,
+} hw_irq_id_t;
+
 typedef struct {
 	hw_type_t type;
 	hw_clock_id_t clock_id;
+	hw_irq_id_t irq_id;
 	union {
 		struct {
 			GPIO_TypeDef * bank;
@@ -298,7 +413,6 @@ typedef struct {
 		struct {
 			DMA_TypeDef * controller;
 			DMA_Stream_TypeDef * stream;
-			uint32_t channel;
 		} dma;
 		ADC_TypeDef * adc;
 		DAC_TypeDef * dac;
@@ -392,6 +506,9 @@ void hw_clock_enable(hw_clock_id_t clock_id);
 void hw_clock_disable(hw_clock_id_t clock_id);
 void hw_clock_force_reset(hw_clock_id_t clock_id);
 
+void hw_irq_enable(hw_irq_id_t irq_id);
+void hw_irq_disable(hw_irq_id_t irq_id);
+
 hw_assignment_id_t hw_pin_assign(hw_resource_id_t pin_id);
 void hw_pin_deassign(hw_assignment_id_t id);
 void hw_pin_configure(hw_assignment_id_t id, hw_pin_mode_t mode);
@@ -399,7 +516,7 @@ void hw_pin_configure(hw_assignment_id_t id, hw_pin_mode_t mode);
 hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 		hw_resource_id_t sclk_pin, hw_resource_id_t ws_pin,
 		hw_resource_id_t sd_pin, hw_resource_id_t mclk_pin,
-		hw_resource_id_t dma_channel);
+		hw_resource_id_t dma_stream);
 void hw_i2s_deassign(hw_assignment_id_t id);
 void hw_i2s_start_output(hw_assignment_id_t id, hw_i2s_rate_t rate,
 		void * buf, size_t buf_len, hw_i2s_fill_func_t fill_func);
@@ -407,7 +524,8 @@ void hw_i2s_stop(hw_assignment_id_t id);
 
 hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
 		hw_resource_id_t sck_pin, hw_resource_id_t miso_pin,
-		hw_resource_id_t mosi_pin);
+		hw_resource_id_t mosi_pin, hw_resource_id_t tx_dma,
+		hw_resource_id_t rx_dma);
 void hw_spi_deassign(hw_assignment_id_t id);
 
 hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,

@@ -56,7 +56,7 @@ static void cs43l22_stop(void);
 void cs43l22_init(void) {
 	uint8_t tmp;
 
-	cs43l22_i2s = hw_i2s_assign(HWR_SPII2S3, HWR_PC10, HWR_PA4, HWR_PC12, HWR_PC7, HWR_DMA1_STREAM0);
+	cs43l22_i2s = hw_i2s_assign(HWR_SPII2S3, HWR_PC10, HWR_PA4, HWR_PC12, HWR_PC7, HWR_DMA1_STREAM7);
 	cs43l22_i2c = hw_i2c_assign(HWR_I2C1, HWR_PB6, HWR_PB9);
 	cs43l22_reset = hw_pin_assign(HWR_PD4);
 
@@ -134,6 +134,14 @@ void fill_i2s(void * buf, size_t buf_len) {
 	}
 }
 
+static void ws2801_init(void);
+//static void ws2801_output(void * buf, size_t buf_len);
+
+void ws2801_init(void) {
+	hw_spi_assign(HWR_SPI1, HWR_PA5, HWR_NONE, HWR_PA7, HWR_DMA2_STREAM3,
+			HWR_NONE);
+}
+
 int main(void) {
 	hw_assignment_id_t ld3, ld4, ld5, ld6;
 
@@ -155,6 +163,8 @@ int main(void) {
 	hw_pin_configure(ld4, HWPM_OUT_PP);
 	hw_pin_configure(ld5, HWPM_OUT_PP);
 	hw_pin_configure(ld6, HWPM_OUT_PP);
+
+	ws2801_init();
 
 	cs43l22_init();
 	cs43l22_start(fill_i2s);
