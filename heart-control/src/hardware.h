@@ -11,8 +11,6 @@
 
 #include "heart_control.h"
 
-#include "resource_assignment.h"
-
 #define HW_ASSIGNMENT_MAX 256
 #define HW_ASSIGNMENT_START 1
 
@@ -177,22 +175,22 @@ typedef enum {
 	HWR_TIM13,
 	HWR_TIM14,
 
-	HWR_DMA1_CH0,
-	HWR_DMA1_CH1,
-	HWR_DMA1_CH2,
-	HWR_DMA1_CH3,
-	HWR_DMA1_CH4,
-	HWR_DMA1_CH5,
-	HWR_DMA1_CH6,
-	HWR_DMA1_CH7,
-	HWR_DMA2_CH0,
-	HWR_DMA2_CH1,
-	HWR_DMA2_CH2,
-	HWR_DMA2_CH3,
-	HWR_DMA2_CH4,
-	HWR_DMA2_CH5,
-	HWR_DMA2_CH6,
-	HWR_DMA2_CH7,
+	HWR_DMA1_STREAM0,
+	HWR_DMA1_STREAM1,
+	HWR_DMA1_STREAM2,
+	HWR_DMA1_STREAM3,
+	HWR_DMA1_STREAM4,
+	HWR_DMA1_STREAM5,
+	HWR_DMA1_STREAM6,
+	HWR_DMA1_STREAM7,
+	HWR_DMA2_STREAM0,
+	HWR_DMA2_STREAM1,
+	HWR_DMA2_STREAM2,
+	HWR_DMA2_STREAM3,
+	HWR_DMA2_STREAM4,
+	HWR_DMA2_STREAM5,
+	HWR_DMA2_STREAM6,
+	HWR_DMA2_STREAM7,
 
 	HWR_ADC1,
 	HWR_ADC2,
@@ -366,13 +364,15 @@ typedef enum {
 } hw_pin_mode_t;
 
 typedef enum {
-	HWI2SR_8KHZ,
-	HWI2SR_22_05KHZ,
-	HWI2SR_24KHZ,
-	HWI2SR_44_1KHZ,
-	HWI2SR_48KHZ,
-	HWI2SR_96KHZ,
-	HWI2SR_192KHZ,
+	HWI2SR_8KHZ = I2S_AUDIOFREQ_8K,
+	HWI2SR_11_025KHZ = I2S_AUDIOFREQ_11K,
+	HWI2SR_16KHZ = I2S_AUDIOFREQ_16K,
+	HWI2SR_22_05KHZ = I2S_AUDIOFREQ_22K,
+	HWI2SR_32KHZ = I2S_AUDIOFREQ_32K,
+	HWI2SR_44_1KHZ = I2S_AUDIOFREQ_44K,
+	HWI2SR_48KHZ = I2S_AUDIOFREQ_48K,
+	HWI2SR_96KHZ = I2S_AUDIOFREQ_96K,
+	HWI2SR_192KHZ = I2S_AUDIOFREQ_192K,
 } hw_i2s_rate_t;
 
 typedef void (*hw_i2s_fill_func_t)(void * buf, size_t buf_len);
@@ -405,15 +405,15 @@ void hw_i2s_start_output(hw_assignment_id_t id, hw_i2s_rate_t rate,
 		void * buf, size_t buf_len, hw_i2s_fill_func_t fill_func);
 void hw_i2s_stop(hw_assignment_id_t id);
 
-//hw_assignment_id_t hw_spi_assign(pins, dma)
-//void hw_spi_output(buf, buf_len)
-//bool hw_spi_is_busy()
+hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
+		hw_resource_id_t sck_pin, hw_resource_id_t miso_pin,
+		hw_resource_id_t mosi_pin);
+void hw_spi_deassign(hw_assignment_id_t id);
 
-//hw_button_monitor
-
-//eh_setup()
-//eh_tick_1ms()
-//eh_loop()
-
+hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,
+		hw_resource_id_t scl_pin, hw_resource_id_t sda_pin);
+void hw_i2c_deassign(hw_assignment_id_t id);
+void hw_i2c_configure(hw_assignment_id_t id, uint8_t master_address);
+I2C_HandleTypeDef * hw_i2c_get_handle(hw_assignment_id_t id);
 
 #endif /* HARDWARE_H_ */

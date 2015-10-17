@@ -17,13 +17,28 @@ typedef struct {
 	hw_assignment_id_t sclk;
 	hw_assignment_id_t sd;
 	hw_assignment_id_t mclk;
+	hw_assignment_id_t dma_channel;
 	I2S_HandleTypeDef i2s_handle;
 	DMA_HandleTypeDef dma_handle;
 	void * buf;
 	size_t buf_len;
+	hw_i2s_fill_func_t fill_func;
 	bool running;
 	uint8_t pad0[3];
 } hw_i2s_struct_t;
+
+typedef struct {
+	hw_assignment_id_t scl;
+	hw_assignment_id_t sda;
+	I2C_HandleTypeDef i2c_handle;
+} hw_i2c_struct_t;
+
+typedef struct {
+	hw_assignment_id_t sck;
+	hw_assignment_id_t miso;
+	hw_assignment_id_t mosi;
+	SPI_HandleTypeDef spi_handle;
+} hw_spi_struct_t;
 
 static hw_resource_definition_t const hw_resource_definitions[HWR_COUNT] = {
 		{.type = HWT_INVALID},
@@ -217,7 +232,8 @@ static hw_resource_definition_t const hw_resource_definitions[HWR_COUNT] = {
 		{.type = HWT_USART, .clock_id = HWC_USART6, .usart = USART6},
 };
 
-static size_t hw_clock_enable_counts[HWC_COUNT];
+static size_t hw_clock_enable_counts[HWC_COUNT]; // all init 0
+static size_t hw_clock_i2s_pll_enable_count = 0;
 
 static hw_assignment_id_t hw_assignment_id_in_pool_count = 0;
 static hw_assignment_id_t hw_assignment_id_total_count = 0;
@@ -229,6 +245,14 @@ static hw_resource_assignment_t hw_assignment_resources[HW_ASSIGNMENT_MAX];
 
 static hw_i2s_struct_t hw_i2s_2;
 static hw_i2s_struct_t hw_i2s_3;
+
+static hw_i2c_struct_t hw_i2c_1;
+static hw_i2c_struct_t hw_i2c_2;
+static hw_i2c_struct_t hw_i2c_3;
+
+static hw_spi_struct_t hw_spi_1;
+static hw_spi_struct_t hw_spi_2;
+static hw_spi_struct_t hw_spi_3;
 
 hw_assignment_id_t hw_assignment_alloc(void) {
 	if (hw_assignment_id_in_pool_count > 0) {
@@ -562,10 +586,21 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 
 	switch(i2s) {
 	case HWR_SPII2S2:
+		cu_verify(sclk_pin == HWR_PB10 || sclk_pin == HWR_PB13 ||
+				sclk_pin == HWR_PI1);
+		cu_verify(ws_pin == HWR_PB9 || ws_pin == HWR_PB12 ||
+				ws_pin == HWR_PI0);
+		cu_verify(sd_pin == HWR_PB15 || sd_pin == HWR_PC3 ||
+				sd_pin == HWR_PI3);
+		cu_verify(mclk_pin == HWR_NONE || mclk_pin == HWR_PC6);
 		i2ss = &hw_i2s_2;
 		i2ss->i2s_handle.Instance = SPI2;
 		break;
 	case HWR_SPII2S3:
+		cu_verify(sclk_pin == HWR_PB3 || sclk_pin == HWR_PC10);
+		cu_verify(ws_pin == HWR_PA4 || ws_pin == HWR_PA15);
+		cu_verify(sd_pin == HWR_PB5 || sd_pin == HWR_PC12);
+		cu_verify(mclk_pin == HWR_NONE || mclk_pin == HWR_PC7);
 		i2ss = &hw_i2s_3;
 		i2ss->i2s_handle.Instance = SPI3;
 		break;
@@ -575,24 +610,79 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 	}
 
 	id = hw_resource_assign(i2s, (intptr_t)i2ss);
-	i2ss->ws = hw_pin_assign(sclk_pin);
-	i2ss->sclk = hw_pin_assign(ws_pin);
+	i2ss->sclk = hw_pin_assign(sclk_pin);
+	i2ss->ws = hw_pin_assign(ws_pin);
 	i2ss->sd = hw_pin_assign(sd_pin);
 	i2ss->mclk = HW_ASSIGNMENT_ID_NULL;
 	if(mclk_pin != HWR_NONE) {
 		i2ss->mclk = hw_pin_assign(mclk_pin);
 		//hw_pin_configure(mclk_pin, HWPM_AF_PP);
 	}
+	i2ss->dma_channel = hw_resource_assign(dma_channel, 0);
 	i2ss->buf = NULL;
 	i2ss->buf_len = 0;
 
 	i2ss->dma_handle.Instance =
 			hw_resource_definitions[dma_channel].dma.stream;
+
 	i2ss->dma_handle.Init.Channel =
 			hw_resource_definitions[dma_channel].dma.channel;
+	i2ss->dma_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
+	i2ss->dma_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+	i2ss->dma_handle.Init.MemInc = DMA_MINC_ENABLE;
+	i2ss->dma_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+	i2ss->dma_handle.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+	i2ss->dma_handle.Init.Mode = DMA_CIRCULAR;
+	i2ss->dma_handle.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+	i2ss->dma_handle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+	i2ss->dma_handle.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
+	i2ss->dma_handle.Init.MemBurst = DMA_MBURST_INC8;
+	i2ss->dma_handle.Init.PeriphBurst = DMA_PBURST_SINGLE;
+
+	i2ss->i2s_handle.Init.Mode = I2S_MODE_MASTER_TX;
+	i2ss->i2s_handle.Init.Standard = I2S_STANDARD_PHILIPS;
+	i2ss->i2s_handle.Init.DataFormat = I2S_DATAFORMAT_16B;
+	i2ss->i2s_handle.Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
+	i2ss->i2s_handle.Init.AudioFreq = I2S_AUDIOFREQ_48K;
+	i2ss->i2s_handle.Init.CPOL = I2S_CPOL_LOW;
+	i2ss->i2s_handle.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
+
+	switch(i2s) {
+	case HWR_SPII2S2:
+		hw_pin_configure(i2ss->sclk, HWPM_AF_PP | HWPM_ALT_5);
+		hw_pin_configure(i2ss->ws, HWPM_AF_PP | HWPM_ALT_5);
+		hw_pin_configure(i2ss->sd, HWPM_AF_PP | HWPM_ALT_5);
+		if(i2ss->mclk != HW_ASSIGNMENT_ID_NULL) {
+			hw_pin_configure(i2ss->mclk, HWPM_AF_PP | HWPM_ALT_5);
+		}
+		break;
+	case HWR_SPII2S3:
+		hw_pin_configure(i2ss->sclk, HWPM_AF_PP | HWPM_ALT_6);
+		hw_pin_configure(i2ss->ws, HWPM_AF_PP | HWPM_ALT_6);
+		hw_pin_configure(i2ss->sd, HWPM_AF_PP | HWPM_ALT_6);
+		if(i2ss->mclk != HW_ASSIGNMENT_ID_NULL) {
+			hw_pin_configure(i2ss->mclk, HWPM_AF_PP | HWPM_ALT_6);
+		}
+		break;
+	default:
+		cu_error("i2s does not identify an I2S peripheral");
+		break;
+	}
+
+	if(hw_clock_i2s_pll_enable_count == 0) {
+		__HAL_RCC_PLLI2S_ENABLE();
+	}
+	++hw_clock_i2s_pll_enable_count;
+
+	hw_clock_enable(hw_resource_definitions[i2s].clock_id);
+	hw_clock_enable(hw_resource_definitions[dma_channel].clock_id);
+
+	HAL_Delay(2);
 
 	i2ss->running = false;
 
+	i2ss->i2s_handle.hdmarx = NULL;
+	i2ss->i2s_handle.hdmatx = &i2ss->dma_handle;
 	return id;
 }
 
@@ -602,12 +692,29 @@ void hw_i2s_deassign(hw_assignment_id_t id) {
 	if(i2ss->running) {
 		hw_i2s_stop(id);
 	}
+	hw_clock_disable(hw_resource_definitions[hw_resource_get_resource_id(id)].clock_id);
+	hw_clock_disable(hw_resource_definitions[i2ss->dma_channel].clock_id);
+	cu_verify(hw_clock_i2s_pll_enable_count > 0);
+	--hw_clock_i2s_pll_enable_count;
+	if(hw_clock_i2s_pll_enable_count == 0) {
+		__HAL_RCC_PLLI2S_DISABLE();
+	}
+
+	hw_resource_deassign(i2ss->dma_channel);
+	i2ss->dma_channel = HW_ASSIGNMENT_ID_NULL;
+
 	hw_pin_deassign(i2ss->ws);
 	hw_pin_deassign(i2ss->sclk);
 	hw_pin_deassign(i2ss->sd);
 	if(i2ss->mclk != HW_ASSIGNMENT_ID_NULL) {
 		hw_pin_deassign(i2ss->mclk);
 	}
+
+	i2ss->ws = HW_ASSIGNMENT_ID_NULL;
+	i2ss->sclk = HW_ASSIGNMENT_ID_NULL;
+	i2ss->sd = HW_ASSIGNMENT_ID_NULL;
+	i2ss->mclk = HW_ASSIGNMENT_ID_NULL;
+
 	hw_resource_deassign(id);
 }
 
@@ -615,23 +722,226 @@ void hw_i2s_start_output(hw_assignment_id_t id, hw_i2s_rate_t rate,
 		void * buf, size_t buf_len, hw_i2s_fill_func_t fill_func) {
 	hw_i2s_struct_t * i2ss = (hw_i2s_struct_t *)hw_resource_get_user(id);
 
-	(void)i2ss;
-	(void)rate;
-	(void)buf;
-	(void)buf_len;
-	(void)fill_func;
-	/*
-	i2ss->i2s_handle.Init.
-	i2ss->dma_handle.Instance =
-			hw_resource_definitions[dma_channel].dma.controller;
-	i2ss->dma_handle.Init.Channel =
-	*/
-}
-void hw_i2s_stop(hw_assignment_id_t id) {
-	(void)id;
+	cu_verify(fill_func != NULL);
+
+	i2ss->i2s_handle.Init.AudioFreq = rate;
+	i2ss->fill_func = fill_func;
+
+	cu_verify(HAL_DMA_Init(&i2ss->dma_handle) == HAL_OK);
+	cu_verify(HAL_I2S_Init(&i2ss->i2s_handle) == HAL_OK);
+
+	fill_func(buf, buf_len / 2);
+	fill_func((uint8_t *)buf + buf_len / 2, buf_len / 2);
+
+	cu_verify(HAL_I2S_Transmit_DMA(&i2ss->i2s_handle, buf,
+			(uint16_t)buf_len / sizeof (uint16_t)) == HAL_OK);
 }
 
-void SysTick_Handler(void) {
-	HAL_IncTick();
+void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef * i2sh) {
+	hw_i2s_fill_func_t fill_func = NULL;
+	uint8_t * buf = NULL;
+	size_t buf_len;
+
+	if(i2sh == &hw_i2s_2.i2s_handle) {
+		buf = (uint8_t *)hw_i2s_2.buf;
+		buf_len = hw_i2s_2.buf_len;
+		fill_func = hw_i2s_2.fill_func;
+	} else if(i2sh == &hw_i2s_3.i2s_handle) {
+		buf = (uint8_t *)hw_i2s_3.buf;
+		buf_len = hw_i2s_3.buf_len;
+		fill_func = hw_i2s_3.fill_func;
+	}
+	if(fill_func != NULL) {
+		fill_func(buf, buf_len / 2);
+	}
+}
+
+void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef * i2sh) {
+	hw_i2s_fill_func_t fill_func = NULL;
+	uint8_t * buf = NULL;
+	size_t buf_len;
+
+	if(i2sh == &hw_i2s_2.i2s_handle) {
+		buf = (uint8_t *)hw_i2s_2.buf;
+		buf_len = hw_i2s_2.buf_len;
+		fill_func = hw_i2s_2.fill_func;
+	} else if(i2sh == &hw_i2s_3.i2s_handle) {
+		buf = (uint8_t *)hw_i2s_3.buf;
+		buf_len = hw_i2s_3.buf_len;
+		fill_func = hw_i2s_3.fill_func;
+	}
+	if(fill_func != NULL) {
+		fill_func(buf + buf_len / 2, buf_len / 2);
+	}
+}
+
+void hw_i2s_stop(hw_assignment_id_t id) {
+	hw_i2s_struct_t * i2ss = (hw_i2s_struct_t *)hw_resource_get_user(id);
+	HAL_I2S_DeInit(&i2ss->i2s_handle);
+}
+
+hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
+		hw_resource_id_t sck_pin, hw_resource_id_t miso_pin,
+		hw_resource_id_t mosi_pin) {
+	hw_assignment_id_t id;
+	hw_spi_struct_t * spis = NULL;
+
+	cu_verify(spi > HWR_NONE && spi < HWR_COUNT);
+	cu_verify(hw_resource_definitions[spi].type == HWT_SPI);
+
+	switch(spi) {
+	case HWR_SPI1:
+		// NSS = PA4, PA15
+		cu_verify(sck_pin == HWR_PA5 || sck_pin == HWR_PB3);
+		cu_verify(miso_pin == HWR_PA6 || miso_pin == HWR_PB4);
+		cu_verify(mosi_pin == HWR_PA7 || mosi_pin == HWR_PB5);
+		spis = &hw_spi_1;
+		spis->spi_handle.Instance = SPI1;
+		break;
+	case HWR_SPII2S2:
+		// NSS = B9, B12, PI0
+		cu_verify(sck_pin == HWR_PB10 || sck_pin == HWR_PB13 ||
+				sck_pin == HWR_PI1);
+		cu_verify(miso_pin == HWR_PB14 || miso_pin == HWR_PC2 ||
+				miso_pin == HWR_PI2);
+		cu_verify(mosi_pin == HWR_PB15 || mosi_pin == HWR_PC3 ||
+				mosi_pin == HWR_PI3);
+		spis = &hw_spi_2;
+		spis->spi_handle.Instance = SPI2;
+		break;
+	case HWR_SPII2S3:
+		// NSS = PA4, PA15
+		cu_verify(sck_pin == HWR_PB3 || sck_pin == HWR_PC10);
+		cu_verify(miso_pin == HWR_PB4 || miso_pin == HWR_PC11);
+		cu_verify(mosi_pin == HWR_PB5 || mosi_pin == HWR_PC12);
+		spis = &hw_spi_3;
+		spis->spi_handle.Instance = SPI3;
+		break;
+	default:
+		cu_error("spi does not identify an I2C peripheral");
+		break;
+	}
+
+	id = hw_resource_assign(spi, (intptr_t)spis);
+	spis->sck = hw_pin_assign(sck_pin);
+	spis->miso = hw_pin_assign(miso_pin);
+	spis->mosi = hw_pin_assign(mosi_pin);
+
+	switch(spi) {
+	case HWR_SPI1:
+	case HWR_SPII2S2:
+		hw_pin_configure(spis->sck, HWPM_AF_PP | HWPM_ALT_5);
+		hw_pin_configure(spis->miso, HWPM_AF_PP | HWPM_ALT_5);
+		hw_pin_configure(spis->mosi, HWPM_AF_PP | HWPM_ALT_5);
+		break;
+	case HWR_SPII2S3:
+		hw_pin_configure(spis->sck, HWPM_AF_PP | HWPM_ALT_6);
+		hw_pin_configure(spis->miso, HWPM_AF_PP | HWPM_ALT_6);
+		hw_pin_configure(spis->mosi, HWPM_AF_PP | HWPM_ALT_6);
+		break;
+	default:
+		cu_error("spi does not identify an SPI peripheral");
+		break;
+	}
+
+	hw_clock_enable(hw_resource_definitions[spi].clock_id);
+
+	return id;
+}
+
+void hw_spi_deassign(hw_assignment_id_t id) {
+	hw_spi_struct_t * spis = (hw_spi_struct_t *)hw_resource_get_user(id);
+
+	hw_clock_disable(hw_resource_definitions[hw_resource_get_resource_id(id)].clock_id);
+
+	hw_pin_deassign(spis->sck);
+	hw_pin_deassign(spis->miso);
+	hw_pin_deassign(spis->mosi);
+
+	spis->sck = HW_ASSIGNMENT_ID_NULL;
+	spis->miso = HW_ASSIGNMENT_ID_NULL;
+	spis->mosi = HW_ASSIGNMENT_ID_NULL;
+
+	hw_resource_deassign(id);
+}
+
+hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,
+		hw_resource_id_t scl_pin, hw_resource_id_t sda_pin) {
+	hw_assignment_id_t id;
+	hw_i2c_struct_t * i2cs = NULL;
+
+	cu_verify(i2c > HWR_NONE && i2c < HWR_COUNT);
+	cu_verify(hw_resource_definitions[i2c].type == HWT_I2C);
+
+	switch(i2c) {
+	case HWR_I2C1:
+		cu_verify(scl_pin == HWR_PB6 || scl_pin == HWR_PB8);
+		cu_verify(sda_pin == HWR_PB7 || sda_pin == HWR_PB9);
+		i2cs = &hw_i2c_1;
+		i2cs->i2c_handle.Instance = I2C1;
+		break;
+	case HWR_I2C2:
+		cu_verify(scl_pin == HWR_PB10 || scl_pin == HWR_PF0 ||
+				scl_pin == HWR_PH4);
+		cu_verify(sda_pin == HWR_PB11 || sda_pin == HWR_PF1 ||
+				sda_pin == HWR_PH5);
+		i2cs = &hw_i2c_2;
+		i2cs->i2c_handle.Instance = I2C2;
+		break;
+	case HWR_I2C3:
+		cu_verify(scl_pin == HWR_PA8 || scl_pin == HWR_PH7);
+		cu_verify(sda_pin == HWR_PC9 || sda_pin == HWR_PH8);
+		i2cs = &hw_i2c_3;
+		i2cs->i2c_handle.Instance = I2C3;
+		break;
+	default:
+		cu_error("i2c does not identify an I2C peripheral");
+		break;
+	}
+
+	id = hw_resource_assign(i2c, (intptr_t)i2cs);
+	i2cs->scl = hw_pin_assign(scl_pin);
+	i2cs->sda = hw_pin_assign(sda_pin);
+
+	hw_pin_configure(i2cs->scl, HWPM_AF_OD_PU | HWPM_ALT_4);
+	hw_pin_configure(i2cs->sda, HWPM_AF_OD_PU | HWPM_ALT_4);
+
+	hw_clock_enable(hw_resource_definitions[i2c].clock_id);
+
+	return id;
+}
+
+void hw_i2c_deassign(hw_assignment_id_t id) {
+	hw_i2c_struct_t * i2cs = (hw_i2c_struct_t *)hw_resource_get_user(id);
+
+	hw_clock_disable(hw_resource_definitions[hw_resource_get_resource_id(id)].clock_id);
+
+	hw_pin_deassign(i2cs->scl);
+	hw_pin_deassign(i2cs->sda);
+
+	i2cs->scl = HW_ASSIGNMENT_ID_NULL;
+	i2cs->sda = HW_ASSIGNMENT_ID_NULL;
+
+	hw_resource_deassign(id);
+}
+
+void hw_i2c_configure(hw_assignment_id_t id, uint8_t master_address) {
+	hw_i2c_struct_t * i2cs = (hw_i2c_struct_t *)hw_resource_get_user(id);
+
+	i2cs->i2c_handle.Init.ClockSpeed = 100000;
+	i2cs->i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	i2cs->i2c_handle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	i2cs->i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	i2cs->i2c_handle.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+	i2cs->i2c_handle.Init.DutyCycle = I2C_DUTYCYCLE_2;
+	i2cs->i2c_handle.Init.OwnAddress1 = master_address;
+	i2cs->i2c_handle.Init.OwnAddress2 = 0;
+
+	HAL_I2C_Init(&i2cs->i2c_handle);
+}
+
+I2C_HandleTypeDef * hw_i2c_get_handle(hw_assignment_id_t id) {
+	hw_i2c_struct_t * i2cs = (hw_i2c_struct_t *)hw_resource_get_user(id);
+	return &i2cs->i2c_handle;
 }
 

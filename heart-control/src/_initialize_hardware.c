@@ -9,6 +9,8 @@
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_cortex.h"
 
+#include "cortexm/ExceptionHandlers.h"
+
 // ----------------------------------------------------------------------------
 
 // The external clock frequency is specified as a preprocessor definition
@@ -65,10 +67,12 @@ __initialize_hardware(void)
   // Call the CSMSIS system clock routine to store the clock frequency
   // in the SystemCoreClock global RAM location.
   SystemCoreClockUpdate();
+
+  HAL_ResumeTick();
 }
 
 // Disable when using RTOSes, since they have their own handler.
-#if 0
+#if 1
 
 // This is a sample SysTick handler, use it if you need HAL timings.
 void __attribute__ ((section(".after_vectors")))
