@@ -1115,6 +1115,13 @@ void hw_spi_deassign(hw_assignment_id_t id) {
 	hw_resource_deassign(id);
 }
 
+void hw_spi_transmit(hw_assignment_id_t id, void * buf, size_t buf_len) {
+	hw_spi_struct_t * spis = (hw_spi_struct_t *)hw_resource_get_user(id);
+
+	cu_verify(HAL_SPI_Transmit_DMA(&spis->spi_handle, buf,
+			(uint16_t)buf_len) == HAL_OK);
+}
+
 hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,
 		hw_resource_id_t scl_pin, hw_resource_id_t sda_pin) {
 	hw_assignment_id_t id;

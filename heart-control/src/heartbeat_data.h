@@ -8,6 +8,6 @@
 #ifndef HEARTBEAT_DATA_H_
 #define HEARTBEAT_DATA_H_
 
-uint8_t hd_heartbeat_data[24186];
+int16_t hd_heartbeat_data[24186];
 
 #endif /* HEARTBEAT_DATA_H_ */
