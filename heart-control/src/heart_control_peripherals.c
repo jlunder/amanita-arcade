@@ -124,7 +124,8 @@ uint8_t cs43l22_read_register(uint8_t address) {
 
 void ws2801_init(void) {
 	ws2801_spi = hw_spi_assign(HWR_SPI1, HWR_PA5, HWR_NONE, HWR_PA7,
-			HWR_DMA2_STREAM3, HWR_NONE);
+			HWR_NONE, HWR_NONE);
+			//HWR_DMA2_STREAM3, HWR_NONE);
 }
 
 void ws2801_output(void * buf, size_t buf_len) {

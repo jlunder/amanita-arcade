@@ -1026,6 +1026,8 @@ hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
 		spis->tx_dma_handle->Init.MemBurst = DMA_PBURST_SINGLE;
 		spis->tx_dma_handle->Init.PeriphBurst = DMA_PBURST_SINGLE;
 		spis->tx_dma_handle->Parent = &spis->spi_handle;
+	} else {
+		spis->tx_dma_handle = NULL;
 	}
 	if(rx_dma != HWR_NONE) {
 		spis->rx_dma_stream = hw_resource_assign(rx_dma, 0);
@@ -1045,7 +1047,23 @@ hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
 		spis->rx_dma_handle->Init.MemBurst = DMA_PBURST_SINGLE;
 		spis->rx_dma_handle->Init.PeriphBurst = DMA_PBURST_SINGLE;
 		spis->rx_dma_handle->Parent = &spis->spi_handle;
+	} else {
+		spis->rx_dma_handle = NULL;
 	}
+
+	spis->spi_handle.Init.Mode = SPI_MODE_MASTER;
+	spis->spi_handle.Init.Direction = SPI_DIRECTION_2LINES;
+	spis->spi_handle.Init.DataSize = SPI_DATASIZE_8BIT;
+	spis->spi_handle.Init.CLKPolarity = SPI_POLARITY_LOW;
+	spis->spi_handle.Init.CLKPhase = SPI_PHASE_1EDGE;
+	spis->spi_handle.Init.NSS = SPI_NSS_SOFT;
+	spis->spi_handle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+	spis->spi_handle.Init.FirstBit = SPI_FIRSTBIT_MSB;
+	spis->spi_handle.Init.TIMode = SPI_TIMODE_DISABLE;
+	spis->spi_handle.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+	spis->spi_handle.Init.CRCPolynomial = SPI_CRCPR_CRCPOLY;
+	spis->spi_handle.hdmatx = spis->tx_dma_handle;
+	spis->spi_handle.hdmarx = spis->rx_dma_handle;
 
 	switch(spi) {
 	case HWR_SPI1:
@@ -1073,6 +1091,19 @@ hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
 	}
 
 	hw_clock_enable(hw_resource_definitions[spi].clock_id);
+	hw_irq_enable(hw_resource_definitions[spi].irq_id);
+
+	if(spis->tx_dma_handle != NULL) {
+		hw_clock_enable(hw_resource_definitions[tx_dma].clock_id);
+		hw_irq_enable(hw_resource_definitions[tx_dma].irq_id);
+		cu_verify(HAL_DMA_Init(spis->tx_dma_handle) == HAL_OK);
+	}
+	if(spis->rx_dma_handle != NULL) {
+		hw_clock_enable(hw_resource_definitions[rx_dma].clock_id);
+		hw_irq_enable(hw_resource_definitions[rx_dma].irq_id);
+		cu_verify(HAL_DMA_Init(spis->rx_dma_handle) == HAL_OK);
+	}
+	cu_verify(HAL_SPI_Init(&spis->spi_handle) == HAL_OK);
 
 	return id;
 }
@@ -1083,9 +1114,15 @@ void hw_spi_deassign(hw_assignment_id_t id) {
 	hw_clock_disable(hw_resource_definitions[hw_resource_get_resource_id(id)].clock_id);
 
 	cu_verify(HAL_SPI_DeInit(&spis->spi_handle) == HAL_OK);
+	spis->spi_handle.hdmatx = NULL;
+	spis->spi_handle.hdmarx = NULL;
 
 	if(spis->tx_dma_stream != HW_ASSIGNMENT_ID_NULL) {
 		cu_verify(HAL_DMA_DeInit(spis->tx_dma_handle) == HAL_OK);
+		hw_clock_disable(hw_resource_definitions[
+				hw_resource_get_resource_id(spis->tx_dma_stream)].clock_id);
+		hw_irq_disable(hw_resource_definitions[
+				hw_resource_get_resource_id(spis->tx_dma_stream)].irq_id);
 		hw_resource_deassign(spis->tx_dma_stream);
 		spis->tx_dma_stream = HW_ASSIGNMENT_ID_NULL;
 		spis->tx_dma_handle->Parent = NULL;
@@ -1094,6 +1131,10 @@ void hw_spi_deassign(hw_assignment_id_t id) {
 
 	if(spis->rx_dma_stream != HW_ASSIGNMENT_ID_NULL) {
 		cu_verify(HAL_DMA_DeInit(spis->rx_dma_handle) == HAL_OK);
+		hw_clock_disable(hw_resource_definitions[
+				hw_resource_get_resource_id(spis->rx_dma_stream)].clock_id);
+		hw_irq_disable(hw_resource_definitions[
+				hw_resource_get_resource_id(spis->rx_dma_stream)].irq_id);
 		hw_resource_deassign(spis->rx_dma_stream);
 		spis->rx_dma_stream = HW_ASSIGNMENT_ID_NULL;
 		spis->rx_dma_handle->Parent = NULL;
@@ -1118,8 +1159,17 @@ void hw_spi_deassign(hw_assignment_id_t id) {
 void hw_spi_transmit(hw_assignment_id_t id, void * buf, size_t buf_len) {
 	hw_spi_struct_t * spis = (hw_spi_struct_t *)hw_resource_get_user(id);
 
-	cu_verify(HAL_SPI_Transmit_DMA(&spis->spi_handle, buf,
-			(uint16_t)buf_len) == HAL_OK);
+	/*
+	if(spis->tx_dma_handle != NULL) {
+		cu_verify(HAL_SPI_Transmit_DMA(&spis->spi_handle, buf,
+				(uint16_t)buf_len) == HAL_OK);
+	} else {
+		cu_verify(HAL_SPI_Transmit_IT(&spis->spi_handle, buf,
+				(uint16_t)buf_len) == HAL_OK);
+	}
+	*/
+	cu_verify(HAL_SPI_Transmit(&spis->spi_handle, buf,
+			(uint16_t)buf_len, 100) == HAL_OK);
 }
 
 hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,
