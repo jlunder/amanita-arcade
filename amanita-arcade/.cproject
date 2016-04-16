@@ -173,9 +173,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1856471086.130803396" name="stm32f4xx_hal_i2s_ex.c" rcbsApplicability="disable" resourcePath="system/src/stm32f4-hal/stm32f4xx_hal_i2s_ex.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.1815825981">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.1815825981" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233"/>
-					</fileInfo>
 					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1856471086.system/src/newlib/_startup.c" name="_startup.c" rcbsApplicability="disable" resourcePath="system/src/newlib/_startup.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.12824775">
 						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.12824775" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233">
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.262354048" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" valueType="definedSymbols">
@@ -361,9 +358,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.962744331.322179341" name="stm32f4xx_hal_i2s_ex.c" rcbsApplicability="disable" resourcePath="system/src/stm32f4-hal/stm32f4xx_hal_i2s_ex.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.519457739">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.519457739" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137"/>
-					</fileInfo>
 					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.962744331.system/src/newlib/_startup.c" name="_startup.c" rcbsApplicability="disable" resourcePath="system/src/newlib/_startup.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1745332711">
 						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1745332711" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137">
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.260045633" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" valueType="definedSymbols">

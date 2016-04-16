@@ -9,7 +9,7 @@
 #define HARDWARE_H_
 
 
-#include "heart_control.h"
+#include "amanita_arcade.h"
 
 #define HW_ASSIGNMENT_MAX 256
 #define HW_ASSIGNMENT_START 1

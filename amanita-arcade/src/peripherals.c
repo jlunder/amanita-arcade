@@ -6,7 +6,7 @@
  */
 
 
-#include "heart_control_peripherals.h"
+#include "peripherals.h"
 
 #define CS43L22_ADDRESS 0x94
 
@@ -55,7 +55,7 @@ static short cs43l22_buf[128];
 
 static hw_assignment_id_t ws2801_spi;
 
-void hcp_init(void) {
+void per_init(void) {
 	cs43l22_init();
 	ws2801_init();
 }

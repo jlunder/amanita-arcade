@@ -1,12 +1,12 @@
 /*
- * heart_control.h
+ * amanita_arcade.h
  *
  *  Created on: Oct 13, 2015
  *      Author: jlunder
  */
 
-#ifndef HEART_CONTROL_H_
-#define HEART_CONTROL_H_
+#ifndef AMANITA_ARCADE_H_
+#define AMANITA_ARCADE_H_
 
 
 #include <stdarg.h>
@@ -30,4 +30,17 @@
 #include "core_util.h"
 
 
-#endif /* HEART_CONTROL_H_ */
+typedef struct {
+	uint8_t b, r, g;
+} aa_color_t;
+
+typedef struct {
+	int32_t r, g, b;
+} aa_pal_color_t;
+
+
+extern uint8_t const aa_cie_table[4096];
+extern aa_pal_color_t const aa_orange_pink_pal[256];
+
+
+#endif /* AMANITA_ARCADE_H_ */
