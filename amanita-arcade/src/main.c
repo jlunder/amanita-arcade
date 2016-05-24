@@ -42,6 +42,13 @@ int main(void) {
 
 	per_init();
 
+	mpr121_auto_configure();
+
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+
 	cs43l22_start(aa_fill_i2s);
 
 	__sync_synchronize();
@@ -51,20 +58,35 @@ int main(void) {
 	for( ;; ) {
 		uint32_t cur_tick = HAL_GetTick();
 		int32_t power;
+		uint16_t touch_state;
 
 		if((uint32_t)(cur_tick - last_tick) < 5) {
 			continue;
 		}
 		last_tick = cur_tick;
 
-		aa_display_lights();
+		//aa_display_lights();
+		mpr121_get_analog_values(0, &touch_state, 1);
+
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, touch_state > 4);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, touch_state > 2);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, touch_state > 1);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, touch_state > 0);
+		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, !!(touch_state & 0x08));
+		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, !!(touch_state & 0x04));
+		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, !!(touch_state & 0x02));
+		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, !!(touch_state & 0x01));
 
 		__sync_synchronize();
+
 		cur_audio_pos = aa_audio_pos;
 		power = aa_compute_power(last_audio_pos, cur_audio_pos);
 		last_audio_pos = cur_audio_pos;
 
-		aa_generate_lights(power);
+		(void)aa_display_lights;
+		(void)aa_generate_lights;
+		(void)power;
+		//aa_generate_lights(power);
 	}
 }
 

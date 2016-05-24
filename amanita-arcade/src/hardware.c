@@ -1235,7 +1235,7 @@ void hw_i2c_deassign(hw_assignment_id_t id) {
 void hw_i2c_configure(hw_assignment_id_t id, uint8_t master_address) {
 	hw_i2c_struct_t * i2cs = (hw_i2c_struct_t *)hw_resource_get_user(id);
 
-	i2cs->i2c_handle.Init.ClockSpeed = 100000;
+	i2cs->i2c_handle.Init.ClockSpeed = 40000;
 	i2cs->i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
 	i2cs->i2c_handle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
 	i2cs->i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

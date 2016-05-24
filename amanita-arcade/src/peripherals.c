@@ -8,14 +8,14 @@
 
 #include "peripherals.h"
 
-#define CS43L22_ADDRESS 0x94
+#define CS43L22_ADDRESS (0x4A << 1)
 
 #define CS43L22_MAP_CHIP_ID 0x01
 #define CS43L22_MAP_PWR_CTRL1 0x02
 #define CS43L22_MAP_PWR_CTRL2 0x04
-#define CS43L22_MAP_CLK_CTRL  0x05
-#define CS43L22_MAP_IF_CTRL1  0x06
-#define CS43L22_MAP_IF_CTRL2  0x07
+#define CS43L22_MAP_CLK_CTRL 0x05
+#define CS43L22_MAP_IF_CTRL1 0x06
+#define CS43L22_MAP_IF_CTRL2 0x07
 #define CS43L22_MAP_PASSTHROUGH_A_SELECT 0x08
 #define CS43L22_MAP_PASSTHROUGH_B_SELECT 0x09
 #define CS43L22_MAP_ANALOG_SET 0x0A
@@ -47,17 +47,44 @@
 #define CS43L22_MAP_SPEAK_STATUS 0x31
 #define CS43L22_MAP_CHARGE_PUMP_FREQ 0x34
 
+#define MPR121_ADDRESS (0x5A << 1)
+
+#define MPR121_MAP_EXTS 0x00
+#define MPR121_MAP_EXOOR 0x02
+#define MPR121_MAP_EXFDL 0x04
+#define MPR121_MAP_EXBV 0x1E
+#define MPR121_MAP_MHDR 0x2B
+#define MPR121_MAP_NHDR 0x2C
+#define MPR121_MAP_NCLR 0x2D
+#define MPR121_MAP_FDLR 0x2E
+#define MPR121_MAP_MHDF 0x2F
+#define MPR121_MAP_NHDF 0x30
+#define MPR121_MAP_NCLF 0x31
+#define MPR121_MAP_FDLF 0x32
+#define MPR121_MAP_EXTTH 0x41
+#define MPR121_MAP_EXRTH 0x42
+#define MPR121_MAP_AFEC1 0x5C
+#define MPR121_MAP_AFEC2 0x5D
+#define MPR121_MAP_EC 0x5E
+#define MPR121_THRESH_TOUCH 0x0F
+#define MPR121_THRESH_RELEASE 0x0A
+
 static hw_assignment_id_t cs43l22_i2s;
 static hw_assignment_id_t cs43l22_i2c;
+static I2C_HandleTypeDef * cs43l22_i2c_handle = NULL;
 static hw_assignment_id_t cs43l22_reset;
 
 static short cs43l22_buf[128];
+
+static hw_assignment_id_t mpr121_i2c = HW_ASSIGNMENT_ID_NULL;
+static I2C_HandleTypeDef * mpr121_i2c_handle = NULL;
 
 static hw_assignment_id_t ws2801_spi;
 
 void per_init(void) {
 	cs43l22_init();
-	ws2801_init();
+	mpr121_init();
+	ws2811_init();
 }
 
 void cs43l22_init(void) {
@@ -72,6 +99,7 @@ void cs43l22_init(void) {
 	GPIOD->BSRR = GPIO_PIN_4 << 16;
 
 	hw_i2c_configure(cs43l22_i2c, 0x33);
+	cs43l22_i2c_handle = hw_i2c_get_handle(cs43l22_i2c);
 
 	// bring cs43l22 out of reset
 	GPIOD->BSRR = GPIO_PIN_4;
@@ -109,17 +137,93 @@ void cs43l22_stop(void) {
 }
 
 void cs43l22_write_register(uint8_t address, uint8_t value) {
-	I2C_HandleTypeDef * i2ch = hw_i2c_get_handle(cs43l22_i2c);
-	cu_verify(HAL_I2C_Mem_Write(i2ch, CS43L22_ADDRESS, address,
+	cu_verify(HAL_I2C_Mem_Write(cs43l22_i2c_handle, CS43L22_ADDRESS, address,
 			I2C_MEMADD_SIZE_8BIT, &value, 1, 50) == HAL_OK);
 }
 
 uint8_t cs43l22_read_register(uint8_t address) {
 	uint8_t value;
-	I2C_HandleTypeDef * i2ch = hw_i2c_get_handle(cs43l22_i2c);
-	cu_verify(HAL_I2C_Mem_Read(i2ch, CS43L22_ADDRESS, address,
+	cu_verify(HAL_I2C_Mem_Read(cs43l22_i2c_handle, CS43L22_ADDRESS, address,
 			I2C_MEMADD_SIZE_8BIT, &value, 1, 50) == HAL_OK);
 	return value;
+}
+
+void mpr121_init(void) {
+	mpr121_i2c = hw_i2c_assign(HWR_I2C3, HWR_PA8, HWR_PC9);
+	hw_i2c_configure(mpr121_i2c, 0x33);
+	mpr121_i2c_handle = hw_i2c_get_handle(mpr121_i2c);
+}
+
+void mpr121_write_register(uint8_t address, uint8_t value) {
+	cu_verify(HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
+			I2C_MEMADD_SIZE_8BIT, &value, 1, 50) == HAL_OK);
+}
+
+void mpr121_write_registers(uint8_t address, void const * value,
+		size_t size) {
+	cu_verify(HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
+			I2C_MEMADD_SIZE_8BIT, (void *)value, (uint16_t)size, 50)
+			== HAL_OK);
+}
+
+void mpr121_read_registers(uint8_t address, void * value, size_t size) {
+	cu_verify(HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
+			I2C_MEMADD_SIZE_8BIT, value, (uint16_t)size, 50) == HAL_OK);
+}
+
+void mpr121_auto_configure(void) {
+	mpr121_write_register(MPR121_MAP_EC, 0x00);
+	mpr121_write_register(MPR121_MAP_MHDR, 0x01);
+	mpr121_write_register(MPR121_MAP_NHDR, 0x01);
+	mpr121_write_register(MPR121_MAP_NCLR, 0x00);
+	mpr121_write_register(MPR121_MAP_FDLR, 0x00);
+	mpr121_write_register(MPR121_MAP_MHDF, 0x01);
+	mpr121_write_register(MPR121_MAP_NHDF, 0x01);
+	mpr121_write_register(MPR121_MAP_NCLF, 0xFF);
+	mpr121_write_register(MPR121_MAP_FDLF, 0x02);
+	for(uint8_t i = 0; i < 13; ++i) {
+		mpr121_write_register((uint8_t)(MPR121_MAP_EXTTH + i * 2),
+				MPR121_THRESH_TOUCH);
+		mpr121_write_register((uint8_t)(MPR121_MAP_EXRTH + i * 2),
+				MPR121_THRESH_RELEASE);
+	}
+	mpr121_write_register(MPR121_MAP_AFEC2, 0x24);
+
+	HAL_Delay(2);
+
+	mpr121_write_register(MPR121_MAP_EC, 0x04); // Enable 4 sensors
+}
+
+void mpr121_set_thresholds(uint8_t start, uint8_t * thresholds,
+		size_t count) {
+	mpr121_write_registers((uint8_t)(MPR121_MAP_EXTTH + start), thresholds,
+			count);
+}
+
+uint16_t mpr121_get_touch_states(void) {
+	uint16_t states;
+	mpr121_read_registers(MPR121_MAP_EXTS, &states, sizeof states);
+	return states;
+}
+
+void mpr121_get_analog_baselines(uint8_t start, uint16_t * baselines,
+		size_t count) {
+	mpr121_read_registers((uint8_t)(MPR121_MAP_EXBV + start * 2), baselines,
+			count * sizeof (baselines[0]));
+}
+
+void mpr121_get_analog_values(uint8_t start, uint16_t * values,
+		size_t count) {
+	mpr121_read_registers((uint8_t)(MPR121_MAP_EXFDL + start * 2), values,
+			count * sizeof (values[0]));
+}
+
+void ws2811_init(void) {
+}
+
+void ws2811_output(void * buf, size_t buf_len) {
+	(void)buf;
+	(void)buf_len;
 }
 
 void ws2801_init(void) {
