@@ -49,33 +49,44 @@ int main(void) {
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
 
-	cs43l22_start(aa_fill_i2s);
+	//cs43l22_start(aa_fill_i2s);
 
 	__sync_synchronize();
 	last_audio_pos = aa_audio_pos;
 	last_tick = HAL_GetTick();
 
+	bool touch_state[4] = {false, false, false, false};
 	for( ;; ) {
 		uint32_t cur_tick = HAL_GetTick();
 		int32_t power;
-		uint16_t touch_state;
+		uint16_t touch_analog[4];
 
 		if((uint32_t)(cur_tick - last_tick) < 5) {
 			continue;
 		}
 		last_tick = cur_tick;
 
+		//mpr121_get_analog_baselines(0, touch_analog, 4);
+		//cu_log("%d %d %d %d\n", touch_analog[0], touch_analog[1], touch_analog[2], touch_analog[3]);
 		//aa_display_lights();
-		mpr121_get_analog_values(0, &touch_state, 1);
+		mpr121_get_analog_values(0, touch_analog, 4);
 
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, touch_state > 4);
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, touch_state > 2);
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, touch_state > 1);
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, touch_state > 0);
-		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, !!(touch_state & 0x08));
-		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, !!(touch_state & 0x04));
-		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, !!(touch_state & 0x02));
-		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, !!(touch_state & 0x01));
+		for(size_t i = 0; i < 4; ++i) {
+			if(touch_state[i]) {
+				if(touch_analog[i] > 180) {
+					touch_state[i] = false;
+				}
+			} else {
+				if(touch_analog[i] < 160) {
+					touch_state[i] = true;
+				}
+			}
+		}
+
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, touch_state[0]);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, touch_state[1]);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, touch_state[2]);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, touch_state[3]);
 
 		__sync_synchronize();
 
@@ -83,6 +94,7 @@ int main(void) {
 		power = aa_compute_power(last_audio_pos, cur_audio_pos);
 		last_audio_pos = cur_audio_pos;
 
+		(void)aa_fill_i2s;
 		(void)aa_display_lights;
 		(void)aa_generate_lights;
 		(void)power;

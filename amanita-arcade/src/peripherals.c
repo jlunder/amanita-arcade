@@ -66,8 +66,13 @@
 #define MPR121_MAP_AFEC1 0x5C
 #define MPR121_MAP_AFEC2 0x5D
 #define MPR121_MAP_EC 0x5E
-#define MPR121_THRESH_TOUCH 0x0F
-#define MPR121_THRESH_RELEASE 0x0A
+#define MPR121_MAP_ACCR0 0x7B
+#define MPR121_MAP_ACCR1 0x7C
+#define MPR121_MAP_ACUSL 0x7D
+#define MPR121_MAP_ACLSL 0x7E
+#define MPR121_MAP_ACTL 0x7F
+#define MPR121_THRESH_TOUCH 0x20
+#define MPR121_THRESH_RELEASE 0x10
 
 static hw_assignment_id_t cs43l22_i2s;
 static hw_assignment_id_t cs43l22_i2c;
@@ -167,12 +172,13 @@ void mpr121_write_registers(uint8_t address, void const * value,
 }
 
 void mpr121_read_registers(uint8_t address, void * value, size_t size) {
-	cu_verify(HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
+	cu_verify(HAL_I2C_Mem_Read(mpr121_i2c_handle, MPR121_ADDRESS, address,
 			I2C_MEMADD_SIZE_8BIT, value, (uint16_t)size, 50) == HAL_OK);
 }
 
 void mpr121_auto_configure(void) {
-	mpr121_write_register(MPR121_MAP_EC, 0x00);
+	//mpr121_write_register(MPR121_MAP_EC, 0x00);
+	mpr121_write_register(MPR121_MAP_EC, 0x04); // Enable 4 sensors
 	mpr121_write_register(MPR121_MAP_MHDR, 0x01);
 	mpr121_write_register(MPR121_MAP_NHDR, 0x01);
 	mpr121_write_register(MPR121_MAP_NCLR, 0x00);
@@ -181,17 +187,21 @@ void mpr121_auto_configure(void) {
 	mpr121_write_register(MPR121_MAP_NHDF, 0x01);
 	mpr121_write_register(MPR121_MAP_NCLF, 0xFF);
 	mpr121_write_register(MPR121_MAP_FDLF, 0x02);
-	for(uint8_t i = 0; i < 13; ++i) {
+	for(uint8_t i = 0; i < 12; ++i) {
 		mpr121_write_register((uint8_t)(MPR121_MAP_EXTTH + i * 2),
 				MPR121_THRESH_TOUCH);
 		mpr121_write_register((uint8_t)(MPR121_MAP_EXRTH + i * 2),
 				MPR121_THRESH_RELEASE);
 	}
-	mpr121_write_register(MPR121_MAP_AFEC2, 0x24);
+	mpr121_write_register(MPR121_MAP_AFEC2, 0x20);
+	mpr121_write_register(MPR121_MAP_ACUSL, 0xC9);  // USL = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V
+	mpr121_write_register(MPR121_MAP_ACLSL, 0x82);  // LSL = 0.65*USL = 0x82 @3.3V
+	mpr121_write_register(MPR121_MAP_ACTL, 0xB5);  // Target = 0.9*USL = 0xB5 @3.3V
+	mpr121_write_register(MPR121_MAP_ACCR0, 0x0B);
 
-	HAL_Delay(2);
+	HAL_Delay(50);
 
-	mpr121_write_register(MPR121_MAP_EC, 0x04); // Enable 4 sensors
+	//mpr121_write_register(MPR121_MAP_EC, 0x04); // Enable 4 sensors
 }
 
 void mpr121_set_thresholds(uint8_t start, uint8_t * thresholds,
@@ -201,19 +211,21 @@ void mpr121_set_thresholds(uint8_t start, uint8_t * thresholds,
 }
 
 uint16_t mpr121_get_touch_states(void) {
-	uint16_t states;
+	uint16_t states = 0xFEFE;
 	mpr121_read_registers(MPR121_MAP_EXTS, &states, sizeof states);
 	return states;
 }
 
 void mpr121_get_analog_baselines(uint8_t start, uint16_t * baselines,
 		size_t count) {
+	memset(baselines, 0xFE, count * sizeof (baselines[0]));
 	mpr121_read_registers((uint8_t)(MPR121_MAP_EXBV + start * 2), baselines,
 			count * sizeof (baselines[0]));
 }
 
 void mpr121_get_analog_values(uint8_t start, uint16_t * values,
 		size_t count) {
+	memset(values, 0xFE, count * sizeof (values[0]));
 	mpr121_read_registers((uint8_t)(MPR121_MAP_EXFDL + start * 2), values,
 			count * sizeof (values[0]));
 }

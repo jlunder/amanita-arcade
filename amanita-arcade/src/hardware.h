@@ -512,7 +512,13 @@ void hw_irq_disable(hw_irq_id_t irq_id);
 hw_assignment_id_t hw_pin_assign(hw_resource_id_t pin_id);
 void hw_pin_deassign(hw_assignment_id_t id);
 void hw_pin_configure(hw_assignment_id_t id, hw_pin_mode_t mode);
-
+/*
+hw_assignment_id_t hw_uart_assign(hw_resource_id_t uart,
+		hw_resource_id_t tx_pin, hw_resource_id_t rx_pin);
+void hw_uart_deassign(hw_assignment_id_t id);
+void hw_uart_configure(hw_assignment_id_t id, int32_t bit_rate);
+USART_TypeDef * hw_uart_get_handle(hw_assignment_id_t id);
+*/
 hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 		hw_resource_id_t sclk_pin, hw_resource_id_t ws_pin,
 		hw_resource_id_t sd_pin, hw_resource_id_t mclk_pin,
