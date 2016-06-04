@@ -26,6 +26,11 @@
 #include "stm32f4xx_hal_i2s.h"
 #include "stm32f4xx_hal_rcc.h"
 #include "stm32f4xx_hal_spi.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpadded"
+#include "stm32f4xx_hal_uart.h"
+#include "stm32f4xx_hal_usart.h"
+#pragma GCC diagnostic pop
 
 #include "core_util.h"
 

@@ -489,6 +489,24 @@ typedef enum {
 	HWI2SR_192KHZ = I2S_AUDIOFREQ_192K,
 } hw_i2s_rate_t;
 
+typedef enum {
+	HWUARTWL_7_BITS = USART_WORDLENGTH_8B,
+	HWUARTWL_8_BITS = USART_WORDLENGTH_9B,
+} hw_uart_word_length_t;
+
+typedef enum {
+	HWUARTSL_0_5_BITS = USART_STOPBITS_0_5,
+	HWUARTSL_1_0_BITS = USART_STOPBITS_1,
+	HWUARTSL_1_5_BITS = USART_STOPBITS_1_5,
+	HWUARTSL_2_0_BITS = USART_STOPBITS_2,
+} hw_uart_stop_length_t;
+
+typedef enum {
+	HWUARTP_NONE = USART_PARITY_NONE,
+	HWUARTP_EVEN = USART_PARITY_EVEN,
+	HWUARTP_ODD = USART_PARITY_ODD,
+} hw_uart_parity_t;
+
 typedef void (*hw_i2s_fill_func_t)(void * buf, size_t buf_len);
 
 hw_assignment_id_t hw_assignment_alloc(void);
@@ -512,13 +530,7 @@ void hw_irq_disable(hw_irq_id_t irq_id);
 hw_assignment_id_t hw_pin_assign(hw_resource_id_t pin_id);
 void hw_pin_deassign(hw_assignment_id_t id);
 void hw_pin_configure(hw_assignment_id_t id, hw_pin_mode_t mode);
-/*
-hw_assignment_id_t hw_uart_assign(hw_resource_id_t uart,
-		hw_resource_id_t tx_pin, hw_resource_id_t rx_pin);
-void hw_uart_deassign(hw_assignment_id_t id);
-void hw_uart_configure(hw_assignment_id_t id, int32_t bit_rate);
-USART_TypeDef * hw_uart_get_handle(hw_assignment_id_t id);
-*/
+
 hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 		hw_resource_id_t sclk_pin, hw_resource_id_t ws_pin,
 		hw_resource_id_t sd_pin, hw_resource_id_t mclk_pin,
@@ -539,6 +551,32 @@ hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,
 		hw_resource_id_t scl_pin, hw_resource_id_t sda_pin);
 void hw_i2c_deassign(hw_assignment_id_t id);
 void hw_i2c_configure(hw_assignment_id_t id, uint8_t master_address);
+I2C_HandleTypeDef * hw_i2c_get_handle(hw_assignment_id_t id);
+
+hw_assignment_id_t hw_uart_assign(hw_resource_id_t uart,
+		hw_resource_id_t tx_pin, hw_resource_id_t rx_pin,
+		hw_resource_id_t cts_pin, hw_resource_id_t rts_pin);
+void hw_uart_deassign(hw_assignment_id_t id);
+void hw_uart_configure_format(hw_assignment_id_t id, int32_t baud_rate,
+		hw_uart_word_length_t word_length, hw_uart_stop_length_t stop_length,
+		hw_uart_parity_t parity);
+void hw_uart_configure_tx_buffer(hw_assignment_id_t id,
+		hw_resource_id_t tx_dma_stream, uint8_t * tx_ring,
+		size_t tx_ring_size);
+void hw_uart_configure_rx_buffer(hw_assignment_id_t id,
+		hw_resource_id_t rx_dma_stream, uint8_t * rx_ring,
+		size_t rx_ring_size);
+void hw_uart_start(hw_assignment_id_t id);
+void hw_uart_transmit(hw_assignment_id_t id, uint8_t const * buf,
+		size_t count);
+size_t hw_uart_transmit_nonblock(hw_assignment_id_t id, uint8_t const * buf,
+		size_t count);
+void hw_uart_receive(hw_assignment_id_t id, uint8_t * buf, size_t count);
+size_t hw_uart_receive_nonblock(hw_assignment_id_t id, uint8_t * buf,
+		size_t count);
+size_t hw_uart_get_receive_waiting(hw_assignment_id_t id);
+size_t hw_uart_get_transmit_space(hw_assignment_id_t id);
+
 I2C_HandleTypeDef * hw_i2c_get_handle(hw_assignment_id_t id);
 
 #endif /* HARDWARE_H_ */
