@@ -18,31 +18,8 @@ static uint8_t aa_fix16_to_uint8(int32_t a);
 static void aa_display_lights(void);
 static void aa_generate_lights(int32_t power);
 
-TIM_HandleTypeDef hw_tim_2;
-TIM_HandleTypeDef hw_tim_3;
-
-void TIM2_IRQHandler(void);
-void TIM3_IRQHandler(void);
-
-void __attribute__ ((section(".after_vectors"))) TIM2_IRQHandler(void) {
-	static bool val = false;
-
-	//HAL_TIM_IRQHandler(&hw_tim_2);
-    __HAL_TIM_CLEAR_IT(&hw_tim_2, TIM_IT_UPDATE);
-	val = !val;
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, val);
-}
-
-void __attribute__ ((section(".after_vectors"))) TIM3_IRQHandler(void) {
-	static bool val = false;
-
-	//HAL_TIM_IRQHandler(&hw_tim_3);
-    __HAL_TIM_CLEAR_IT(&hw_tim_3, TIM_IT_UPDATE);
-	val = !val;
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, val);
-}
-
-//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+//TIM_HandleTypeDef hw_tim_2;
+//TIM_HandleTypeDef hw_tim_3;
 
 int main(void) {
 	hw_assignment_id_t ld3, ld4, ld5, ld6;
@@ -66,6 +43,9 @@ int main(void) {
 	hw_pin_configure(ld5, HWPM_OUT_PP);
 	hw_pin_configure(ld6, HWPM_OUT_PP);
 
+	//led_spi = hw_spi_assign(HWR_SPI1, HWR_NONE, HWR_PB5, HWR_NONE, HWR_NONE, HWR_NONE);
+
+/*
 	hw_clock_enable(HWC_TIM2);
 
 	hw_tim_2.Instance = TIM2;
@@ -93,6 +73,7 @@ int main(void) {
 	HAL_TIM_Base_Start_IT(&hw_tim_3);
 	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 	HAL_NVIC_SetPriority(TIM3_IRQn, 1, 0);
+*/
 
 	per_init();
 
@@ -137,8 +118,8 @@ int main(void) {
 			}
 		}
 
-		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, touch_state[0]);
-		//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, touch_state[1]);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, touch_state[0]);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, touch_state[1]);
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, touch_state[2]);
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, touch_state[3]);
 

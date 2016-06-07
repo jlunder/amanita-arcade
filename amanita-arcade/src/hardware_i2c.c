@@ -76,7 +76,7 @@ void hw_i2c_deassign(hw_assignment_id_t id) {
 void hw_i2c_configure(hw_assignment_id_t id, uint8_t master_address) {
 	hw_i2c_struct_t * i2cs = (hw_i2c_struct_t *)hw_resource_get_user(id);
 
-	i2cs->i2c_handle.Init.ClockSpeed = 40000;
+	i2cs->i2c_handle.Init.ClockSpeed = 100000;
 	i2cs->i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
 	i2cs->i2c_handle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
 	i2cs->i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -91,5 +91,42 @@ void hw_i2c_configure(hw_assignment_id_t id, uint8_t master_address) {
 I2C_HandleTypeDef * hw_i2c_get_handle(hw_assignment_id_t id) {
 	hw_i2c_struct_t * i2cs = (hw_i2c_struct_t *)hw_resource_get_user(id);
 	return &i2cs->i2c_handle;
+}
+
+void I2C1_EV_IRQHandler(void);
+void I2C1_ER_IRQHandler(void);
+void I2C2_EV_IRQHandler(void);
+void I2C2_ER_IRQHandler(void);
+void I2C3_EV_IRQHandler(void);
+void I2C3_ER_IRQHandler(void);
+
+void __attribute__ ((section(".after_vectors")))
+I2C1_EV_IRQHandler(void) {
+	HAL_I2C_EV_IRQHandler(&hw_i2c_1.i2c_handle);
+}
+
+void __attribute__ ((section(".after_vectors")))
+I2C1_ER_IRQHandler(void) {
+	HAL_I2C_ER_IRQHandler(&hw_i2c_1.i2c_handle);
+}
+
+void __attribute__ ((section(".after_vectors")))
+I2C2_EV_IRQHandler(void) {
+	HAL_I2C_EV_IRQHandler(&hw_i2c_2.i2c_handle);
+}
+
+void __attribute__ ((section(".after_vectors")))
+I2C2_ER_IRQHandler(void) {
+	HAL_I2C_ER_IRQHandler(&hw_i2c_2.i2c_handle);
+}
+
+void __attribute__ ((section(".after_vectors")))
+I2C3_EV_IRQHandler(void) {
+	HAL_I2C_EV_IRQHandler(&hw_i2c_3.i2c_handle);
+}
+
+void __attribute__ ((section(".after_vectors")))
+I2C3_ER_IRQHandler(void) {
+	HAL_I2C_ER_IRQHandler(&hw_i2c_3.i2c_handle);
 }
 

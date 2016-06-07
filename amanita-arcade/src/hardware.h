@@ -490,6 +490,21 @@ typedef enum {
 } hw_i2s_rate_t;
 
 typedef enum {
+	HWI2SF_FRAME_SIZE_MASK = 0x0F,
+	HWI2SF_16B             = 0x00,
+	HWI2SF_16B_EXT_32B     = 0x01,
+	HWI2SF_24B_EXT_32B     = 0x02,
+	HWI2SF_32B             = 0x03,
+
+	HWI2SF_STANDARD_MASK   = 0xF0,
+	HWI2SF_LSB_JUSTIFIED   = 0x00,
+	HWI2SF_MSB_JUSTIFIED   = 0x10,
+	HWI2SF_PCM_SHORT       = 0x20,
+	HWI2SF_PCM_LONG        = 0x30,
+	HWI2SF_PHILIPS         = 0x40,
+} hw_i2s_format_t;
+
+typedef enum {
 	HWUARTWL_7_BITS = USART_WORDLENGTH_8B,
 	HWUARTWL_8_BITS = USART_WORDLENGTH_9B,
 } hw_uart_word_length_t;
@@ -536,8 +551,9 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 		hw_resource_id_t sd_pin, hw_resource_id_t mclk_pin,
 		hw_resource_id_t dma_stream);
 void hw_i2s_deassign(hw_assignment_id_t id);
-void hw_i2s_start_output(hw_assignment_id_t id, hw_i2s_rate_t rate,
-		void * buf, size_t buf_len, hw_i2s_fill_func_t fill_func);
+void hw_i2s_start_output(hw_assignment_id_t id, uint32_t rate,
+		hw_i2s_format_t format, void * buf, size_t buf_len,
+		hw_i2s_fill_func_t fill_func);
 void hw_i2s_stop(hw_assignment_id_t id);
 
 hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,

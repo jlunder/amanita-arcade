@@ -30,9 +30,9 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 	switch(i2s) {
 	case HWR_SPII2S2:
 		cu_verify(sclk_pin == HWR_PB10 || sclk_pin == HWR_PB13 ||
-				sclk_pin == HWR_PI1);
+				sclk_pin == HWR_PI1 || sclk_pin == HWR_NONE);
 		cu_verify(ws_pin == HWR_PB9 || ws_pin == HWR_PB12 ||
-				ws_pin == HWR_PI0);
+				ws_pin == HWR_PI0 || ws_pin == HWR_NONE);
 		cu_verify(sd_pin == HWR_PB15 || sd_pin == HWR_PC3 ||
 				sd_pin == HWR_PI3);
 		cu_verify(mclk_pin == HWR_NONE || mclk_pin == HWR_PC6);
@@ -44,12 +44,14 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 		i2ss->i2s_handle.Instance = SPI2;
 		break;
 	case HWR_SPII2S3:
-		cu_verify(sclk_pin == HWR_PB3 || sclk_pin == HWR_PC10);
-		cu_verify(ws_pin == HWR_PA4 || ws_pin == HWR_PA15);
+		cu_verify(sclk_pin == HWR_PB3 || sclk_pin == HWR_PC10 ||
+				sclk_pin == HWR_NONE);
+		cu_verify(ws_pin == HWR_PA4 || ws_pin == HWR_PA15 ||
+				ws_pin == HWR_NONE);
 		cu_verify(sd_pin == HWR_PB5 || sd_pin == HWR_PC12);
 		cu_verify(mclk_pin == HWR_NONE || mclk_pin == HWR_PC7);
 		switch(dma_stream) {
-		case HWR_DMA1_STREAM0: dma_channel = DMA_CHANNEL_0; break;
+		case HWR_DMA1_STREAM5: dma_channel = DMA_CHANNEL_0; break;
 		case HWR_DMA1_STREAM7: dma_channel = DMA_CHANNEL_0; break;
 		default: cu_error("Invalid DMA stream for I2S3"); break;
 		}
@@ -62,8 +64,14 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 	}
 
 	id = hw_resource_assign(i2s, (intptr_t)i2ss);
-	i2ss->sclk = hw_pin_assign(sclk_pin);
-	i2ss->ws = hw_pin_assign(ws_pin);
+	i2ss->mclk = HW_ASSIGNMENT_ID_NULL;
+	if(sclk_pin != HWR_NONE) {
+		i2ss->sclk = hw_pin_assign(sclk_pin);
+	}
+	i2ss->mclk = HW_ASSIGNMENT_ID_NULL;
+	if(ws_pin != HWR_NONE) {
+		i2ss->ws = hw_pin_assign(ws_pin);
+	}
 	i2ss->sd = hw_pin_assign(sd_pin);
 	i2ss->mclk = HW_ASSIGNMENT_ID_NULL;
 	if(mclk_pin != HWR_NONE) {
@@ -103,16 +111,24 @@ hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 
 	switch(i2s) {
 	case HWR_SPII2S2:
-		hw_pin_configure(i2ss->sclk, HWPM_AF_PP | HWPM_ALT_5);
-		hw_pin_configure(i2ss->ws, HWPM_AF_PP | HWPM_ALT_5);
+		if(i2ss->sclk != HW_ASSIGNMENT_ID_NULL) {
+			hw_pin_configure(i2ss->sclk, HWPM_AF_PP | HWPM_ALT_5);
+		}
+		if(i2ss->ws != HW_ASSIGNMENT_ID_NULL) {
+			hw_pin_configure(i2ss->ws, HWPM_AF_PP | HWPM_ALT_5);
+		}
 		hw_pin_configure(i2ss->sd, HWPM_AF_PP | HWPM_ALT_5);
 		if(i2ss->mclk != HW_ASSIGNMENT_ID_NULL) {
 			hw_pin_configure(i2ss->mclk, HWPM_AF_PP | HWPM_ALT_5);
 		}
 		break;
 	case HWR_SPII2S3:
-		hw_pin_configure(i2ss->sclk, HWPM_AF_PP | HWPM_ALT_6);
-		hw_pin_configure(i2ss->ws, HWPM_AF_PP | HWPM_ALT_6);
+		if(i2ss->sclk != HW_ASSIGNMENT_ID_NULL) {
+			hw_pin_configure(i2ss->sclk, HWPM_AF_PP | HWPM_ALT_6);
+		}
+		if(i2ss->ws != HW_ASSIGNMENT_ID_NULL) {
+			hw_pin_configure(i2ss->ws, HWPM_AF_PP | HWPM_ALT_6);
+		}
 		hw_pin_configure(i2ss->sd, HWPM_AF_PP | HWPM_ALT_6);
 		if(i2ss->mclk != HW_ASSIGNMENT_ID_NULL) {
 			hw_pin_configure(i2ss->mclk, HWPM_AF_PP | HWPM_ALT_6);
@@ -172,16 +188,61 @@ void hw_i2s_deassign(hw_assignment_id_t id) {
 	hw_resource_deassign(id);
 }
 
-void hw_i2s_start_output(hw_assignment_id_t id, hw_i2s_rate_t rate,
-		void * buf, size_t buf_len, hw_i2s_fill_func_t fill_func) {
+void hw_i2s_start_output(hw_assignment_id_t id, uint32_t rate,
+		hw_i2s_format_t format, void * buf, size_t buf_len,
+		hw_i2s_fill_func_t fill_func) {
 	hw_i2s_struct_t * i2ss = (hw_i2s_struct_t *)hw_resource_get_user(id);
+	uint16_t tx_size;
 
 	cu_verify(fill_func != NULL);
+	cu_verify(buf_len < 0x10000);
 
 	i2ss->i2s_handle.Init.AudioFreq = rate;
+	switch(format & HWI2SF_FRAME_SIZE_MASK) {
+	case HWI2SF_16B: i2ss->i2s_handle.Init.DataFormat =
+			I2S_DATAFORMAT_16B; break;
+	case HWI2SF_16B_EXT_32B: i2ss->i2s_handle.Init.DataFormat =
+			I2S_DATAFORMAT_16B_EXTENDED; break;
+	case HWI2SF_24B_EXT_32B: i2ss->i2s_handle.Init.DataFormat =
+			I2S_DATAFORMAT_24B; break;
+	case HWI2SF_32B: i2ss->i2s_handle.Init.DataFormat =
+			I2S_DATAFORMAT_32B; break;
+	default:
+		cu_error("invalid frame size?");
+		break;
+	}
+	switch(format & HWI2SF_STANDARD_MASK) {
+	case HWI2SF_LSB_JUSTIFIED: i2ss->i2s_handle.Init.Standard =
+			I2S_STANDARD_LSB; break;
+	case HWI2SF_MSB_JUSTIFIED: i2ss->i2s_handle.Init.Standard =
+			I2S_STANDARD_MSB; break;
+	case HWI2SF_PCM_SHORT: i2ss->i2s_handle.Init.Standard =
+			I2S_STANDARD_PCM_SHORT; break;
+	case HWI2SF_PCM_LONG: i2ss->i2s_handle.Init.Standard =
+			I2S_STANDARD_PCM_LONG; break;
+	case HWI2SF_PHILIPS: i2ss->i2s_handle.Init.Standard =
+			I2S_STANDARD_PHILIPS; break;
+	default:
+		cu_error("invalid signaling standard?");
+		break;
+	}
 	i2ss->fill_func = fill_func;
 	i2ss->buf = buf;
 	i2ss->buf_len = buf_len;
+
+	switch(format & HWI2SF_FRAME_SIZE_MASK) {
+	case HWI2SF_24B_EXT_32B:
+	case HWI2SF_32B:
+		i2ss->dma_handle->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+		i2ss->dma_handle->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+		tx_size = (uint16_t)(buf_len / sizeof (uint32_t));
+		break;
+	default:
+		i2ss->dma_handle->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+		i2ss->dma_handle->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+		tx_size = (uint16_t)(buf_len / sizeof (uint16_t));
+		break;
+	}
 
 	hw_irq_enable(
 			hw_resource_definitions[hw_resource_get_resource_id(id)].irq_id);
@@ -194,8 +255,8 @@ void hw_i2s_start_output(hw_assignment_id_t id, hw_i2s_rate_t rate,
 	fill_func(buf, buf_len / 2);
 	fill_func((uint8_t *)buf + buf_len / 2, buf_len / 2);
 
-	cu_verify(HAL_I2S_Transmit_DMA(&i2ss->i2s_handle, buf,
-			(uint16_t)buf_len / sizeof (uint16_t)) == HAL_OK);
+	cu_verify(HAL_I2S_Transmit_DMA(&i2ss->i2s_handle, buf, tx_size) ==
+			HAL_OK);
 }
 
 void hw_i2s_stop(hw_assignment_id_t id) {

@@ -25,6 +25,7 @@
 #include "stm32f4xx_hal_i2c.h"
 #include "stm32f4xx_hal_i2s.h"
 #include "stm32f4xx_hal_rcc.h"
+#include "stm32f4xx_hal_rcc_ex.h"
 #include "stm32f4xx_hal_spi.h"
 #include "stm32f4xx_hal_tim.h"
 #pragma GCC diagnostic push

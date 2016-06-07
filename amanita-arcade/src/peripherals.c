@@ -74,19 +74,34 @@
 #define MPR121_THRESH_TOUCH 0x20
 #define MPR121_THRESH_RELEASE 0x10
 
-static hw_assignment_id_t cs43l22_i2s;
-static hw_assignment_id_t cs43l22_i2c;
+static hw_assignment_id_t cs43l22_i2s = HW_ASSIGNMENT_ID_NULL;
+static hw_assignment_id_t cs43l22_i2c = HW_ASSIGNMENT_ID_NULL;
 static I2C_HandleTypeDef * cs43l22_i2c_handle = NULL;
-static hw_assignment_id_t cs43l22_reset;
+static hw_assignment_id_t cs43l22_reset = HW_ASSIGNMENT_ID_NULL;
 
 static short cs43l22_buf[128];
 
+static hw_assignment_id_t mpr121_power = HW_ASSIGNMENT_ID_NULL;
 static hw_assignment_id_t mpr121_i2c = HW_ASSIGNMENT_ID_NULL;
 static I2C_HandleTypeDef * mpr121_i2c_handle = NULL;
 
-static hw_assignment_id_t ws2801_spi;
+static hw_assignment_id_t ws2801_spi = HW_ASSIGNMENT_ID_NULL;
+
+static hw_assignment_id_t ws2811_i2s;
+static uint32_t ws2811_buf[512];
 
 void per_init(void) {
+	HAL_NVIC_SetPriority(I2C3_EV_IRQn, 4, 0);
+	HAL_NVIC_SetPriority(I2C3_ER_IRQn, 4, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 10, 0);
+	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 10, 0);
+
 	cs43l22_init();
 	mpr121_init();
 	ws2811_init();
@@ -133,8 +148,9 @@ void cs43l22_init(void) {
 }
 
 void cs43l22_start(hw_i2s_fill_func_t fill_func) {
-	hw_i2s_start_output(cs43l22_i2s, HWI2SR_8KHZ, cs43l22_buf,
-			sizeof cs43l22_buf, fill_func);
+	hw_i2s_start_output(cs43l22_i2s, HWI2SR_8KHZ,
+			HWI2SF_16B | HWI2SF_LSB_JUSTIFIED, cs43l22_buf, sizeof cs43l22_buf,
+			fill_func);
 }
 
 void cs43l22_stop(void) {
@@ -154,8 +170,15 @@ uint8_t cs43l22_read_register(uint8_t address) {
 }
 
 void mpr121_init(void) {
+	mpr121_power = hw_pin_assign(HWR_PC0);
+	hw_pin_configure(mpr121_power, HWPM_OUT_PP);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, 0);
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, 1);
+	HAL_Delay(50);
 	mpr121_i2c = hw_i2c_assign(HWR_I2C3, HWR_PA8, HWR_PC9);
 	hw_i2c_configure(mpr121_i2c, 0x33);
+	hw_irq_enable(HWI_I2C3);
 	mpr121_i2c_handle = hw_i2c_get_handle(mpr121_i2c);
 }
 
@@ -171,9 +194,37 @@ void mpr121_write_registers(uint8_t address, void const * value,
 			== HAL_OK);
 }
 
+static HAL_StatusTypeDef mpr121_read_status = HAL_ERROR;
+
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if(hi2c == mpr121_i2c_handle) {
+		mpr121_read_status = HAL_OK;
+		__sync_synchronize();
+	}
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if(hi2c == mpr121_i2c_handle) {
+		mpr121_read_status = HAL_OK;
+		__sync_synchronize();
+	}
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
+	if(hi2c == mpr121_i2c_handle) {
+		mpr121_read_status = HAL_ERROR;
+		__sync_synchronize();
+	}
+}
+
 void mpr121_read_registers(uint8_t address, void * value, size_t size) {
-	cu_verify(HAL_I2C_Mem_Read(mpr121_i2c_handle, MPR121_ADDRESS, address,
-			I2C_MEMADD_SIZE_8BIT, value, (uint16_t)size, 50) == HAL_OK);
+	mpr121_read_status = HAL_BUSY;
+
+	cu_verify(HAL_I2C_Mem_Read_IT(mpr121_i2c_handle, MPR121_ADDRESS, address,
+			I2C_MEMADD_SIZE_8BIT, value, (uint16_t)size) == HAL_OK);
+	while(mpr121_read_status == HAL_BUSY) {
+		__sync_synchronize();
+	}
 }
 
 void mpr121_auto_configure(void) {
@@ -230,14 +281,6 @@ void mpr121_get_analog_values(uint8_t start, uint16_t * values,
 			count * sizeof (values[0]));
 }
 
-void ws2811_init(void) {
-}
-
-void ws2811_output(void * buf, size_t buf_len) {
-	(void)buf;
-	(void)buf_len;
-}
-
 void ws2801_init(void) {
 	ws2801_spi = hw_spi_assign(HWR_SPI1, HWR_PA5, HWR_NONE, HWR_PA7,
 			HWR_NONE, HWR_NONE);
@@ -247,5 +290,50 @@ void ws2801_init(void) {
 void ws2801_output(void * buf, size_t buf_len) {
 	hw_spi_transmit(ws2801_spi, buf, buf_len);
 	HAL_Delay(2);
+}
+
+static void ws2811_fill(void * buf, size_t buf_len) {
+	// 0x    9    2    4    9
+	// 0b 1001 0010 0100 1001
+	// 0x    2    4    9    2
+	// 0b 0010 0100 1001 0010
+	// 0x    4    9    2    4
+	// 0b 0100 1001 0010 0100
+	static union {
+		uint16_t const patternU16[6];
+		uint32_t const pattern[3];
+	} u = {.patternU16 = {0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC}};//{0x9249, 0x2492, 0x4924, 0x9249, 0x2492, 0x4924}};
+	uint32_t * buf_words = (uint32_t *)buf;
+	static size_t i = 0;
+
+	//cu_verify(buf_len % (3 * sizeof (uint32_t)) == 0);
+
+	for(size_t j = 0; j < (buf_len / sizeof *buf_words); ++j) {
+		buf_words[j] = u.pattern[i++];
+		if(i >= 3) {
+			i = 0;
+		}
+	}
+}
+
+void ws2811_init(void) {
+	ws2811_i2s = hw_i2s_assign(HWR_SPII2S2, HWR_PB13, HWR_PB12, HWR_PB15,
+			HWR_NONE, HWR_DMA1_STREAM4);
+	hw_i2s_start_output(ws2811_i2s, 400000 * 3 / 32,
+			HWI2SF_16B | HWI2SF_LSB_JUSTIFIED, ws2811_buf, sizeof ws2811_buf,
+			ws2811_fill);
+}
+
+void ws2811_output(void * buf, size_t buf_len) {
+	(void)buf;
+	(void)buf_len;
+	/*
+	ws2811_running = false;
+	__sync_synchronize();
+
+	__sync_synchronize();
+	ws2811_running = true;
+	__sync_synchronize();
+	*/
 }
 
