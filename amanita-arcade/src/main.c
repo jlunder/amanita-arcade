@@ -101,6 +101,21 @@ int main(void) {
 		}
 		last_tick = cur_tick;
 
+		if(!ws2811_get_outputting()) {
+			static uint8_t buf[] = {
+					0xFF, 0x00, 0x00,
+					0x00, 0xFF, 0x00,
+					0x00, 0x00, 0xFF,
+					0xFF, 0x40, 0x00,
+					0xFF, 0x40, 0x00,
+					0x0F, 0x0F, 0x0F,
+					0x0F, 0x00, 0x00,
+					0x00, 0x0F, 0x00,
+					0x00, 0x00, 0x0F,
+			};
+			ws2811_output_nb(buf, sizeof buf);
+		}
+
 		//mpr121_get_analog_baselines(0, touch_analog, 4);
 		//cu_log("%d %d %d %d\n", touch_analog[0], touch_analog[1], touch_analog[2], touch_analog[3]);
 		//aa_display_lights();

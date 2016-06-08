@@ -240,21 +240,25 @@ HAL_StatusTypeDef HAL_I2S_Init(I2S_HandleTypeDef *hi2s)
     if(hi2s->Init.MCLKOutput == I2S_MCLKOUTPUT_ENABLE)
     {
       /* MCLK output is enabled */
-      uint32_t denom = 128 * hi2s->Init.AudioFreq;
-      tmp = (i2sclk + denom / 2) / denom;
+      tmp = (uint32_t)(((((i2sclk / 256) * 10) / hi2s->Init.AudioFreq)) + 5);
     }
     else
     {
       /* MCLK output is disabled */
-      uint32_t denom = 16 * packetlength * hi2s->Init.AudioFreq;
-      tmp = (i2sclk + denom / 2) / denom;
+      tmp = (uint32_t)(((((i2sclk / (32 * packetlength)) *10 ) / hi2s->Init.AudioFreq)) + 5);
     }
 
+    /* Remove the flatting point */
+    tmp = tmp / 10;  
+
+    /* Check the parity of the divider */
+    i2sodd = (uint32_t)(tmp & (uint32_t)1);
+
     /* Compute the i2sdiv prescaler */
-    i2sdiv = (uint32_t)(tmp >> 1);
+    i2sdiv = (uint32_t)((tmp - i2sodd) / 2);
 
     /* Get the Mask for the Odd bit (SPI_I2SPR[8]) register */
-    i2sodd = (uint32_t)((tmp & 1) << 8);
+    i2sodd = (uint32_t) (i2sodd << 8);
   }
 
   /* Test if the divider is 1 or 0 or greater than 0xFF */

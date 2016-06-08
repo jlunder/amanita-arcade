@@ -74,6 +74,12 @@
 #define MPR121_THRESH_TOUCH 0x20
 #define MPR121_THRESH_RELEASE 0x10
 
+#define WS2811_BIT_RATE 800000L
+#define WS2811_CLOCKS_PER_BIT 4
+#define WS2811_RESET_US 50
+#define WS2811_RESET_CLOCKS ((WS2811_BIT_RATE * WS2811_CLOCKS_PER_BIT * \
+		WS2811_RESET_US + 999999L) / 1000000L)
+
 static hw_assignment_id_t cs43l22_i2s = HW_ASSIGNMENT_ID_NULL;
 static hw_assignment_id_t cs43l22_i2c = HW_ASSIGNMENT_ID_NULL;
 static I2C_HandleTypeDef * cs43l22_i2c_handle = NULL;
@@ -89,6 +95,12 @@ static hw_assignment_id_t ws2801_spi = HW_ASSIGNMENT_ID_NULL;
 
 static hw_assignment_id_t ws2811_i2s;
 static uint32_t ws2811_buf[512];
+static uint8_t const * ws2811_data_buf = NULL;
+static size_t ws2811_data_buf_len = 0;
+static size_t ws2811_data_buf_sent = 0;
+static int32_t ws2811_reset_counter = 0;
+
+static void ws2811_fill(void * buf, size_t buf_len);
 
 void per_init(void) {
 	HAL_NVIC_SetPriority(I2C3_EV_IRQn, 4, 0);
@@ -287,53 +299,89 @@ void ws2801_init(void) {
 			//HWR_DMA2_STREAM3, HWR_NONE);
 }
 
-void ws2801_output(void * buf, size_t buf_len) {
+void ws2801_output(void const * buf, size_t buf_len) {
 	hw_spi_transmit(ws2801_spi, buf, buf_len);
 	HAL_Delay(2);
 }
 
-static void ws2811_fill(void * buf, size_t buf_len) {
-	// 0x    9    2    4    9
-	// 0b 1001 0010 0100 1001
-	// 0x    2    4    9    2
-	// 0b 0010 0100 1001 0010
-	// 0x    4    9    2    4
-	// 0b 0100 1001 0010 0100
-	static union {
-		uint16_t const patternU16[6];
-		uint32_t const pattern[3];
-	} u = {.patternU16 = {0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC}};//{0x9249, 0x2492, 0x4924, 0x9249, 0x2492, 0x4924}};
-	uint32_t * buf_words = (uint32_t *)buf;
-	static size_t i = 0;
-
-	//cu_verify(buf_len % (3 * sizeof (uint32_t)) == 0);
-
-	for(size_t j = 0; j < (buf_len / sizeof *buf_words); ++j) {
-		buf_words[j] = u.pattern[i++];
-		if(i >= 3) {
-			i = 0;
-		}
-	}
-}
-
 void ws2811_init(void) {
+	ws2811_data_buf = NULL;
+	ws2811_reset_counter = 0;
+	__sync_synchronize();
+
 	ws2811_i2s = hw_i2s_assign(HWR_SPII2S2, HWR_PB13, HWR_PB12, HWR_PB15,
 			HWR_NONE, HWR_DMA1_STREAM4);
-	hw_i2s_start_output(ws2811_i2s, 400000 * 3 / 32,
+	hw_i2s_start_output(ws2811_i2s,
+			WS2811_BIT_RATE * WS2811_CLOCKS_PER_BIT / 32,
 			HWI2SF_16B | HWI2SF_LSB_JUSTIFIED, ws2811_buf, sizeof ws2811_buf,
 			ws2811_fill);
 }
 
-void ws2811_output(void * buf, size_t buf_len) {
-	(void)buf;
-	(void)buf_len;
-	/*
-	ws2811_running = false;
+void ws2811_output_nb(void const * buf, size_t buf_len) {
+	__disable_irq();
+	ws2811_data_buf = NULL;
+	if(ws2811_reset_counter < WS2811_RESET_CLOCKS) {
+		ws2811_reset_counter -= WS2811_RESET_CLOCKS;
+	}
+	__sync_synchronize();
+	__enable_irq();
+
+	ws2811_data_buf_len = buf_len;
+	ws2811_data_buf_sent = 0;
 	__sync_synchronize();
 
+	ws2811_data_buf = (uint8_t const *)buf;
 	__sync_synchronize();
-	ws2811_running = true;
-	__sync_synchronize();
-	*/
 }
 
+bool ws2811_get_outputting(void) {
+	__sync_synchronize();
+	return ws2811_data_buf != NULL;
+}
+
+void ws2811_fill(void * buf, size_t buf_len) {
+	uint32_t * buf32 = (uint32_t *)buf;
+	size_t i = 0;
+	uint8_t const * data = ws2811_data_buf;
+	size_t data_len = ws2811_data_buf_len;
+	size_t data_sent = ws2811_data_buf_sent;
+	int32_t reset_counter = ws2811_reset_counter;
+
+	cu_verify(buf_len % 4 == 0);
+
+	while(i < buf_len) {
+		if((reset_counter < 0) || (data == NULL)) {
+			*(buf32++) = 0;
+			reset_counter += 32;
+			if(reset_counter > WS2811_RESET_CLOCKS) {
+				reset_counter = WS2811_RESET_CLOCKS;
+			}
+			i += 4;
+		} else if(data_sent < data_len) {
+			uint8_t d = data[data_sent];
+			uint32_t accum = 0x88888888;
+
+			if(d & 0x01) accum |= 0x00006000;
+			if(d & 0x02) accum |= 0x00000600;
+			if(d & 0x04) accum |= 0x00000060;
+			if(d & 0x08) accum |= 0x00000006;
+			if(d & 0x10) accum |= 0x60000000;
+			if(d & 0x20) accum |= 0x06000000;
+			if(d & 0x40) accum |= 0x00600000;
+			if(d & 0x80) accum |= 0x00060000;
+			*(buf32++) = accum;
+			++data_sent;
+			i += 4;
+
+			if(data_sent >= data_len) {
+				data = NULL;
+				ws2811_data_buf = NULL;
+			}
+
+			reset_counter = 0;
+		}
+	}
+
+	ws2811_reset_counter = reset_counter;
+	ws2811_data_buf_sent = data_sent;
+}

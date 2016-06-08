@@ -561,7 +561,8 @@ hw_assignment_id_t hw_spi_assign(hw_resource_id_t spi,
 		hw_resource_id_t mosi_pin, hw_resource_id_t tx_dma,
 		hw_resource_id_t rx_dma);
 void hw_spi_deassign(hw_assignment_id_t id);
-void hw_spi_transmit(hw_assignment_id_t id, void * buf, size_t buf_len);
+void hw_spi_transmit(hw_assignment_id_t id, void const * buf,
+		size_t buf_len);
 
 hw_assignment_id_t hw_i2c_assign(hw_resource_id_t i2c,
 		hw_resource_id_t scl_pin, hw_resource_id_t sda_pin);

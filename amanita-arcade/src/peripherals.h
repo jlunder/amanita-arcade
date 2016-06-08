@@ -29,11 +29,12 @@ uint16_t mpr121_get_touch_states(void);
 void mpr121_get_analog_baselines(uint8_t start, uint16_t * baselines, size_t count);
 void mpr121_get_analog_values(uint8_t start, uint16_t * values, size_t count);
 
-void ws2811_init(void);
-void ws2811_output(void * buf, size_t buf_len);
-
 void ws2801_init(void);
-void ws2801_output(void * buf, size_t buf_len);
+void ws2801_output(void const * buf, size_t buf_len);
+
+void ws2811_init(void);
+void ws2811_output_nb(void const * buf, size_t buf_len);
+bool ws2811_get_outputting(void);
 
 
 #endif /* PERIPHERALS_H_ */

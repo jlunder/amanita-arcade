@@ -173,8 +173,8 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1856471086.216690545" name="stm32f4xx_hal_usart.c" rcbsApplicability="disable" resourcePath="system/src/stm32f4-hal/stm32f4xx_hal_usart.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.297796053">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.297796053" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233"/>
+					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1856471086.211092463" name="stm32f4xx_hal_i2s_ex.c" rcbsApplicability="disable" resourcePath="system/src/stm32f4-hal/stm32f4xx_hal_i2s_ex.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.1084722247">
+						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.1084722247" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233"/>
 					</fileInfo>
 					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1856471086.system/src/newlib/_startup.c" name="_startup.c" rcbsApplicability="disable" resourcePath="system/src/newlib/_startup.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.12824775">
 						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233.12824775" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1969911233">
@@ -420,8 +420,8 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.962744331.2062637626" name="stm32f4xx_hal_usart.c" rcbsApplicability="disable" resourcePath="system/src/stm32f4-hal/stm32f4xx_hal_usart.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1118071164">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1118071164" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137"/>
+					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.962744331.1481208816" name="stm32f4xx_hal_i2s_ex.c" rcbsApplicability="disable" resourcePath="system/src/stm32f4-hal/stm32f4xx_hal_i2s_ex.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1955039465">
+						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1955039465" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137"/>
 					</fileInfo>
 					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.962744331.system/src/newlib/_startup.c" name="_startup.c" rcbsApplicability="disable" resourcePath="system/src/newlib/_startup.c" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1745332711">
 						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137.1745332711" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.806518137">

@@ -259,7 +259,8 @@ void hw_spi_deassign(hw_assignment_id_t id) {
 	hw_resource_deassign(id);
 }
 
-void hw_spi_transmit(hw_assignment_id_t id, void * buf, size_t buf_len) {
+void hw_spi_transmit(hw_assignment_id_t id, void const * buf,
+		size_t buf_len) {
 	hw_spi_struct_t * spis = (hw_spi_struct_t *)hw_resource_get_user(id);
 
 	/*
@@ -271,7 +272,7 @@ void hw_spi_transmit(hw_assignment_id_t id, void * buf, size_t buf_len) {
 				(uint16_t)buf_len) == HAL_OK);
 	}
 	*/
-	cu_verify(HAL_SPI_Transmit(&spis->spi_handle, buf,
+	cu_verify(HAL_SPI_Transmit(&spis->spi_handle, (uint8_t *)buf,
 			(uint16_t)buf_len, 100) == HAL_OK);
 }
 
