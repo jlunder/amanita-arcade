@@ -361,14 +361,14 @@ void ws2811_fill(void * buf, size_t buf_len) {
 			uint8_t d = data[data_sent];
 			uint32_t accum = 0x88888888;
 
-			if(d & 0x01) accum |= 0x00006000;
-			if(d & 0x02) accum |= 0x00000600;
-			if(d & 0x04) accum |= 0x00000060;
-			if(d & 0x08) accum |= 0x00000006;
-			if(d & 0x10) accum |= 0x60000000;
-			if(d & 0x20) accum |= 0x06000000;
-			if(d & 0x40) accum |= 0x00600000;
-			if(d & 0x80) accum |= 0x00060000;
+			if(d & 0x80) accum |= 0x00006000;
+			if(d & 0x40) accum |= 0x00000600;
+			if(d & 0x20) accum |= 0x00000060;
+			if(d & 0x10) accum |= 0x00000006;
+			if(d & 0x08) accum |= 0x60000000;
+			if(d & 0x04) accum |= 0x06000000;
+			if(d & 0x02) accum |= 0x00600000;
+			if(d & 0x01) accum |= 0x00060000;
 			*(buf32++) = accum;
 			++data_sent;
 			i += 4;
