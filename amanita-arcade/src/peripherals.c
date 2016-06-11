@@ -240,8 +240,7 @@ void mpr121_read_registers(uint8_t address, void * value, size_t size) {
 }
 
 void mpr121_auto_configure(void) {
-	//mpr121_write_register(MPR121_MAP_EC, 0x00);
-	mpr121_write_register(MPR121_MAP_EC, 0x04); // Enable 4 sensors
+	mpr121_write_register(MPR121_MAP_EC, 0x00);
 	mpr121_write_register(MPR121_MAP_MHDR, 0x01);
 	mpr121_write_register(MPR121_MAP_NHDR, 0x01);
 	mpr121_write_register(MPR121_MAP_NCLR, 0x00);
@@ -256,6 +255,8 @@ void mpr121_auto_configure(void) {
 		mpr121_write_register((uint8_t)(MPR121_MAP_EXRTH + i * 2),
 				MPR121_THRESH_RELEASE);
 	}
+
+	mpr121_write_register(MPR121_MAP_EC, 0x08); // Enable 8 sensors
 	mpr121_write_register(MPR121_MAP_AFEC2, 0x20);
 	mpr121_write_register(MPR121_MAP_ACUSL, 0xC9);  // USL = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V
 	mpr121_write_register(MPR121_MAP_ACLSL, 0x82);  // LSL = 0.65*USL = 0x82 @3.3V
