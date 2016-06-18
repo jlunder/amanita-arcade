@@ -11,6 +11,10 @@
 
 #include "hardware.h"
 
+typedef struct {
+	uint8_t b, r, g;
+} ws2811_color_t;
+
 void per_init(void);
 
 void cs43l22_init(void);

@@ -11,4 +11,6 @@
 void aa_sound_init(void);
 void aa_sound_update(void);
 
+void aa_sound_quiet(void);
+
 #endif /* AA_SOUND_H_ */

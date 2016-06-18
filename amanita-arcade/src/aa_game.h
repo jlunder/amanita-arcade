@@ -4,16 +4,17 @@
 
 #include "amanita_arcade.h"
 
+#define AA_GAME_TUNE_COUNT 0
 
 typedef enum {
-	AAGM_ATTRACT,
+	AAGM_INVALID,
 	AAGM_DEBUG,
+	AAGM_ATTRACT,
 	AAGM_SIMON,
 	AAGM_HARMONIZE,
 	AAGM_PLAY_ALONG,
 	AAGM_FREE_PLAY,
 } aa_game_mode_t;
-
 
 typedef struct {
 	size_t length;
@@ -30,9 +31,8 @@ typedef struct {
 	bool buttons_held[8];
 } aa_game_input_t;
 
-
-extern aa_game_tune_t const * aa_game_tunes;
-
+extern aa_color_t const aa_game_orange_pink_pal[256];
+extern aa_game_tune_t const * aa_game_tunes[AA_GAME_TUNE_COUNT];
 
 void aa_game_init(void);
 void aa_game_loop(void);

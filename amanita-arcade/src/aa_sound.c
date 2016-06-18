@@ -35,6 +35,9 @@ void aa_sound_update(void) {
 	(void)power;
 }
 
+void aa_sound_quiet(void) {
+
+}
 
 void aa_fill_i2s(void * buf, size_t buf_len) {
 	uint16_t * sample_buf = (uint16_t *)buf;

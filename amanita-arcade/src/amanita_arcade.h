@@ -36,18 +36,32 @@
 
 #include "core_util.h"
 
+#define AA_FIX12_ONE 4096
+#define AA_FIX16_ONE 65536
+#define AA_COLOR_ONE 4096
 
-typedef struct {
-	uint8_t b, r, g;
+typedef union {
+	struct {
+		int32_t r, g, b, a;
+	};
+	// No NEON on Cortex-M4 so don't bother with a SIMD union
 } aa_color_t;
 
-typedef struct {
-	int32_t r, g, b;
-} aa_pal_color_t;
+typedef int32_t aa_time_t;
 
+static inline aa_color_t aa_color_make(int32_t r, int32_t g, int32_t b,
+		int32_t a) {
+	aa_color_t c = {{.r = r, .g = g, .b = b, .a = a}};
+	return c;
+}
 
-extern uint8_t const aa_cie_table[4096];
-extern aa_pal_color_t const aa_orange_pink_pal[256];
+static inline aa_time_t aa_time_from_ms(int32_t ms) {
+	return ms;
+}
 
+static inline aa_time_t aa_time_diff(aa_time_t period_start,
+		aa_time_t period_end) {
+	return period_end - period_start;
+}
 
 #endif /* AMANITA_ARCADE_H_ */
