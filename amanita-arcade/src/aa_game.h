@@ -35,7 +35,7 @@ extern aa_color_t const aa_game_orange_pink_pal[256];
 extern aa_game_tune_t const * aa_game_tunes[AA_GAME_TUNE_COUNT];
 
 void aa_game_init(void);
-void aa_game_loop(void);
+void aa_game_loop(aa_time_t delta_time);
 void aa_game_reset_timeout(void);
 void aa_game_change_mode(aa_game_mode_t mode);
 

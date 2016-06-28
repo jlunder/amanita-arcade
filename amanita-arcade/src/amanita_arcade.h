@@ -36,9 +36,15 @@
 
 #include "core_util.h"
 
+#ifdef DEBUG
+#define AA_TEST_HARDWARE
+#else
+#define AA_PRODUCTION_HARDWARE
+#endif
+
 #define AA_FIX12_ONE 4096
 #define AA_FIX16_ONE 65536
-#define AA_COLOR_ONE 4096
+#define AA_COLOR_ONE AA_FIX16_ONE
 
 typedef union {
 	struct {
@@ -55,6 +61,30 @@ static inline aa_color_t aa_color_make(int32_t r, int32_t g, int32_t b,
 	return c;
 }
 
+static inline aa_color_t aa_color_lerp(aa_color_t a, aa_color_t b,
+		int32_t alpha) {
+	int64_t a0 = alpha;
+	int64_t a1 = 65536 - a0;
+
+	return aa_color_make(
+			(int32_t)((a.r * a1 + b.r * a0) >> 16),
+			(int32_t)((a.b * a1 + b.g * a0) >> 16),
+			(int32_t)((a.g * a1 + b.b * a0) >> 16),
+			(int32_t)((a.a * a1 + b.a * a0) >> 16));
+}
+
+static inline aa_color_t aa_color_mix_pma(aa_color_t a, aa_color_t b) {
+	// pma means pre-multiplied alpha
+
+	int64_t a0 = 65536 - b.a;
+
+	return aa_color_make(
+			(int32_t)((a.r * a0 + 32768) >> 16) + b.r,
+			(int32_t)((a.b * a0 + 32768) >> 16) + b.g,
+			(int32_t)((a.g * a0 + 32768) >> 16) + b.b,
+			(int32_t)((a.a * a0 + 32768) >> 16) + b.a);
+}
+
 static inline aa_time_t aa_time_from_ms(int32_t ms) {
 	return ms;
 }
@@ -63,5 +93,8 @@ static inline aa_time_t aa_time_diff(aa_time_t period_start,
 		aa_time_t period_end) {
 	return period_end - period_start;
 }
+
+void aa_init(void);
+void aa_loop(void);
 
 #endif /* AMANITA_ARCADE_H_ */

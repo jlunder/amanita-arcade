@@ -7,8 +7,8 @@
 
 #include "aa_sound.h"
 
+#include "aa_peripherals.h"
 #include "hardware.h"
-#include "peripherals.h"
 
 static size_t last_audio_pos, cur_audio_pos;
 

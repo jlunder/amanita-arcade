@@ -6,7 +6,7 @@
  */
 
 
-#include "peripherals.h"
+#include "aa_peripherals.h"
 
 #define CS43L22_ADDRESS (0x4A << 1)
 
@@ -102,7 +102,7 @@ static int32_t ws2811_reset_counter = 0;
 
 static void ws2811_fill(void * buf, size_t buf_len);
 
-void per_init(void) {
+void aa_peripherals_init(void) {
 	HAL_NVIC_SetPriority(I2C3_EV_IRQn, 4, 0);
 	HAL_NVIC_SetPriority(I2C3_ER_IRQn, 4, 0);
 	HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 10, 0);
@@ -183,10 +183,11 @@ uint8_t cs43l22_read_register(uint8_t address) {
 
 void mpr121_init(void) {
 	mpr121_power = hw_pin_assign(HWR_PC0);
-	hw_pin_configure(mpr121_power, HWPM_OUT_PP);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, 0);
-	HAL_Delay(2);
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, 1);
+	hw_pin_configure(mpr121_power, HWPM_OUT_PP);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, 1);
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, 0);
 	HAL_Delay(50);
 	mpr121_i2c = hw_i2c_assign(HWR_I2C3, HWR_PA8, HWR_PC9);
 	hw_i2c_configure(mpr121_i2c, 0x33);
@@ -195,15 +196,18 @@ void mpr121_init(void) {
 }
 
 void mpr121_write_register(uint8_t address, uint8_t value) {
-	cu_verify(HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
-			I2C_MEMADD_SIZE_8BIT, &value, 1, 50) == HAL_OK);
+	HAL_StatusTypeDef res = HAL_TIMEOUT;
+	res = HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
+			I2C_MEMADD_SIZE_8BIT, &value, 1, 50);
+	cu_verify(res == HAL_OK);
 }
 
 void mpr121_write_registers(uint8_t address, void const * value,
 		size_t size) {
-	cu_verify(HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
-			I2C_MEMADD_SIZE_8BIT, (void *)value, (uint16_t)size, 50)
-			== HAL_OK);
+	HAL_StatusTypeDef res = HAL_TIMEOUT;
+	res = HAL_I2C_Mem_Write(mpr121_i2c_handle, MPR121_ADDRESS, address,
+			I2C_MEMADD_SIZE_8BIT, (void *)value, (uint16_t)size, 50);
+	cu_verify(res == HAL_OK);
 }
 
 static HAL_StatusTypeDef mpr121_read_status = HAL_ERROR;
@@ -232,14 +236,18 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
 void mpr121_read_registers(uint8_t address, void * value, size_t size) {
 	mpr121_read_status = HAL_BUSY;
 
-	cu_verify(HAL_I2C_Mem_Read_IT(mpr121_i2c_handle, MPR121_ADDRESS, address,
-			I2C_MEMADD_SIZE_8BIT, value, (uint16_t)size) == HAL_OK);
+	HAL_StatusTypeDef res = HAL_TIMEOUT;
+	for(size_t i = 0; i < 3 && res != HAL_OK; ++i) {
+		res = HAL_I2C_Mem_Read_IT(mpr121_i2c_handle, MPR121_ADDRESS, address,
+				I2C_MEMADD_SIZE_8BIT, value, (uint16_t)size);
+	}
+	cu_verify(res == HAL_OK);
 	while(mpr121_read_status == HAL_BUSY) {
 		__sync_synchronize();
 	}
 }
 
-void mpr121_auto_configure(void) {
+void mpr121_auto_configure(size_t num_sensors) {
 	mpr121_write_register(MPR121_MAP_EC, 0x00);
 	mpr121_write_register(MPR121_MAP_MHDR, 0x01);
 	mpr121_write_register(MPR121_MAP_NHDR, 0x01);
@@ -256,7 +264,7 @@ void mpr121_auto_configure(void) {
 				MPR121_THRESH_RELEASE);
 	}
 
-	mpr121_write_register(MPR121_MAP_EC, 0x08); // Enable 8 sensors
+	mpr121_write_register(MPR121_MAP_EC, (uint8_t)num_sensors);
 	mpr121_write_register(MPR121_MAP_AFEC2, 0x20);
 	mpr121_write_register(MPR121_MAP_ACUSL, 0xC9);  // USL = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V
 	mpr121_write_register(MPR121_MAP_ACLSL, 0x82);  // LSL = 0.65*USL = 0x82 @3.3V

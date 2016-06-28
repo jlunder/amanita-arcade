@@ -31,11 +31,18 @@ void aa_game_init(void) {
 	aa_game_mode_requested = AAGM_ATTRACT;
 }
 
-void aa_game_loop(void) {
+void aa_game_loop(aa_time_t delta_time) {
+	(void)delta_time;
 	switch(aa_game_mode) {
 	case AAGM_DEBUG:
 		break;
 	case AAGM_ATTRACT:
+		aa_sound_quiet();
+		for(aa_lights_mushroom_t i = AALM_A; i <= AALM_D; ++i) {
+			aa_lights_solid(i, AALL_BG, aa_time_from_ms(0),
+					&aa_game_bg_error);
+			aa_lights_clear(i, AALL_FG, aa_time_from_ms(0));
+		}
 		break;
 	case AAGM_SIMON:
 		break;
@@ -48,8 +55,9 @@ void aa_game_loop(void) {
 	default:
 		aa_sound_quiet();
 		for(aa_lights_mushroom_t i = AALM_A; i <= AALM_D; ++i) {
-			aa_lights_bg_static(i, aa_time_from_ms(0), &aa_game_bg_error);
-			aa_lights_fg_clear(i, aa_time_from_ms(0));
+			aa_lights_solid(i, AALL_BG, aa_time_from_ms(0),
+					&aa_game_bg_error);
+			aa_lights_clear(i, AALL_FG, aa_time_from_ms(0));
 		}
 		break;
 	}

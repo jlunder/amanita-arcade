@@ -7,8 +7,8 @@
 
 #include "aa_input.h"
 
+#include "aa_peripherals.h"
 #include "hardware.h"
-#include "peripherals.h"
 
 #define AA_INPUT_THRESHOLD_PRESS 160
 #define AA_INPUT_THRESHOLD_RELEASE 180
@@ -20,7 +20,7 @@ static hw_assignment_id_t aa_input_debug_leds[4];
 
 
 void aa_input_init(void) {
-	mpr121_auto_configure();
+	mpr121_auto_configure(4);
 
 	memset(aa_input_buttons, 0, sizeof aa_input_buttons);
 	memset(aa_input_buttons_last, 0, sizeof aa_input_buttons_last);
@@ -36,17 +36,32 @@ void aa_input_init(void) {
 }
 
 void aa_input_read_buttons(void) {
+#ifdef AA_TEST_HARDWARE
+	uint16_t touch_analog[AAIB_COUNT / 2];
+	mpr121_get_analog_values(0, touch_analog, AAIB_COUNT / 2);
+#else
 	uint16_t touch_analog[AAIB_COUNT];
 	mpr121_get_analog_values(0, touch_analog, AAIB_COUNT);
+#endif
 	memcpy(aa_input_buttons_last, aa_input_buttons,
 			sizeof aa_input_buttons_last);
 	for(size_t i = 0; i < AAIB_COUNT; ++i) {
 		if(!aa_input_buttons_last[i]) {
+#ifdef AA_TEST_HARDWARE
+			aa_input_buttons[i] = touch_analog[i / 2] <
+					AA_INPUT_THRESHOLD_PRESS;
+#else
 			aa_input_buttons[i] = touch_analog[i] <
 					AA_INPUT_THRESHOLD_PRESS;
+#endif
 		} else {
+#ifdef AA_TEST_HARDWARE
+			aa_input_buttons[i] = touch_analog[i / 2] <
+					AA_INPUT_THRESHOLD_RELEASE;
+#else
 			aa_input_buttons[i] = touch_analog[i] <
 					AA_INPUT_THRESHOLD_RELEASE;
+#endif
 		}
 	}
 

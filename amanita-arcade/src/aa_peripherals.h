@@ -5,8 +5,8 @@
  *      Author: jlunder
  */
 
-#ifndef PERIPHERALS_H_
-#define PERIPHERALS_H_
+#ifndef AA_PERIPHERALS_H_
+#define AA_PERIPHERALS_H_
 
 
 #include "hardware.h"
@@ -15,7 +15,7 @@ typedef struct {
 	uint8_t b, r, g;
 } ws2811_color_t;
 
-void per_init(void);
+void aa_peripherals_init(void);
 
 void cs43l22_init(void);
 void cs43l22_write_register(uint8_t address, uint8_t value);
@@ -27,7 +27,7 @@ void mpr121_init(void);
 void mpr121_write_register(uint8_t address, uint8_t value);
 void mpr121_write_registers(uint8_t address, void const * value, size_t size);
 void mpr121_read_registers(uint8_t address, void * value, size_t size);
-void mpr121_auto_configure(void);
+void mpr121_auto_configure(size_t num_sensors);
 void mpr121_set_thresholds(uint8_t start, uint8_t * thresholds, size_t count);
 uint16_t mpr121_get_touch_states(void);
 void mpr121_get_analog_baselines(uint8_t start, uint16_t * baselines, size_t count);
@@ -41,4 +41,4 @@ void ws2811_output_nb(void const * buf, size_t buf_len);
 bool ws2811_get_outputting(void);
 
 
-#endif /* PERIPHERALS_H_ */
+#endif /* AA_PERIPHERALS_H_ */

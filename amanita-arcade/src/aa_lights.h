@@ -10,10 +10,13 @@
 
 #include "amanita_arcade.h"
 
-#define AA_LIGHTS_STALK_HEIGHT 50
+#define AA_LIGHTS_STALK_HEIGHT 8
 #define AA_LIGHTS_STALK_CIRC 3
+
 #define AA_LIGHTS_MYCELIUM_BREADTH 3
 #define AA_LIGHTS_MYCELIUM_DEPTH 1
+
+#define AA_LIGHTS_CYCLE_STEPS_MAX 16
 
 // brightnesses -- cap, mycelium -- are FIX12
 
@@ -22,7 +25,14 @@ typedef enum {
 	AALM_B,
 	AALM_C,
 	AALM_D,
+	AALM_COUNT
 } aa_lights_mushroom_t;
+
+typedef enum {
+	AALL_BG,
+	AALL_FG,
+	AALL_COUNT
+} aa_lights_layer_t;
 
 typedef struct {
 	int32_t mycelium;
@@ -38,13 +48,13 @@ typedef struct {
 
 typedef struct {
 	aa_time_t transition;
-	aa_lights_pattern_t pattern;
+	aa_lights_pattern_t const * pattern;
 } aa_lights_cycle_step_t;
 
 typedef struct {
 	size_t step_count;
 	size_t loop_step;
-	aa_lights_cycle_step_t const * steps;
+	aa_lights_cycle_step_t steps[AA_LIGHTS_CYCLE_STEPS_MAX];
 } aa_lights_cycle_t;
 
 typedef struct {
@@ -54,22 +64,20 @@ typedef struct {
 } aa_lights_pulse_t;
 
 void aa_lights_init(void);
-void aa_lights_update(void);
+void aa_lights_update(aa_time_t delta_time);
 
-void aa_lights_bg_static(aa_lights_mushroom_t mushroom, aa_time_t transition,
-		aa_lights_solid_t const * solid);
-void aa_lights_bg_cycle(aa_lights_mushroom_t mushroom, aa_time_t transition,
-		aa_lights_cycle_t const * cycle);
-void aa_lights_fg_clear(aa_lights_mushroom_t mushroom, aa_time_t transition);
-void aa_lights_fg_solid(aa_lights_mushroom_t mushroom, aa_time_t transition,
-		aa_lights_solid_t const * solid);
-void aa_lights_fg_pattern(aa_lights_mushroom_t mushroom,
-		aa_time_t transition, aa_lights_pattern_t const * pattern);
-void aa_lights_fg_cycle(aa_lights_mushroom_t mushroom,
+void aa_lights_clear(aa_lights_mushroom_t mushroom, aa_lights_layer_t layer,
+		aa_time_t transition);
+void aa_lights_solid(aa_lights_mushroom_t mushroom, aa_lights_layer_t layer,
+		aa_time_t transition, aa_lights_solid_t const * solid);
+void aa_lights_pattern(aa_lights_mushroom_t mushroom,
+		aa_lights_layer_t layer, aa_time_t transition,
+		aa_lights_pattern_t const * pattern);
+void aa_lights_cycle(aa_lights_mushroom_t mushroom, aa_lights_layer_t layer,
 		aa_time_t transition, aa_lights_cycle_t const * cycle);
 void aa_lights_pulse_up(aa_lights_mushroom_t mushroom,
-		aa_lights_pulse_t const * pulse);
+		aa_lights_layer_t layer, aa_lights_pulse_t const * pulse);
 void aa_lights_pulse_down(aa_lights_mushroom_t mushroom,
-		aa_lights_pulse_t const * pulse);
+		aa_lights_layer_t layer, aa_lights_pulse_t const * pulse);
 
 #endif /* AA_LIGHTS_H_ */
