@@ -16,6 +16,12 @@ typedef struct {
 } hw_resource_assignment_t;
 
 typedef struct {
+	hw_assignment_id_t pwm_channels[4];
+	TIM_HandleTypeDef tim_handle;
+	uint32_t frequency;
+} hw_timer_struct_t;
+
+typedef struct {
 	hw_assignment_id_t ws;
 	hw_assignment_id_t sclk;
 	hw_assignment_id_t sd;

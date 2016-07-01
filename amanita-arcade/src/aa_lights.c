@@ -164,31 +164,58 @@ static const aa_lights_pattern_t aa_lights_pattern_neutral = {
 #undef N
 #undef W
 
-aa_lights_pattern_t aa_lights_static_values[AALL_COUNT][AALM_COUNT];
+aa_lights_pattern_t aa_lights_static_values[AALM_COUNT][AALL_COUNT];
 
 static aa_lights_layer_state_t aa_lights_state[AALM_COUNT][AALL_COUNT];
 
 static aa_lights_pattern_t aa_lights_cur[AALM_COUNT];
 
 #ifdef AA_PRODUCTION_HARDWARE
+#ifdef AA_WS2811_I2S
 static uint8_t aa_lights_data_buf[AALM_COUNT][AA_LIGHTS_STALK_CIRC]
 											  [AA_LIGHTS_STALK_HEIGHT][3];
+#endif
+#ifdef AA_WS2811_BITBANG
+static uint8_t aa_lights_data_buf[AA_LIGHTS_STALK_CIRC]
+								  [AA_LIGHTS_STALK_HEIGHT][3][8];
+#endif
 #else
+#ifdef AA_WS2811_I2S
 static uint8_t aa_lights_data_buf[AALM_COUNT][2][8][3];
+#endif
+#ifdef AA_WS2811_BITBANG
+static uint8_t aa_lights_data_buf[2][8][3][8];
+#endif
 #endif
 
 void aa_lights_init(void) {
 	memset(aa_lights_data_buf, 0, sizeof aa_lights_data_buf);
 	memset(aa_lights_cur, 0, sizeof aa_lights_cur);
 	memset(aa_lights_state, 0, sizeof aa_lights_state);
+
+	ws2811_start();
+
 	(void)aa_fix16_to_fix8;
 	(void)aa_lights_pattern_pulse;
 	(void)aa_lights_pattern_neutral;
 }
 
 void aa_lights_update(aa_time_t delta_time) {
+	for(size_t i = 0; i < AALM_COUNT; ++i) {
+		for(size_t j = 0; j < AA_LIGHTS_STALK_CIRC; ++j) {
+			for(size_t k = 0; k < AA_LIGHTS_STALK_HEIGHT; ++k) {
+				aa_lights_cur[i].stalk[j][k] = aa_color_make(
+						(((int32_t)i + 1) << 14) / AALM_COUNT,
+						(((int32_t)j + 1) << 14) / AA_LIGHTS_STALK_CIRC,
+						(((int32_t)k + 1) << 14) / AA_LIGHTS_STALK_HEIGHT,
+						AA_FIX16_ONE);
+			}
+		}
+	}
 	aa_lights_display();
-	aa_lights_generate(delta_time);
+	(void)delta_time;
+	(void)aa_lights_generate;
+	//aa_lights_generate(delta_time);
 }
 
 void aa_lights_clear(aa_lights_mushroom_t mushroom, aa_lights_layer_t layer,
@@ -338,56 +365,128 @@ void aa_lights_advance_state(aa_lights_layer_state_t * state,
 }
 
 void aa_lights_display(void) {
-
-	if(!ws2811_get_outputting()) {
-#ifdef AA_PRODUCTION_HARDWARE
-		// color order is BRG for AA_PRODUCTION_HARDWARE
-		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			for(size_t j = 0; j < AA_LIGHTS_STALK_CIRC; ++j) {
-				for(size_t k = 0; k < AA_LIGHTS_STALK_HEIGHT; ++k) {
-					aa_lights_data_buf[i][j][k][0] =
-							aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].b);
-					aa_lights_data_buf[i][j][k][1] =
-							aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].r);
-					aa_lights_data_buf[i][j][k][2] =
-							aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].g);
-				}
-			}
-		}
-#else // AA_TEST_HARDWARE
-		// color order is GRB for AA_TEST_HARDWARE
-		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			for(size_t k = 0; k < 8; ++k) {
-				aa_lights_data_buf[i][0][k][0] =
-						aa_cie16_to_fix8(
-								(aa_lights_cur[i].stalk[0][k].g * 2 +
-										aa_lights_cur[i].stalk[2][k].g) / 3);
-				aa_lights_data_buf[i][0][k][1] =
-						aa_cie16_to_fix8(
-								(aa_lights_cur[i].stalk[0][k].r * 2 +
-										aa_lights_cur[i].stalk[2][k].r) / 3);
-				aa_lights_data_buf[i][0][k][2] =
-						aa_cie16_to_fix8(
-								(aa_lights_cur[i].stalk[0][k].b * 2 +
-										aa_lights_cur[i].stalk[2][k].b) / 3);
-			}
-			for(size_t k = 0; k < 8; ++k) {
-				aa_lights_data_buf[i][1][k][0] =
-						aa_cie16_to_fix8(
-								(aa_lights_cur[i].stalk[1][k].g * 2 +
-										aa_lights_cur[i].stalk[2][k].g) / 3);
-				aa_lights_data_buf[i][1][k][1] =
-						aa_cie16_to_fix8(
-								(aa_lights_cur[i].stalk[1][k].r * 2 +
-										aa_lights_cur[i].stalk[2][k].r) / 3);
-				aa_lights_data_buf[i][1][k][2] =
-						aa_cie16_to_fix8(
-								(aa_lights_cur[i].stalk[1][k].b * 2 +
-										aa_lights_cur[i].stalk[2][k].b) / 3);
-			}
-		}
-#endif
-		ws2811_output_nb(aa_lights_data_buf, sizeof aa_lights_data_buf);
+#ifdef AA_WS2811_I2S
+	if(ws2811_get_outputting()) {
+		return;
 	}
+#endif
+	memset(aa_lights_data_buf, 0, sizeof aa_lights_data_buf);
+#if defined(AA_WS2811_I2S) && defined(AA_PRODUCTION_HARDWARE)
+	// color order is BRG for AA_PRODUCTION_HARDWARE
+	for(size_t i = 0; i < AALM_COUNT; ++i) {
+		for(size_t j = 0; j < AA_LIGHTS_STALK_CIRC; ++j) {
+			for(size_t k = 0; k < AA_LIGHTS_STALK_HEIGHT; ++k) {
+				aa_lights_data_buf[i][j][k][0] =
+						aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].b);
+				aa_lights_data_buf[i][j][k][1] =
+						aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].r);
+				aa_lights_data_buf[i][j][k][2] =
+						aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].g);
+			}
+		}
+	}
+#elif defined(AA_WS2811_I2S) && !defined(AA_PRODUCTION_HARDWARE) // AA_TEST_HARDWARE
+	// color order is GRB for AA_TEST_HARDWARE
+	for(size_t i = 0; i < AALM_COUNT; ++i) {
+		for(size_t k = 0; k < 8; ++k) {
+			size_t l = k * AA_LIGHTS_STALK_HEIGHT / 8;
+			aa_lights_data_buf[i][0][k][0] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[0][l].g * 2 +
+									aa_lights_cur[i].stalk[2][l].g) / 3);
+			aa_lights_data_buf[i][0][k][1] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[0][l].r * 2 +
+									aa_lights_cur[i].stalk[2][l].r) / 3);
+			aa_lights_data_buf[i][0][k][2] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[0][l].b * 2 +
+									aa_lights_cur[i].stalk[2][l].b) / 3);
+		}
+		for(size_t k = 0; k < 8; ++k) {
+			size_t l = k * AA_LIGHTS_STALK_HEIGHT / 8;
+			aa_lights_data_buf[i][1][7 - k][0] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[1][l].g * 2 +
+									aa_lights_cur[i].stalk[2][l].g) / 3);
+			aa_lights_data_buf[i][1][7 - k][1] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[1][l].r * 2 +
+									aa_lights_cur[i].stalk[2][l].r) / 3);
+			aa_lights_data_buf[i][1][7 - k][2] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[1][l].b * 2 +
+									aa_lights_cur[i].stalk[2][l].b) / 3);
+		}
+	}
+#elif defined(AA_WS2811_BITBANG) && defined(AA_PRODUCTION_HARDWARE)
+	// color order is BRG for AA_PRODUCTION_HARDWARE
+	for(size_t j = 0; j < AA_LIGHTS_STALK_CIRC; ++j) {
+		for(size_t k = 0; k < AA_LIGHTS_STALK_HEIGHT; ++k) {
+			for(size_t i = 0; i < AALM_COUNT; ++i) {
+				aa_lights_data_buf[j][k][0][i] =
+						aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].b);
+			}
+			for(size_t i = 0; i < AALM_COUNT; ++i) {
+				aa_lights_data_buf[j][k][1][i] =
+						aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].r);
+			}
+			for(size_t i = 0; i < AALM_COUNT; ++i) {
+				aa_lights_data_buf[j][k][2][i] =
+						aa_cie16_to_fix8(aa_lights_cur[i].stalk[j][k].g);
+			}
+		}
+	}
+#elif defined(AA_WS2811_BITBANG) && !defined(AA_PRODUCTION_HARDWARE) // AA_TEST_HARDWARE
+	// color order is GRB for AA_TEST_HARDWARE
+	for(size_t k = 0; k < 8; ++k) {
+		size_t l = k * AA_LIGHTS_STALK_HEIGHT / 8;
+		for(size_t i = 0; i < AALM_COUNT; ++i) {
+			aa_lights_data_buf[0][k][0][i] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[0][l].g * 2 +
+									aa_lights_cur[i].stalk[2][l].g) / 3);
+		}
+		for(size_t i = 0; i < AALM_COUNT; ++i) {
+			aa_lights_data_buf[0][k][1][i] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[0][l].r * 2 +
+									aa_lights_cur[i].stalk[2][l].r) / 3);
+		}
+		for(size_t i = 0; i < AALM_COUNT; ++i) {
+			aa_lights_data_buf[0][k][2][i] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[0][l].b * 2 +
+									aa_lights_cur[i].stalk[2][l].b) / 3);
+		}
+	}
+	for(size_t k = 0; k < 8; ++k) {
+		size_t l = k * AA_LIGHTS_STALK_HEIGHT / 8;
+		for(size_t i = 0; i < AALM_COUNT; ++i) {
+			aa_lights_data_buf[1][7 - k][0][i] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[1][l].g * 2 +
+									aa_lights_cur[i].stalk[2][l].g) / 3);
+		}
+		for(size_t i = 0; i < AALM_COUNT; ++i) {
+			aa_lights_data_buf[1][7 - k][1][i] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[1][l].r * 2 +
+									aa_lights_cur[i].stalk[2][l].r) / 3);
+		}
+		for(size_t i = 0; i < AALM_COUNT; ++i) {
+			aa_lights_data_buf[1][7 - k][2][i] =
+					aa_cie16_to_fix8(
+							(aa_lights_cur[i].stalk[1][l].b * 2 +
+									aa_lights_cur[i].stalk[2][l].b) / 3);
+		}
+	}
+#endif
+#ifdef AA_WS2811_BITBANG
+	ws2811_output(aa_lights_data_buf, sizeof aa_lights_data_buf);
+#endif
+#ifdef AA_WS2811_I2S
+	ws2811_output_nb(aa_lights_data_buf, sizeof aa_lights_data_buf);
+#endif
 }
 

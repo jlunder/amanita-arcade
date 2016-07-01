@@ -15,24 +15,21 @@ static size_t last_audio_pos, cur_audio_pos;
 static size_t aa_audio_pos = 0;
 
 static void aa_fill_i2s(void * buf, size_t buf_len);
-static int32_t aa_compute_power(size_t sample_from, size_t sample_to);
 
 void aa_sound_init(void) {
+#ifdef AA_PRODUCTION_HARDWARE
 	cs43l22_start(aa_fill_i2s);
 
 	__sync_synchronize();
 	last_audio_pos = aa_audio_pos;
+#else
+	aa_fill_i2s(NULL, 0);
+#endif
 }
 
 void aa_sound_update(void) {
-	int32_t power;
-
 	cur_audio_pos = aa_audio_pos;
-	power = aa_compute_power(last_audio_pos, cur_audio_pos);
 	last_audio_pos = cur_audio_pos;
-
-	(void)aa_fill_i2s;
-	(void)power;
 }
 
 void aa_sound_quiet(void) {
@@ -59,23 +56,3 @@ void aa_fill_i2s(void * buf, size_t buf_len) {
 	__sync_synchronize();
 }
 
-int32_t aa_compute_power(size_t sample_from, size_t sample_to) {
-	int32_t maxs = 0;
-
-	//cu_verify(sample_from < cu_lengthof(hd_heartbeat_data));
-	//cu_verify(sample_to < cu_lengthof(hd_heartbeat_data));
-
-	for(size_t i = sample_from; i != sample_to; ) {
-		//int32_t as = abs((int32_t)hd_heartbeat_data[i]);
-		int32_t as = 0;
-		if(as > maxs) {
-			maxs = as;
-		}
-		++i;
-		//if(i >= cu_lengthof(hd_heartbeat_data)) {
-		if(i >= 10000) {
-			i = 0;
-		}
-	}
-	return maxs;
-}

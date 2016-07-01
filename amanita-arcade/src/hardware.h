@@ -546,6 +546,23 @@ hw_assignment_id_t hw_pin_assign(hw_resource_id_t pin_id);
 void hw_pin_deassign(hw_assignment_id_t id);
 void hw_pin_configure(hw_assignment_id_t id, hw_pin_mode_t mode);
 
+hw_assignment_id_t hw_timer_assign(hw_resource_id_t timer);
+void hw_timer_deassign(hw_assignment_id_t id);
+uint32_t hw_timer_get_frequency(hw_assignment_id_t id);
+void hw_timer_configure_clock(hw_assignment_id_t id, uint32_t resolution,
+		uint32_t rollover);
+uint32_t hw_timer_read(hw_assignment_id_t id);
+//void hw_timer_configure_periodic_interrupt(hw_assignment_id_t id, uint32_t rate);
+
+#if 0
+hw_assignment_id_t hw_pwm_assign(hw_resource_id_t timer_id);
+void hw_pwm_configure(hw_assignment_id_t pwm, uint32_t rate, uint32_t steps);
+hw_assignment_id_t hw_pwm_channel_assign(hw_assignment_id_t pwm,
+		hw_resource_id_t pin);
+hw_assignment_id_t hw_pwm_channels_set(hw_assignment_id_t pwm,
+		uint32_t channels_mask, uint32_t const * values);
+#endif
+
 hw_assignment_id_t hw_i2s_assign(hw_resource_id_t i2s,
 		hw_resource_id_t sclk_pin, hw_resource_id_t ws_pin,
 		hw_resource_id_t sd_pin, hw_resource_id_t mclk_pin,

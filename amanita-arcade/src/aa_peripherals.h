@@ -11,6 +11,8 @@
 
 #include "hardware.h"
 
+#define AA_WS2811_BITBANG
+
 typedef struct {
 	uint8_t b, r, g;
 } ws2811_color_t;
@@ -33,12 +35,21 @@ uint16_t mpr121_get_touch_states(void);
 void mpr121_get_analog_baselines(uint8_t start, uint16_t * baselines, size_t count);
 void mpr121_get_analog_values(uint8_t start, uint16_t * values, size_t count);
 
+#ifdef AA_WS2811_SPI
 void ws2801_init(void);
 void ws2801_output(void const * buf, size_t buf_len);
+#endif
 
 void ws2811_init(void);
+void ws2811_start(void);
+void ws2811_stop(void);
+#ifdef AA_WS2811_BITBANG
+void ws2811_output(void const * buf, size_t buf_len);
+#endif
+#ifdef AA_WS2811_I2S
 void ws2811_output_nb(void const * buf, size_t buf_len);
 bool ws2811_get_outputting(void);
+#endif
 
 
 #endif /* AA_PERIPHERALS_H_ */

@@ -8,6 +8,9 @@
 
 #include "aa_peripherals.h"
 
+//#define AA_WS2811_I2S
+#define AA_WS2811_BITBANG
+
 #define CS43L22_ADDRESS (0x4A << 1)
 
 #define CS43L22_MAP_CHIP_ID 0x01
@@ -75,10 +78,21 @@
 #define MPR121_THRESH_RELEASE 0x10
 
 #define WS2811_BIT_RATE 800000L
-#define WS2811_CLOCKS_PER_BIT 4
 #define WS2811_RESET_US 50
-#define WS2811_RESET_CLOCKS ((WS2811_BIT_RATE * WS2811_CLOCKS_PER_BIT * \
+
+#ifdef AA_WS2811_I2S
+#define WS2811_CLOCKS_PER_BIT 4
+#define WS2811_CLOCK_RATE (WS2811_BIT_RATE * WS2811_CLOCKS_PER_BIT)
+#define WS2811_RESET_CLOCKS ((WS2811_CLOCK_RATE * \
 		WS2811_RESET_US + 999999L) / 1000000L)
+#endif
+
+#ifdef AA_WS2811_BITBANG
+#define WS2811_NUM_OUTPUTS 8
+#define WS2811_CLOCKS_PER_BIT (168000000UL / (WS2811_BIT_RATE * 3))
+#define WS2811_RESET_CLOCKS ((WS2811_CLOCKS_PER_BIT * WS2811_BIT_RATE * \
+		WS2811_RESET_US + 999999L) / 1000000L)
+#endif
 
 static hw_assignment_id_t cs43l22_i2s = HW_ASSIGNMENT_ID_NULL;
 static hw_assignment_id_t cs43l22_i2c = HW_ASSIGNMENT_ID_NULL;
@@ -91,16 +105,27 @@ static hw_assignment_id_t mpr121_power = HW_ASSIGNMENT_ID_NULL;
 static hw_assignment_id_t mpr121_i2c = HW_ASSIGNMENT_ID_NULL;
 static I2C_HandleTypeDef * mpr121_i2c_handle = NULL;
 
+#ifdef AA_WS2801_SPI
 static hw_assignment_id_t ws2801_spi = HW_ASSIGNMENT_ID_NULL;
+#endif
 
+#ifdef AA_WS2811_I2S
 static hw_assignment_id_t ws2811_i2s;
 static uint32_t ws2811_buf[512];
 static uint8_t const * ws2811_data_buf = NULL;
 static size_t ws2811_data_buf_len = 0;
 static size_t ws2811_data_buf_sent = 0;
 static int32_t ws2811_reset_counter = 0;
+#endif
 
+#ifdef AA_WS2811_BITBANG
+hw_assignment_id_t ws2811_timer;
+hw_assignment_id_t ws2811_pins[WS2811_NUM_OUTPUTS];
+#endif
+
+#ifdef AA_WS2811_I2S
 static void ws2811_fill(void * buf, size_t buf_len);
+#endif
 
 void aa_peripherals_init(void) {
 	HAL_NVIC_SetPriority(I2C3_EV_IRQn, 4, 0);
@@ -302,6 +327,7 @@ void mpr121_get_analog_values(uint8_t start, uint16_t * values,
 			count * sizeof (values[0]));
 }
 
+#ifdef AA_WS2801_SPI
 void ws2801_init(void) {
 	ws2801_spi = hw_spi_assign(HWR_SPI1, HWR_PA5, HWR_NONE, HWR_PA7,
 			HWR_NONE, HWR_NONE);
@@ -312,7 +338,9 @@ void ws2801_output(void const * buf, size_t buf_len) {
 	hw_spi_transmit(ws2801_spi, buf, buf_len);
 	HAL_Delay(2);
 }
+#endif
 
+#ifdef AA_WS2811_I2S
 void ws2811_init(void) {
 	ws2811_data_buf = NULL;
 	ws2811_reset_counter = 0;
@@ -320,13 +348,22 @@ void ws2811_init(void) {
 
 	ws2811_i2s = hw_i2s_assign(HWR_SPII2S2, HWR_PB13, HWR_PB12, HWR_PB15,
 			HWR_NONE, HWR_DMA1_STREAM4);
+}
+
+void ws2811_start(void) {
 	hw_i2s_start_output(ws2811_i2s,
-			WS2811_BIT_RATE * WS2811_CLOCKS_PER_BIT / 32,
+			WS2811_CLOCK_RATE / 32,
 			HWI2SF_16B | HWI2SF_LSB_JUSTIFIED, ws2811_buf, sizeof ws2811_buf,
 			ws2811_fill);
 }
 
+void ws2811_stop(void) {
+	hw_i2s_stop(ws2811_i2s);
+}
+
 void ws2811_output_nb(void const * buf, size_t buf_len) {
+	cu_verify(!ws2811_get_outputting());
+
 	__disable_irq();
 	ws2811_data_buf = NULL;
 	if(ws2811_reset_counter < WS2811_RESET_CLOCKS) {
@@ -394,3 +431,85 @@ void ws2811_fill(void * buf, size_t buf_len) {
 	ws2811_reset_counter = reset_counter;
 	ws2811_data_buf_sent = data_sent;
 }
+
+#endif
+
+#ifdef AA_WS2811_BITBANG
+void ws2811_init(void) {
+	ws2811_pins[0] = hw_pin_assign(HWR_PE8);
+	ws2811_pins[1] = hw_pin_assign(HWR_PE9);
+	ws2811_pins[2] = hw_pin_assign(HWR_PE10);
+	ws2811_pins[3] = hw_pin_assign(HWR_PE11);
+	ws2811_pins[4] = hw_pin_assign(HWR_PE12);
+	ws2811_pins[5] = hw_pin_assign(HWR_PE13);
+	ws2811_pins[6] = hw_pin_assign(HWR_PE14);
+	ws2811_pins[7] = hw_pin_assign(HWR_PE15);
+	ws2811_timer = hw_timer_assign(HWR_TIM10);
+
+	for(size_t i = 0; i < WS2811_NUM_OUTPUTS; ++i) {
+		hw_pin_configure(ws2811_pins[i], HWPM_OUT_PP | HWPM_SPEED_MIN);
+	}
+	hw_timer_configure_clock(ws2811_timer,
+			0,//hw_timer_get_frequency(ws2811_timer) / WS2811_CLOCK_RATE,
+			65535);
+}
+
+void ws2811_start(void) {
+}
+
+void ws2811_stop(void) {
+}
+
+void ws2811_output(void const * buf, size_t buf_len)
+		__attribute__((optimize("-O3")));
+
+void ws2811_output(void const * buf, size_t buf_len) {
+	uint32_t time_ref = 0;
+	buf_len -= buf_len % WS2811_NUM_OUTPUTS;
+
+	__disable_irq();
+	for(size_t i = 0; i + 8 <= buf_len; i += WS2811_NUM_OUTPUTS) {
+		uint32_t temp0 = ~*(uint32_t const *)((uint8_t const *)buf + i);
+		uint32_t temp1 = ~*(uint32_t const *)((uint8_t const *)buf + i + 4);
+		if(i == 0) {
+			time_ref = TIM10->CNT;
+		}
+
+		for(size_t j = 0; j < 8; ++j) {
+			uint32_t bsrr = 0;
+
+			while(((TIM10->CNT - time_ref) & 0xFFFF) <
+					WS2811_CLOCKS_PER_BIT) {}
+			GPIOE->BSRR = 0x0000FF00UL;
+			time_ref = (time_ref + WS2811_CLOCKS_PER_BIT) & 0xFFFF;
+
+			bsrr |= ((temp0 & 0x00000080LU) << 17) |
+					((temp0 & 0x00008000LU) << 10) |
+					((temp0 & 0x00800000LU) << 3) |
+					((temp0 & 0x80000000LU) >> 4);
+			bsrr |= ((temp1 & 0x00000080LU) << 21) |
+					((temp1 & 0x00008000LU) << 14) |
+					((temp1 & 0x00800000LU) << 7) |
+					((temp1 & 0x80000000LU) << 0);
+
+			while(((TIM10->CNT - time_ref) & 0xFFFF) <
+					WS2811_CLOCKS_PER_BIT) {}
+			GPIOE->BSRR = bsrr;
+			time_ref = (time_ref + WS2811_CLOCKS_PER_BIT) & 0xFFFF;
+
+			temp0 = temp0 << 1;
+			temp1 = temp1 << 1;
+
+			while(((TIM10->CNT - time_ref) & 0xFFFF) <
+					WS2811_CLOCKS_PER_BIT) {}
+			GPIOE->BSRR = 0xFF000000UL;
+			time_ref = (time_ref + WS2811_CLOCKS_PER_BIT) & 0xFFFF;
+		}
+	}
+
+	while((hw_timer_read(ws2811_timer) - time_ref) < WS2811_RESET_CLOCKS) {}
+	__enable_irq();
+}
+#endif
+
+
