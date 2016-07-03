@@ -18,6 +18,16 @@
 
 #define AA_LIGHTS_CYCLE_STEPS_MAX 16
 
+#define AA_LIGHTS_COLOR_RED_INIT \
+	{{.r = AA_FIX16_ONE, .g = 0, .b = 0, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_GREEN_INIT \
+	{{.r = 0, .g = AA_FIX16_ONE, .b = 0, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_BLUE_INIT \
+	{{.r = 0, .g = 0, .b = AA_FIX16_ONE, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_PINK_INIT \
+	{{.r = AA_FIX16_ONE, .g = AA_FIX16_ONE / 2, .b = AA_FIX16_ONE / 2, \
+		.a = AA_FIX16_ONE}}
+
 // brightnesses -- cap, mycelium -- are FIX12
 
 typedef enum {
@@ -79,5 +89,11 @@ void aa_lights_pulse_up(aa_lights_mushroom_t mushroom,
 		aa_lights_layer_t layer, aa_lights_pulse_t const * pulse);
 void aa_lights_pulse_down(aa_lights_mushroom_t mushroom,
 		aa_lights_layer_t layer, aa_lights_pulse_t const * pulse);
+
+extern aa_lights_solid_t const aa_lights_solid_red;
+extern aa_lights_solid_t const aa_lights_solid_green;
+extern aa_lights_solid_t const aa_lights_solid_blue;
+extern aa_lights_solid_t const aa_lights_solid_pink;
+extern aa_lights_solid_t const aa_lights_solid_clear;
 
 #endif /* AA_LIGHTS_H_ */

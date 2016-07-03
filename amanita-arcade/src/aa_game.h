@@ -40,23 +40,23 @@ void aa_game_reset_timeout(void);
 void aa_game_change_mode(aa_game_mode_t mode);
 
 void aa_game_attract_init(void);
-void aa_game_attract_loop(void);
+void aa_game_attract_loop(aa_time_t delta_time);
 void aa_game_attract_shutdown(void);
 
 void aa_game_simon_init(void);
-void aa_game_simon_loop(void);
+void aa_game_simon_loop(aa_time_t delta_time);
 void aa_game_simon_shutdown(void);
 
 void aa_game_harmonize_init(void);
-void aa_game_harmonize_loop(void);
+void aa_game_harmonize_loop(aa_time_t delta_time);
 void aa_game_harmonize_shutdown(void);
 
 void aa_game_play_along_init(void);
-void aa_game_play_along_loop(void);
+void aa_game_play_along_loop(aa_time_t delta_time);
 void aa_game_play_along_shutdown(void);
 
 void aa_game_free_play_init(void);
-void aa_game_free_play_loop(void);
+void aa_game_free_play_loop(aa_time_t delta_time);
 void aa_game_free_play_shutdown(void);
 
 
