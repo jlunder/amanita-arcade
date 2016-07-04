@@ -158,17 +158,28 @@ void aa_game_debug_loop(aa_time_t delta_time) {
 void aa_game_debug_shutdown(void) {
 }
 
+aa_time_t aa_game_attract_loop_time;
+aa_lights_mushroom_t aa_game_attract_last_mushroom;
+
 void aa_game_attract_init(void) {
+	aa_game_attract_loop_time = 0;
+	aa_game_attract_last_mushroom = 0;
+	aa_sound_quiet();
+
+	for(aa_lights_mushroom_t i = 0; i < AALM_COUNT; ++i) {
+		aa_lights_cycle(i, AALL_BG, aa_time_from_ms(0),
+				&aa_lights_default_bg_cycles[i]);
+		aa_lights_clear(i, AALL_FG, aa_time_from_ms(0));
+	}
 }
 
 void aa_game_attract_loop(aa_time_t delta_time) {
-	(void)delta_time;
+	aa_game_attract_loop_time += delta_time;
 
-	aa_sound_quiet();
-	for(aa_lights_mushroom_t i = 0; i < AALM_COUNT; ++i) {
-		aa_lights_solid(i, AALL_BG, aa_time_from_ms(0),
-				&aa_game_bg_error);
-		aa_lights_clear(i, AALL_FG, aa_time_from_ms(0));
+	for(aa_input_button_id_t b = 0; b < AAIB_COUNT; ++b) {
+		if(aa_input_button_press(b)) {
+			aa_game_change_mode(AAGM_SIMON);
+		}
 	}
 }
 

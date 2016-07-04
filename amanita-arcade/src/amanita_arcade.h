@@ -46,6 +46,9 @@
 #define AA_FIX16_ONE 65536
 #define AA_COLOR_ONE AA_FIX16_ONE
 
+#define AA_TIME_FROM_MILLIS_INIT(x) (x)
+
+
 typedef union {
 	struct {
 		int32_t r, g, b, a;
@@ -68,8 +71,8 @@ static inline aa_color_t aa_color_lerp(aa_color_t a, aa_color_t b,
 
 	return aa_color_make(
 			(int32_t)((a.r * a1 + b.r * a0) >> 16),
-			(int32_t)((a.b * a1 + b.g * a0) >> 16),
-			(int32_t)((a.g * a1 + b.b * a0) >> 16),
+			(int32_t)((a.g * a1 + b.g * a0) >> 16),
+			(int32_t)((a.b * a1 + b.b * a0) >> 16),
 			(int32_t)((a.a * a1 + b.a * a0) >> 16));
 }
 

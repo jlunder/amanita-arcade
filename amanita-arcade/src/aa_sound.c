@@ -13,6 +13,7 @@
 static size_t last_audio_pos, cur_audio_pos;
 
 static size_t aa_audio_pos = 0;
+//static uint16_t aa_sound_buf[1024][2];
 
 static void aa_fill_i2s(void * buf, size_t buf_len);
 

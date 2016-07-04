@@ -16,16 +16,36 @@
 #define AA_LIGHTS_MYCELIUM_BREADTH 3
 #define AA_LIGHTS_MYCELIUM_DEPTH 1
 
+#define AA_LIGHTS_SMALL_CAP_CIRC 8
+
 #define AA_LIGHTS_CYCLE_STEPS_MAX 16
 
 #define AA_LIGHTS_COLOR_RED_INIT \
 	{{.r = AA_FIX16_ONE, .g = 0, .b = 0, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_RED_75_INIT \
+	{{.r = AA_FIX16_ONE * 3 / 4, .g = 0, .b = 0, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_RED_50_INIT \
+	{{.r = AA_FIX16_ONE / 2, .g = 0, .b = 0, .a = AA_FIX16_ONE}}
 #define AA_LIGHTS_COLOR_GREEN_INIT \
 	{{.r = 0, .g = AA_FIX16_ONE, .b = 0, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_GREEN_75_INIT \
+	{{.r = 0, .g = AA_FIX16_ONE * 3 / 4, .b = 0, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_GREEN_50_INIT \
+	{{.r = 0, .g = AA_FIX16_ONE / 2, .b = 0, .a = AA_FIX16_ONE}}
 #define AA_LIGHTS_COLOR_BLUE_INIT \
 	{{.r = 0, .g = 0, .b = AA_FIX16_ONE, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_BLUE_75_INIT \
+	{{.r = 0, .g = 0, .b = AA_FIX16_ONE * 3 / 4, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_BLUE_50_INIT \
+	{{.r = 0, .g = 0, .b = AA_FIX16_ONE / 2, .a = AA_FIX16_ONE}}
 #define AA_LIGHTS_COLOR_PINK_INIT \
 	{{.r = AA_FIX16_ONE, .g = AA_FIX16_ONE / 2, .b = AA_FIX16_ONE / 2, \
+		.a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_PINK_75_INIT \
+	{{.r = AA_FIX16_ONE * 3 / 4, .g = AA_FIX16_ONE * 3 / 8, \
+		.b = AA_FIX16_ONE * 3 / 8, .a = AA_FIX16_ONE}}
+#define AA_LIGHTS_COLOR_PINK_50_INIT \
+	{{.r = AA_FIX16_ONE / 2, .g = AA_FIX16_ONE / 4, .b = AA_FIX16_ONE / 4, \
 		.a = AA_FIX16_ONE}}
 
 // brightnesses -- cap, mycelium -- are FIX12
@@ -45,12 +65,14 @@ typedef enum {
 } aa_lights_layer_t;
 
 typedef struct {
+	//aa_color_t small_cap;
 	int32_t mycelium;
 	aa_color_t stalk;
 	int32_t cap;
 } aa_lights_solid_t;
 
 typedef struct {
+	//aa_color_t small_cap[AA_LIGHTS_SMALL_CAP_CIRC];
 	int32_t mycelium[AA_LIGHTS_MYCELIUM_DEPTH][AA_LIGHTS_MYCELIUM_BREADTH];
 	aa_color_t stalk[AA_LIGHTS_STALK_CIRC][AA_LIGHTS_STALK_HEIGHT];
 	int32_t cap;
@@ -95,5 +117,10 @@ extern aa_lights_solid_t const aa_lights_solid_green;
 extern aa_lights_solid_t const aa_lights_solid_blue;
 extern aa_lights_solid_t const aa_lights_solid_pink;
 extern aa_lights_solid_t const aa_lights_solid_clear;
+
+extern aa_lights_solid_t const * aa_lights_default_bg_solid[AALM_COUNT];
+extern aa_lights_pattern_t const aa_lights_default_bg_patterns[AALM_COUNT]
+															   [3];
+extern aa_lights_cycle_t const aa_lights_default_bg_cycles[AALM_COUNT];
 
 #endif /* AA_LIGHTS_H_ */

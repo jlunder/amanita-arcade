@@ -32,8 +32,6 @@ static void aa_lights_display(void);
 static void aa_lights_generate(aa_time_t delta_time);
 static void aa_lights_advance_state(aa_lights_mushroom_t mushroom,
 		aa_lights_layer_t layer, aa_time_t delta_time);
-static bool aa_lights_advance_state_is_at_end_of_cycle(
-		aa_lights_layer_state_t * state);
 static void aa_lights_advance_state_change(aa_lights_layer_state_t * state,
 		aa_lights_pattern_t const * last_pattern);
 
@@ -167,7 +165,7 @@ static const aa_lights_pattern_t aa_lights_pattern_neutral = {
 
 aa_lights_solid_t const aa_lights_solid_red = {
 		.cap = AA_FIX16_ONE,
-		.stalk = AA_LIGHTS_COLOR_RED_INIT,
+		.stalk = AA_LIGHTS_COLOR_PINK_INIT,
 		.mycelium = AA_FIX16_ONE,
 };
 
@@ -195,6 +193,532 @@ aa_lights_solid_t const aa_lights_solid_clear = {
 		.mycelium = 0,
 };
 
+aa_lights_solid_t const * aa_lights_default_bg_solid[AALM_COUNT] = {
+		&aa_lights_solid_red,
+		&aa_lights_solid_green,
+		&aa_lights_solid_blue,
+		&aa_lights_solid_pink,
+};
+
+aa_lights_pattern_t const aa_lights_default_bg_patterns[AALM_COUNT][3] = {
+		{
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+										AA_LIGHTS_COLOR_RED_INIT,
+										AA_LIGHTS_COLOR_RED_75_INIT,
+										AA_LIGHTS_COLOR_RED_50_INIT,
+								},
+						},
+						.cap = 0,
+				},
+		},
+		{
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+										AA_LIGHTS_COLOR_GREEN_INIT,
+										AA_LIGHTS_COLOR_GREEN_75_INIT,
+										AA_LIGHTS_COLOR_GREEN_50_INIT,
+								},
+						},
+						.cap = 0,
+				},
+		},
+		{
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+										AA_LIGHTS_COLOR_BLUE_INIT,
+										AA_LIGHTS_COLOR_BLUE_75_INIT,
+										AA_LIGHTS_COLOR_BLUE_50_INIT,
+								},
+						},
+						.cap = 0,
+				},
+		},
+		{
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+								},
+						},
+						.cap = 0,
+				},
+				{
+						.mycelium = {{0, 0, 0,}},
+						.stalk = {
+								{
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+								},
+								{
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+										AA_LIGHTS_COLOR_PINK_INIT,
+										AA_LIGHTS_COLOR_PINK_75_INIT,
+										AA_LIGHTS_COLOR_PINK_50_INIT,
+								},
+						},
+						.cap = 0,
+				},
+		},
+};
+
+aa_lights_cycle_t const aa_lights_default_bg_cycles[AALM_COUNT] = {
+		{
+				.step_count = 3,
+				.loop_step = 0,
+				.steps = {
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[0][0],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[0][1],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[0][2],
+						},
+				},
+		},
+		{
+				.step_count = 3,
+				.loop_step = 0,
+				.steps = {
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[1][0],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[1][1],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[1][2],
+						},
+				},
+		},
+		{
+				.step_count = 3,
+				.loop_step = 0,
+				.steps = {
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[2][0],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[2][1],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[2][2],
+						},
+				},
+		},
+		{
+				.step_count = 3,
+				.loop_step = 0,
+				.steps = {
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[3][0],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[3][1],
+						},
+						{
+								.transition = AA_TIME_FROM_MILLIS_INIT(150),
+								.pattern = &aa_lights_default_bg_patterns[3][2],
+						},
+				},
+		},
+};
+
+
 #undef N
 #undef W
 
@@ -218,7 +742,7 @@ static uint8_t aa_lights_data_buf[AA_LIGHTS_STALK_CIRC]
 static uint8_t aa_lights_data_buf[AALM_COUNT][2][8][3];
 #endif
 #ifdef AA_WS2811_BITBANG
-static uint8_t aa_lights_data_buf[2][8][3][8];
+static uint8_t aa_lights_data_buf[AALM_COUNT][2][8][3][8];
 #endif
 #endif
 
@@ -399,7 +923,7 @@ void aa_lights_advance_state(aa_lights_mushroom_t mushroom,
 
 	state->time_since_step += delta_time;
 
-	if(state->change_timeout < state->time_since_step &&
+	if((state->change_timeout < state->time_since_step) &&
 			state->change_pending) {
 		aa_lights_advance_state_change(state,
 				&aa_lights_cur[mushroom][layer]);
@@ -410,32 +934,27 @@ void aa_lights_advance_state(aa_lights_mushroom_t mushroom,
 		aa_lights_cycle_step_t const * step =
 				&state->current_cycle.steps[state->current_step];
 
-		if(aa_lights_advance_state_is_at_end_of_cycle(state)) {
-			if(state->change_pending) {
-				aa_lights_advance_state_change(state, step->pattern);
-			} else if(state->current_cycle.loop_step != SIZE_MAX) {
-				state->current_step = state->current_cycle.loop_step;
-			} else {
-				state->time_since_step = step->transition;
-				break;
-			}
-		} else if(state->time_since_step >= step->transition) {
+		if(state->time_since_step >= step->transition) {
+			memcpy(&state->last_pattern, step->pattern,
+					sizeof state->last_pattern);
 			state->time_since_step -= step->transition;
-			++state->current_step;
+			if(state->current_step >= state->current_cycle.step_count - 1) {
+				if(state->change_pending) {
+					aa_lights_advance_state_change(state, step->pattern);
+				} else if(state->current_cycle.loop_step != SIZE_MAX) {
+					state->current_step = state->current_cycle.loop_step;
+				} else {
+					// remain stuck at end of current step
+					state->time_since_step = step->transition;
+					break;
+				}
+			} else {
+				++state->current_step;
+			}
 		} else {
 			break;
 		}
 	}
-}
-
-bool aa_lights_advance_state_is_at_end_of_cycle(
-		aa_lights_layer_state_t * state) {
-	return (state->current_cycle.loop_step == SIZE_MAX &&
-			(state->time_since_step >=
-					state->current_cycle.steps[state->current_step]
-											   .transition) &&
-			(state->current_step >=
-					(state->current_cycle.step_count - 1)));
 }
 
 void aa_lights_advance_state_change(aa_lights_layer_state_t * state,
@@ -547,19 +1066,19 @@ void aa_lights_display(void) {
 	for(size_t k = 0; k < 8; ++k) {
 		size_t l = k * AA_LIGHTS_STALK_HEIGHT / 8;
 		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			aa_lights_data_buf[0][k][0][i] =
+			aa_lights_data_buf[i][0][k][0][0] =
 					aa_cie16_to_fix8(
 							(accum[i].stalk[0][l].g * 2 +
 									accum[i].stalk[2][l].g) / 3);
 		}
 		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			aa_lights_data_buf[0][k][1][i] =
+			aa_lights_data_buf[i][0][k][1][0] =
 					aa_cie16_to_fix8(
 							(accum[i].stalk[0][l].r * 2 +
 									accum[i].stalk[2][l].r) / 3);
 		}
 		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			aa_lights_data_buf[0][k][2][i] =
+			aa_lights_data_buf[i][0][k][2][0] =
 					aa_cie16_to_fix8(
 							(accum[i].stalk[0][l].b * 2 +
 									accum[i].stalk[2][l].b) / 3);
@@ -568,19 +1087,19 @@ void aa_lights_display(void) {
 	for(size_t k = 0; k < 8; ++k) {
 		size_t l = k * AA_LIGHTS_STALK_HEIGHT / 8;
 		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			aa_lights_data_buf[1][7 - k][0][i] =
+			aa_lights_data_buf[i][1][7 - k][0][0] =
 					aa_cie16_to_fix8(
 							(accum[i].stalk[1][l].g * 2 +
 									accum[i].stalk[2][l].g) / 3);
 		}
 		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			aa_lights_data_buf[1][7 - k][1][i] =
+			aa_lights_data_buf[i][1][7 - k][1][0] =
 					aa_cie16_to_fix8(
 							(accum[i].stalk[1][l].r * 2 +
 									accum[i].stalk[2][l].r) / 3);
 		}
 		for(size_t i = 0; i < AALM_COUNT; ++i) {
-			aa_lights_data_buf[1][7 - k][2][i] =
+			aa_lights_data_buf[i][1][7 - k][2][0] =
 					aa_cie16_to_fix8(
 							(accum[i].stalk[1][l].b * 2 +
 									accum[i].stalk[2][l].b) / 3);
