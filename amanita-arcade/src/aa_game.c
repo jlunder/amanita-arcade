@@ -167,9 +167,9 @@ void aa_game_attract_init(void) {
 	aa_sound_quiet();
 
 	for(aa_lights_mushroom_t i = 0; i < AALM_COUNT; ++i) {
-		aa_lights_cycle(i, AALL_BG, aa_time_from_ms(0),
+		aa_lights_cycle(i, AALL_BG, aa_time_from_ms(1000),
 				&aa_lights_default_bg_cycles[i]);
-		aa_lights_clear(i, AALL_FG, aa_time_from_ms(0));
+		aa_lights_clear(i, AALL_FG, aa_time_from_ms(100));
 	}
 }
 

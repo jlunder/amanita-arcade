@@ -140,7 +140,7 @@ void aa_peripherals_init(void) {
 	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 10, 0);
 
 	cs43l22_init();
-	mpr121_init();
+	//mpr121_init();
 	ws2811_init();
 }
 

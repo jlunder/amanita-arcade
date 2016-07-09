@@ -722,11 +722,13 @@ aa_lights_cycle_t const aa_lights_default_bg_cycles[AALM_COUNT] = {
 #undef N
 #undef W
 
-aa_lights_pattern_t aa_lights_static_values[AALM_COUNT][AALL_COUNT];
+static aa_lights_pattern_t aa_lights_static_values[AALM_COUNT][AALL_COUNT];
 
 static aa_lights_layer_state_t aa_lights_state[AALM_COUNT][AALL_COUNT];
 
 static aa_lights_pattern_t aa_lights_cur[AALM_COUNT][AALL_COUNT];
+
+static hw_assignment_id_t aa_lights_cap_pins[AALM_COUNT];
 
 #ifdef AA_PRODUCTION_HARDWARE
 #ifdef AA_WS2811_I2S
@@ -761,6 +763,20 @@ void aa_lights_init(void) {
 	aa_lights_solid(AALM_D, AALL_FG, 0, &aa_lights_solid_pink);
 
 	ws2811_start();
+
+	aa_lights_cap_pins[0] = hw_pin_assign(HWR_PE4);
+	aa_lights_cap_pins[1] = hw_pin_assign(HWR_PE5);
+	aa_lights_cap_pins[2] = hw_pin_assign(HWR_PE6);
+	aa_lights_cap_pins[3] = hw_pin_assign(HWR_PE7);
+
+	for(size_t i = 0; i < AALM_COUNT; ++i) {
+		hw_pin_configure(aa_lights_cap_pins[i], HWPM_OUT_PP | HWPM_SPEED_MIN);
+	}
+
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
 
 	(void)aa_fix16_to_fix8;
 	(void)aa_lights_pattern_pulse;
