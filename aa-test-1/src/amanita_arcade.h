@@ -12,7 +12,13 @@
   expr, "%s: %d: expression not true: %s", __FILE__, __LINE__, #expr
 
 
-namespace AA {
+namespace aa {
+  namespace hardware {
+    extern Serial debug_ser;
+    extern Serial test_io_ser;
+    extern SPI stalk_lights_spi;
+  }
+
   class Debug {
   public:
     static void pause();

@@ -5,7 +5,7 @@
 #include "amanita_arcade.h"
 
 
-namespace AA {
+namespace aa {
   class TimeSpan;
 
   class ShortTimeSpan {

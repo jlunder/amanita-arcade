@@ -2,7 +2,7 @@
 
 #include "amanita_arcade.h"
 
-namespace AA {
+namespace aa {
   class Color {
   public:
     Color(float r, float g, float b, float a = 1.0f)

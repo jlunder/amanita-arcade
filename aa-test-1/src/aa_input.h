@@ -4,8 +4,10 @@
 
 #include "amanita_arcade.h"
 
+#include "aa_time_span.h"
 
-namespace AA {
+
+namespace aa {
   class Input {
   public:
     enum Button {
@@ -15,17 +17,26 @@ namespace AA {
       B_PINK  = 0x08,
     };
 
-    static float button_pressure(Button b);
+    static void init();
 
-    static bool button_state(Button b);
-    static bool button_pressed(Button b);
-    static bool button_released(Button b);
+    static bool button_state(Button b) { return (_buttons & b) != 0; }
+    static bool button_pressed(Button b) {
+      return (_buttons & (_last_buttons ^ _buttons) & b) != 0;
+    }
+    static bool button_released(Button b) {
+      return (~_buttons & (_last_buttons ^ _buttons) & b) != 0;
+    }
+
+    static ShortTimeSpan get_time_since_last_sample() {
+      return _time_since_last_sample;
+    }
 
     static void read_buttons();
 
   private:
-    static uint32_t _lastButtons;
+    static uint32_t _last_buttons;
     static uint32_t _buttons;
+    static ShortTimeSpan _time_since_last_sample;
   };
 }
 

@@ -1,11 +1,14 @@
 #include "amanita_arcade.h"
 
+#include "aa_game.h"
+#include "aa_input.h"
+
 
 #define AA_MAX_INDENT 16
 #define AA_FRAME_MICROS 10000
 
 
-namespace AA {
+namespace aa {
   class Program {
   public:
     static void main();
@@ -23,11 +26,13 @@ namespace AA {
       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
     };
 
-    static Serial debug_ser(PA_2, PA_3);
-    static Serial test_io_ser(PA_9, PA_10);
-    static SPI stalk_lights_spi();
-
     static char trace_buf[256];
+  }
+
+  namespace hardware {
+    Serial debug_ser(PA_2, PA_3);
+    Serial test_io_ser(PA_9, PA_10);
+    //SPI stalk_lights_spi;
   }
 
   int32_t Debug::_indent_depth;
@@ -39,13 +44,14 @@ namespace AA {
 
   void Debug::pause() {
     // TODO debug breakpoint
-    while(debug_ser.readable()) {
-      debug_ser.getc();
+    //__BKPT(0);
+    while(hardware::debug_ser.readable()) {
+      hardware::debug_ser.getc();
     }
     trace("paused, any input to resume");
     for(;;) {
-      if(debug_ser.readable()) {
-        debug_ser.getc();
+      if(hardware::debug_ser.readable()) {
+        hardware::debug_ser.getc();
         break;
       }
     }
@@ -84,19 +90,19 @@ namespace AA {
     char const * q = message;
     char const * p;
     for(;;) {
-      static_cast<FileLike *>(&debug_ser)->write(indent_chars,
+      static_cast<FileLike *>(&hardware::debug_ser)->write(indent_chars,
         _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT);
       p = q;
       if(p == message) {
-        debug_ser.putc('>');
+        hardware::debug_ser.putc('>');
       } else {
-        debug_ser.putc(':');
+        hardware::debug_ser.putc(':');
       }
       while(*q != 0 && *q != '\n') {
         ++q;
       }
-      static_cast<FileLike *>(&debug_ser)->write(p, q - p);
-      debug_ser.puts("\r\n");
+      static_cast<FileLike *>(&hardware::debug_ser)->write(p, q - p);
+      hardware::debug_ser.puts("\r\n");
       if(*q == 0) {
         break;
       }
@@ -134,11 +140,11 @@ namespace AA {
   }
 
   void Debug::push_context(char const * name) {
-    static_cast<FileLike *>(&debug_ser)->write(indent_chars,
+    static_cast<FileLike *>(&hardware::debug_ser)->write(indent_chars,
       _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT);
-    debug_ser.putc('[');
-    debug_ser.puts(name);
-    debug_ser.puts("]\r\n");
+    hardware::debug_ser.putc('[');
+    hardware::debug_ser.puts(name);
+    hardware::debug_ser.puts("]\r\n");
     assertf(AA_AUTO_ASSERT(_indent_depth < AA_MAX_INDENT));
     ++_indent_depth;
   }
@@ -153,10 +159,13 @@ namespace AA {
   void Program::main() {
     mbed::Timer timer;
 
-    debug_ser.baud(115200);
-    test_io_ser.baud(115200);
+    hardware::debug_ser.baud(115200);
+
+    Input::init();
 
     timer.start();
+
+    Debug::pause();
 
     uint32_t last_micros = timer.read_us();
     for(;;) {
@@ -169,8 +178,9 @@ namespace AA {
         } else {
           last_micros = micros;
         }
+
         LogContext c("frame");
-        Debug::tracef("delta = %d", delta);
+        Game::update(ShortTimeSpan(delta));
       }
     }
   }
@@ -178,6 +188,6 @@ namespace AA {
 
 
 int main() {
-  AA::Program::main();
+  aa::Program::main();
   return 0;
 }

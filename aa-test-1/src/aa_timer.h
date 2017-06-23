@@ -7,7 +7,7 @@
 #include "aa_time_span.h"
 
 
-namespace AA {
+namespace aa {
   class Timer {
   public:
     Timer(TimeSpan period, bool periodic = true);
@@ -25,7 +25,7 @@ namespace AA {
     int32_t _periods;
     bool _periodic;
   };
-  
+
 }
 
 

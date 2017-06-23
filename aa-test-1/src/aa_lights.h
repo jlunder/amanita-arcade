@@ -5,7 +5,7 @@
 #include "amanita_arcade.h"
 
 
-namespace AA {
+namespace aa {
   class Lights {
   public:
     static void play_pattern();

@@ -7,10 +7,10 @@
 #include "aa_time_span.h"
 
 
-namespace AA {
+namespace aa {
   class Game {
   public:
-    void update(ShortTimeSpan dt);
+    static void update(ShortTimeSpan dt);
   };
 }
 

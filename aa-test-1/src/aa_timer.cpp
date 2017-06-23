@@ -3,7 +3,7 @@
 #include "aa_timer.h"
 
 
-namespace AA {
+namespace aa {
   Timer::Timer(TimeSpan period, bool periodic)
       : _period(period), _current(), _periodic(periodic) {
   }
