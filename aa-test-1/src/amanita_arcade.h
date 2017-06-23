@@ -74,58 +74,6 @@ namespace AA {
     ~LogContext() { Debug::pop_context(); }
   };
 
-  class TimeSpan {
-  public:
-    explicit TimeSpan(int64_t micros): _micros(micros) { }
-
-    float to_seconds() const { return _micros * 1e-6f; }
-    int64_t to_millis() const { return _micros / 1000; }
-    int64_t to_micros() const { return _micros; }
-
-    static TimeSpan from_micros(int64_t micros) { return TimeSpan(micros); }
-
-    static TimeSpan from_millis(int64_t millis) {
-      return TimeSpan(millis * 1000);
-    }
-
-    static TimeSpan from_seconds(float seconds) {
-      return TimeSpan(seconds * 1e6f);
-    }
-
-  private:
-    int64_t _micros;
-  };
-
-  class ShortTimeSpan {
-  public:
-    explicit ShortTimeSpan(int32_t micros): _micros(micros) { }
-
-    float to_seconds() const { return _micros * 1e-6f; }
-    int32_t to_millis() const { return _micros / 1000; }
-    int32_t to_micros() const { return _micros; }
-
-    static ShortTimeSpan from_micros(int32_t micros) {
-      return ShortTimeSpan(micros);
-    }
-
-    static ShortTimeSpan from_millis(int32_t millis) {
-      return ShortTimeSpan(millis * 1000);
-    }
-
-    static ShortTimeSpan from_seconds(float seconds) {
-      return ShortTimeSpan(seconds);
-    }
-
-    operator TimeSpan() const;
-
-  private:
-    int32_t _micros;
-  };
-
-  inline ShortTimeSpan::operator TimeSpan() const {
-    return TimeSpan(_micros);
-  }
-
 }
 
 

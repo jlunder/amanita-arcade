@@ -15,6 +15,8 @@ namespace AA {
       B_PINK  = 0x08,
     };
 
+    static float button_pressure(Button b);
+
     static bool button_state(Button b);
     static bool button_pressed(Button b);
     static bool button_released(Button b);

@@ -4,11 +4,13 @@
 
 #include "amanita_arcade.h"
 
+#include "aa_time_span.h"
+
 
 namespace AA {
   class Game {
   public:
-    update(TimeSpan dt);
+    void update(ShortTimeSpan dt);
   };
 }
 

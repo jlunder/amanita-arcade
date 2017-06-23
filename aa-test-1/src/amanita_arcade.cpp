@@ -2,6 +2,7 @@
 
 
 #define AA_MAX_INDENT 16
+#define AA_FRAME_MICROS 10000
 
 
 namespace AA {
@@ -150,16 +151,27 @@ namespace AA {
   }
 
   void Program::main() {
+    mbed::Timer timer;
+
     debug_ser.baud(115200);
     test_io_ser.baud(115200);
 
-    LogContext c("main");
+    timer.start();
+
+    uint32_t last_micros = timer.read_us();
     for(;;) {
-      Debug::tracef("Hello World!!!\nThis message is multiline.");
-      _amber_led = 1;
-      wait(0.2);
-      _amber_led = 0;
-      wait(0.2);
+      uint32_t micros = timer.read_us();
+      uint32_t delta = micros - last_micros;
+
+      if(delta >= AA_FRAME_MICROS) {
+        if(delta < AA_FRAME_MICROS * 2) {
+          last_micros += AA_FRAME_MICROS;
+        } else {
+          last_micros = micros;
+        }
+        LogContext c("frame");
+        Debug::tracef("delta = %d", delta);
+      }
     }
   }
 }
