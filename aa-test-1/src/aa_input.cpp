@@ -55,9 +55,11 @@ namespace aa {
           int c = hardware::test_io_ser.getc();
           if(c >= 0) {
             input_test_io_isr_parse(c);
+            //hardware::test_io_ser.putc('A' + (char)parser_state);
           } else {
             parser_state = IPS_IDLE;
           }
+          //Debug::tracef("%2d %08X %08X %08X %c", parser_state, parser_micros, parser_status, parser_buttons, new_sample_available ? 'T' : 'f');
         }
       }
 
@@ -67,15 +69,16 @@ namespace aa {
         sample_micros = parser_micros;
         sample_buttons = parser_buttons;
         parser_state = IPS_IDLE;
+        __sync_synchronize();
+        new_sample_available = true;
+        __sync_synchronize();
       }
-      __sync_synchronize();
       __enable_irq();
-      new_sample_available = true;
     }
 
     static void input_test_io_isr_parse(char in_c) {
       switch(in_c) {
-      case '!': input_test_io_isr_parse_begin(); return;
+      case '!': parser_state = IPS_TYPE; return;
       case '\r': case '\n': input_test_io_isr_parse_reset(); return;
       }
 
@@ -163,23 +166,19 @@ namespace aa {
 
     hardware::test_io_ser.baud(115200);
     hardware::test_io_ser.attach(&input_test_io_isr, Serial::RxIrq);
-    hardware::test_io_ser.puts("A0M0V00");
 
-    mbed::Timer tm;
-    tm.start();
-    while(tm.read_ms() < 30) {
-      if(hardware::test_io_ser.readable()) {
-        hardware::test_io_ser.getc();
-      }
-    }
-
-    hardware::test_io_ser.putc('P');
-    tm.reset();
     bool alive = false;
-    while(tm.read_ms() < 100) {
-      if(new_sample_available) {
-        alive = true;
-        break;
+
+    for(int i = 0; !alive && i < 20; ++i) {
+      hardware::test_io_ser.puts("A0M0V00");
+      wait_ms(100);
+
+      for(int j = 0; !alive && j < 20; ++j) {
+        hardware::test_io_ser.putc('P');
+        wait_ms(10);
+        if(new_sample_available) {
+          alive = true;
+        }
       }
     }
 
@@ -190,21 +189,37 @@ namespace aa {
         last_sample_micros, _buttons);
     } else {
       Debug::trace("Test input not responding");
+      Debug::pause();
     }
   }
 
   void Input::read_buttons() {
-    if(new_sample_available) {
+    bool got_new = new_sample_available;
+    if(got_new) {
       _last_buttons = _buttons;
-      __sync_synchronize();
       __disable_irq();
-      _buttons = sample_buttons;
+      __sync_synchronize();
+      _buttons = 0;
+      if((sample_buttons & 0x1000) == 0) {
+        _buttons |= B_GREEN;
+      }
+      if((sample_buttons & 0x2000) == 0) {
+        _buttons |= B_RED;
+      }
+      if((sample_buttons & 0x4000) == 0) {
+        _buttons |= B_BLUE;
+      }
+      if((sample_buttons & 0x8000) == 0) {
+        _buttons |= B_PINK;
+      }
       _time_since_last_sample = ShortTimeSpan::from_micros(
         static_cast<int32_t>(sample_micros - last_sample_micros));
       last_sample_micros = sample_micros;
       new_sample_available = false;
-      __enable_irq();
       __sync_synchronize();
+      __enable_irq();
     }
+    //Debug::tracef("Buttons: %04X %c", _buttons, got_new ? 'N' : ' ');
+    hardware::test_io_ser.putc('P');
   }
 }

@@ -30,8 +30,8 @@ namespace aa {
   }
 
   namespace hardware {
-    Serial debug_ser(PA_2, PA_3);
-    Serial test_io_ser(PA_9, PA_10);
+    Serial debug_ser(PA_2, PA_3); // USART2
+    Serial test_io_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
     //SPI stalk_lights_spi;
   }
 
@@ -142,9 +142,11 @@ namespace aa {
   void Debug::push_context(char const * name) {
     static_cast<FileLike *>(&hardware::debug_ser)->write(indent_chars,
       _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT);
+    /*
     hardware::debug_ser.putc('[');
     hardware::debug_ser.puts(name);
     hardware::debug_ser.puts("]\r\n");
+    */
     assertf(AA_AUTO_ASSERT(_indent_depth < AA_MAX_INDENT));
     ++_indent_depth;
   }
@@ -161,11 +163,12 @@ namespace aa {
 
     hardware::debug_ser.baud(115200);
 
+    // Give external hardware time to wake up... some of it is sloooow
+    wait_ms(500);
+
     Input::init();
 
     timer.start();
-
-    Debug::pause();
 
     uint32_t last_micros = timer.read_us();
     for(;;) {
