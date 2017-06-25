@@ -16,7 +16,7 @@
 namespace aa {
   namespace hardware {
     extern Serial test_io_ser;
-    extern Serial stalk_lights_ser;
+    extern Serial lights_ws2812_ser;
   }
 
   class Debug {

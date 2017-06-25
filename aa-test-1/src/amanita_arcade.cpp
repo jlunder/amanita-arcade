@@ -31,9 +31,9 @@ namespace aa {
   }
 
   namespace hardware {
-    Serial debug_ser(PA_2, PA_3);
+    Serial debug_ser(PA_2, PA_3); // USART2 -- also accessible via stdio?
     Serial test_io_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
-    Serial stalk_lights_ser(PA_0, PA_1); // USART4
+    Serial lights_ws2812_ser(PA_0, PA_1); // USART4
   }
 
   int32_t Debug::_indent_depth;
