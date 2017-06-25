@@ -4,6 +4,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <mbed.h>
 
@@ -14,9 +15,8 @@
 
 namespace aa {
   namespace hardware {
-    extern Serial debug_ser;
     extern Serial test_io_ser;
-    extern SPI stalk_lights_spi;
+    extern Serial stalk_lights_ser;
   }
 
   class Debug {

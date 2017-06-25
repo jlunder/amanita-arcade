@@ -23,8 +23,6 @@ namespace aa {
   }
 
   void Timer::update(TimeSpan elapsed) {
-    int64_t micros_elapsed = elapsed.to_micros();
-
     Debug::assertf(AA_AUTO_ASSERT(elapsed >= TimeSpan(0)));
 
     if(_periodic) {

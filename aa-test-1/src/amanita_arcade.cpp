@@ -2,10 +2,11 @@
 
 #include "aa_game.h"
 #include "aa_input.h"
+#include "aa_lights.h"
 
 
 #define AA_MAX_INDENT 16
-#define AA_FRAME_MICROS 10000
+#define AA_FRAME_MICROS 50000
 
 
 namespace aa {
@@ -30,9 +31,9 @@ namespace aa {
   }
 
   namespace hardware {
-    Serial debug_ser(PA_2, PA_3); // USART2
+    Serial debug_ser(PA_2, PA_3);
     Serial test_io_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
-    //SPI stalk_lights_spi;
+    Serial stalk_lights_ser(PA_0, PA_1); // USART4
   }
 
   int32_t Debug::_indent_depth;
@@ -45,16 +46,8 @@ namespace aa {
   void Debug::pause() {
     // TODO debug breakpoint
     //__BKPT(0);
-    while(hardware::debug_ser.readable()) {
-      hardware::debug_ser.getc();
-    }
     trace("paused, any input to resume");
-    for(;;) {
-      if(hardware::debug_ser.readable()) {
-        hardware::debug_ser.getc();
-        break;
-      }
-    }
+    getchar();
   }
 
   void Debug::abort() {
@@ -90,19 +83,20 @@ namespace aa {
     char const * q = message;
     char const * p;
     for(;;) {
-      static_cast<FileLike *>(&hardware::debug_ser)->write(indent_chars,
-        _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT);
+      fwrite(indent_chars,
+        _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT, 1,
+        stdout);
       p = q;
       if(p == message) {
-        hardware::debug_ser.putc('>');
+        putchar('>');
       } else {
-        hardware::debug_ser.putc(':');
+        putchar(':');
       }
       while(*q != 0 && *q != '\n') {
         ++q;
       }
-      static_cast<FileLike *>(&hardware::debug_ser)->write(p, q - p);
-      hardware::debug_ser.puts("\r\n");
+      fwrite(p, q - p, 1, stdout);
+      fputs("\r\n", stdout);
       if(*q == 0) {
         break;
       }
@@ -140,12 +134,13 @@ namespace aa {
   }
 
   void Debug::push_context(char const * name) {
-    static_cast<FileLike *>(&hardware::debug_ser)->write(indent_chars,
-      _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT);
     /*
-    hardware::debug_ser.putc('[');
-    hardware::debug_ser.puts(name);
-    hardware::debug_ser.puts("]\r\n");
+    fwrite(indent_chars,
+      _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT, 1,
+      stdout);
+    putchar('[');
+    fputs(name, stdout);
+    putchar("]\r\n");
     */
     assertf(AA_AUTO_ASSERT(_indent_depth < AA_MAX_INDENT));
     ++_indent_depth;
@@ -161,12 +156,14 @@ namespace aa {
   void Program::main() {
     mbed::Timer timer;
 
+    // Somehow stdio knows to hook into USART2...?
     hardware::debug_ser.baud(115200);
 
     // Give external hardware time to wake up... some of it is sloooow
     wait_ms(500);
 
     Input::init();
+    Lights::init();
 
     timer.start();
 
@@ -183,6 +180,7 @@ namespace aa {
         }
 
         LogContext c("frame");
+        Lights::update(ShortTimeSpan(delta));
         Game::update(ShortTimeSpan(delta));
       }
     }
