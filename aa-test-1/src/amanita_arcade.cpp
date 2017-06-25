@@ -6,19 +6,13 @@
 
 
 #define AA_MAX_INDENT 16
-#define AA_FRAME_MICROS 50000
+#define AA_FRAME_MICROS 30000
 
 
 namespace aa {
   class Program {
   public:
     static void main();
-
-  private:
-    static DigitalOut _amber_led;
-    static DigitalOut _green_led;
-    static DigitalOut _red_led;
-    static DigitalOut _blue_led;
   };
 
   namespace {
@@ -30,18 +24,20 @@ namespace aa {
     static char trace_buf[256];
   }
 
-  namespace hardware {
+  namespace hw {
     Serial debug_ser(PA_2, PA_3); // USART2 -- also accessible via stdio?
-    Serial test_io_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
-    Serial lights_ws2812_ser(PA_0, PA_1); // USART4
+    Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
+    //Serial lights_ws2812_ser(PA_0, PA_1); // USART4
+    PortOut lights_ws2812_port(PortE, 0xFFFF);
+    DigitalOut debug_amber_led(LED3);
+    DigitalOut debug_green_led(LED4);
+    DigitalOut debug_red_led(LED5);
+    DigitalOut debug_blue_led(LED6);
+    DigitalOut debug_frame_sync(PA_14);
+    DigitalOut debug_lights_sync(PA_15);
   }
 
   int32_t Debug::_indent_depth;
-
-  DigitalOut Program::_amber_led(LED3);
-  DigitalOut Program::_green_led(LED4);
-  DigitalOut Program::_red_led(LED5);
-  DigitalOut Program::_blue_led(LED6);
 
   void Debug::pause() {
     // TODO debug breakpoint
@@ -157,7 +153,7 @@ namespace aa {
     mbed::Timer timer;
 
     // Somehow stdio knows to hook into USART2...?
-    hardware::debug_ser.baud(115200);
+    hw::debug_ser.baud(115200);
 
     // Give external hardware time to wake up... some of it is sloooow
     wait_ms(500);
@@ -180,8 +176,11 @@ namespace aa {
         }
 
         LogContext c("frame");
+        hw::debug_frame_sync = 1;
         Lights::update(ShortTimeSpan(delta));
+        Input::read_buttons();
         Game::update(ShortTimeSpan(delta));
+        hw::debug_frame_sync = 0;
       }
     }
   }

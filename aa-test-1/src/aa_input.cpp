@@ -51,11 +51,11 @@ namespace aa {
 
     static void input_test_io_isr() {
       for(int i = 0; i < 10; ++i) {
-        while(hardware::test_io_ser.readable()) {
-          int c = hardware::test_io_ser.getc();
+        while(hw::input_ser.readable()) {
+          int c = hw::input_ser.getc();
           if(c >= 0) {
             input_test_io_isr_parse(c);
-            //hardware::test_io_ser.putc('A' + (char)parser_state);
+            //hw::input_ser.putc('A' + (char)parser_state);
           } else {
             parser_state = IPS_IDLE;
           }
@@ -164,17 +164,17 @@ namespace aa {
 
     Debug::trace("Initializing input");
 
-    hardware::test_io_ser.baud(115200);
-    hardware::test_io_ser.attach(&input_test_io_isr, Serial::RxIrq);
+    hw::input_ser.baud(115200);
+    hw::input_ser.attach(&input_test_io_isr, Serial::RxIrq);
 
     bool alive = false;
 
     for(int i = 0; !alive && i < 20; ++i) {
-      hardware::test_io_ser.puts("A0M0V00");
+      hw::input_ser.puts("A0M0V00");
       wait_ms(100);
 
       for(int j = 0; !alive && j < 20; ++j) {
-        hardware::test_io_ser.putc('P');
+        hw::input_ser.putc('P');
         wait_ms(10);
         if(new_sample_available) {
           alive = true;
@@ -220,6 +220,6 @@ namespace aa {
       __enable_irq();
     }
     //Debug::tracef("Buttons: %04X %c", _buttons, got_new ? 'N' : ' ');
-    hardware::test_io_ser.putc('P');
+    hw::input_ser.putc('P');
   }
 }

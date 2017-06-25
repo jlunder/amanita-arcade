@@ -14,9 +14,15 @@
 
 
 namespace aa {
-  namespace hardware {
-    extern Serial test_io_ser;
-    extern Serial lights_ws2812_ser;
+  namespace hw {
+    extern Serial input_ser;
+    extern PortOut lights_ws2812_port;
+    extern DigitalOut debug_amber_led;
+    extern DigitalOut debug_green_led;
+    extern DigitalOut debug_red_led;
+    extern DigitalOut debug_blue_led;
+    extern DigitalOut debug_frame_sync;
+    extern DigitalOut debug_lights_sync;
   }
 
   class Debug {

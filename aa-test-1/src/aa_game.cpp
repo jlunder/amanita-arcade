@@ -7,7 +7,6 @@
 
 namespace aa {
   void Game::update(ShortTimeSpan dt) {
-    Input::read_buttons();
     /*
     Debug::tracef("%6d %c %c %c %c", dt.to_micros(),
       Input::button_state(Input::B_RED) ? 'R' : 'r',
