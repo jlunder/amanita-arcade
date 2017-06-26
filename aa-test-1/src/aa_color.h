@@ -25,50 +25,53 @@ namespace aa {
 
     void lerpThis(Color const & y, float a) {
       float negA = 1.0f - a;
-      _r = _r * a + y.getR() * negA;
-      _g = _g * a + y.getG() * negA;
-      _b = _b * a + y.getB() * negA;
-      _a = _a * a + y.getA() * negA;
+      _r = _r * a + y._r * negA;
+      _g = _g * a + y._g * negA;
+      _b = _b * a + y._b * negA;
+      _a = _a * a + y._a * negA;
     }
 
     void mixThis(Color const & y) {
-      float negA = 1.0f - y.getA();
-      _r = _r * negA + y.getR();
-      _g = _g * negA + y.getG();
-      _b = _b * negA + y.getB();
-      _a = _a * negA + y.getA();
+      float negA = 1.0f - y._a;
+      _r = _r * negA + y._r;
+      _g = _g * negA + y._g;
+      _b = _b * negA + y._b;
+      _a = _a * negA + y._a;
     }
 
-    Color withR(float r) const { return Color(r, _g, _b, _a); }
-    Color withG(float g) const { return Color(_r, g, _b, _a); }
-    Color withB(float b) const { return Color(_r, _g, b, _a); }
-    Color withA(float a) const { return Color(_r, _g, _b, a); }
+    Color with_r(float r) const { return Color(r, _g, _b, _a); }
+    Color with_g(float g) const { return Color(_r, g, _b, _a); }
+    Color with_b(float b) const { return Color(_r, _g, b, _a); }
+    Color with_a(float a) const { return Color(_r, _g, _b, a); }
 
-    static Color lerp(Color const & x, Color const & y, float a) {
+    Color cie_scale(float l) const {
+      return *this * cie(l);
+    }
+
+    Color lerp(Color const & y, float a) const {
       float negA = 1.0f - a;
-      return Color(x.getR() * a + y.getR() * negA,
-        x.getG() * a + y.getG() * negA,
-        x.getB() * a + y.getB() * negA,
-        x.getA() * a + y.getA() * negA);
-    }
-
-    static Color mix(Color const & x, Color const & y) {
-      float negA = 1.0f - y.getA();
       return Color(
-        x.getR() * negA + y.getR(),
-        x.getG() * negA + y.getG(),
-        x.getB() * negA + y.getB(),
-        x.getA() * negA + y.getA());
+        _r * negA + y._r * a,
+        _g * negA + y._g * a,
+        _b * negA + y._b * a,
+        _a * negA + y._a * a);
     }
 
-    static inline Color elemMul(Color const & x, Color const & y) {
-      return Color(x.getR() * y.getR(), x.getG() * y.getG(),
-        x.getB() * y.getB(), x.getA() * y.getA());
+    Color mix(Color const & y) {
+      float negA = 1.0f - y._a;
+      return Color(
+        _r * negA + y._r,
+        _g * negA + y._g,
+        _b * negA + y._b,
+        _a * negA + y._a);
     }
 
-    static inline float dot(Color const & x, Color const & y) {
-      return x.getR() * y.getR() + x.getG() * y.getG() +
-        x.getB() * y.getB() + x.getA() * y.getA();
+    Color elem_mul(Color const & y) const {
+      return Color(_r * y._r, _g * y._g, _b * y._b, _a * y._a);
+    }
+
+    float dot(Color const & y) const {
+      return _r * y._r + _g * y._g + _b * y._b + _a * y._a;
     }
 
     Color & operator *=(float a) {
@@ -80,22 +83,54 @@ namespace aa {
     }
 
     Color & operator +=(Color const & y) {
-      _r += y.getR();
-      _g += y.getG();
-      _b += y.getB();
-      _a += y.getA();
+      _r += y._r;
+      _g += y._g;
+      _b += y._b;
+      _a += y._a;
       return *this;
     }
 
     Color & operator -=(Color const & y) {
-      _r -= y.getR();
-      _g -= y.getG();
-      _b -= y.getB();
-      _a -= y.getA();
+      _r -= y._r;
+      _g -= y._g;
+      _b -= y._b;
+      _a -= y._a;
       return *this;
     }
 
+    uint32_t to_color32() const {
+      return
+        (_r >= 1.0f ? 0xFF0000 : (_r >= 0.0f ?
+          ((uint32_t)(_r * 256) << 16) : 0x000000)) |
+        (_g >= 1.0f ? 0x00FF00 : (_g >= 0.0f ?
+          ((uint32_t)(_g * 256) << 8) : 0x000000)) |
+        (_b >= 1.0f ? 0x0000FF : (_b >= 0.0f ?
+          ((uint32_t)(_b * 256) << 0) : 0x000000));
+    }
+
+    uint32_t to_ws2811_color32() const {
+      return
+        (_g >= 1.0f ? 0xFF0000 : (_g >= 0.0f ?
+          ((uint32_t)(_g * 256) << 16) : 0x000000)) |
+        (_r >= 1.0f ? 0x00FF00 : (_r >= 0.0f ?
+          ((uint32_t)(_r * 256) << 8) : 0x000000)) |
+        (_b >= 1.0f ? 0x0000FF : (_b >= 0.0f ?
+          ((uint32_t)(_b * 256) << 0) : 0x000000));
+    }
+
+    static float cie(float l);
+
+    friend Color operator +(Color const & x, Color const & y);
+    friend Color operator -(Color const & x);
+    friend Color operator -(Color const & x, Color const & y);
+    friend Color operator *(Color const & x, float y);
+    friend Color operator *(float x, Color const & y);
+    friend Color operator /(Color const & x, float y);
+
   private:
+    static const size_t CIE_TABLE_SIZE = 17;
+    static float cie_table[CIE_TABLE_SIZE];
+
     float _r, _g, _b, _a;
   };
 

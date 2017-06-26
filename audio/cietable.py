@@ -5,8 +5,8 @@ def cie1931(L):
     else:
         return ((L+16.0)/116.0)**3
 
-d = [int(round(cie1931(x / 4095.0) * 255)) for x in range(4096)]
+d = [cie1931(x / 16.0) for x in range(17)]
 print '\n'.join(
     [' '.join(
-        [('%3d' % (x,)) + ',' for x in d[i * 8:i * 8 + 8]])
-        for i in range((len(d) + 7) / 8)])
+        [('%.6g' % (x,)) + ',' for x in d[i * 1:i * 1 + 1]])
+        for i in range((len(d) + 0) / 1)])

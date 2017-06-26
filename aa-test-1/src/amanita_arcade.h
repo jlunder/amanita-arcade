@@ -2,6 +2,7 @@
 #define AMANITA_ARCADE_H
 
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,6 +15,49 @@
 
 
 namespace aa {
+  enum MushroomID {
+    M_RED,   // Stalk labeled "1"
+    M_GREEN, // Stalk labeled "B"
+    M_BLUE,  // Stalk labeled "A"
+    M_PINK,  // Stalk labeled "2"
+    M_COUNT
+  };
+
+  #if 1
+  static const size_t STALK_HEIGHT_RED   = 12;
+  static const size_t STALK_HEIGHT_GREEN = 12;
+  static const size_t STALK_HEIGHT_BLUE  = 12;
+  static const size_t STALK_HEIGHT_PINK  = 12;
+  static const size_t STALK_HEIGHT_MAX   = 12;
+  static const size_t STALK_WIDTH = 1;
+  static const size_t SCOREBOARD_WIDTH  = 8;
+  static const size_t SCOREBOARD_HEIGHT = 8;
+  static const float STALK_BRIGHTNESS = 0.25f;
+  static const float SCOREBOARD_BRIGHTNESS = 0.25f;
+  #else
+  static const size_t STALK_HEIGHT_RED   = 36;
+  static const size_t STALK_HEIGHT_GREEN = 24;
+  static const size_t STALK_HEIGHT_BLUE  = 41;
+  static const size_t STALK_HEIGHT_PINK  = 32;
+  static const size_t STALK_HEIGHT_MAX   = 41;
+  static const size_t STALK_WIDTH = 3;
+  static const size_t SCOREBOARD_WIDTH = 30;
+  static const size_t SCOREBOARD_HEIGHT = 30;
+  static const float STALK_BRIGHTNESS = 1.0f;
+  static const float SCOREBOARD_BRIGHTNESS = 0.5f;
+  #endif
+
+  static const size_t STALK_LIGHTS_COUNT_RED =
+    STALK_HEIGHT_RED * STALK_WIDTH;
+  static const size_t STALK_LIGHTS_COUNT_GREEN =
+    STALK_HEIGHT_GREEN * STALK_WIDTH;
+  static const size_t STALK_LIGHTS_COUNT_BLUE =
+    STALK_HEIGHT_BLUE * STALK_WIDTH;
+  static const size_t STALK_LIGHTS_COUNT_PINK =
+    STALK_HEIGHT_PINK * STALK_WIDTH;
+  static const size_t SCOREBOARD_LIGHTS_COUNT =
+    SCOREBOARD_WIDTH * SCOREBOARD_HEIGHT;
+
   namespace hw {
     extern Serial input_ser;
     extern PortOut lights_ws2812_port;
