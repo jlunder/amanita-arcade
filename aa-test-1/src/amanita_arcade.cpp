@@ -165,6 +165,7 @@ namespace aa {
 
     Input::init();
     Lights::init();
+    Game::init();
 
     Debug::trace("Beginning main loop");
 
@@ -180,6 +181,7 @@ namespace aa {
           last_micros += AA_FRAME_MICROS;
         } else {
           last_micros = micros;
+          delta = AA_FRAME_MICROS * 2;
         }
 
         LogContext c("frame");

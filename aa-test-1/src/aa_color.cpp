@@ -4,6 +4,12 @@
 
 
 namespace aa {
+  Color const Color::black(0.0f, 0.0f, 0.0f);
+  Color const Color::red(1.0f, 0.0f, 0.0f);
+  Color const Color::green(0.0f, 1.0f, 0.0f);
+  Color const Color::blue(0.0f, 0.0f, 1.0f);
+  Color const Color::pink(1.0f, 0.2f, 0.2f);
+
   float Color::cie_table[CIE_TABLE_SIZE] = {
     0.0f,
     0.00692674f,

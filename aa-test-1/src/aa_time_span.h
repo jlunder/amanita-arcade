@@ -6,7 +6,18 @@
 
 
 namespace aa {
+  class ShortTimeSpan;
   class TimeSpan;
+
+  class ZeroTimeSpan {
+  public:
+    float to_seconds() const { return 0.0f; }
+    int32_t to_millis() const { return 0; }
+    int32_t to_micros() const { return 0; }
+
+    operator ShortTimeSpan() const;
+    operator TimeSpan() const;
+  };
 
   class ShortTimeSpan {
   public:
@@ -29,6 +40,31 @@ namespace aa {
       return ShortTimeSpan(seconds);
     }
 
+    ShortTimeSpan & operator +=(ShortTimeSpan y) {
+      _micros += y._micros;
+      return *this;
+    }
+
+    ShortTimeSpan & operator -=(ShortTimeSpan y) {
+      _micros -= y._micros;
+      return *this;
+    }
+
+    ShortTimeSpan & operator *=(int32_t y) {
+      _micros *= y;
+      return *this;
+    }
+
+    ShortTimeSpan & operator /=(int32_t y) {
+      _micros /= y;
+      return *this;
+    }
+
+    ShortTimeSpan & operator %=(ShortTimeSpan y) {
+      _micros %= y._micros;
+      return *this;
+    }
+
     operator TimeSpan() const;
 
   private:
@@ -37,9 +73,10 @@ namespace aa {
 
   class TimeSpan {
   public:
+    static ZeroTimeSpan const zero;
+
     TimeSpan(): _micros() { }
     explicit TimeSpan(int64_t micros): _micros(micros) { }
-    TimeSpan(ShortTimeSpan ts): _micros(ts.to_micros()) { }
 
     float to_seconds() const { return _micros * 1e-6f; }
     int64_t to_millis() const { return _micros / 1000; }
@@ -65,12 +102,87 @@ namespace aa {
       return *this;
     }
 
+    TimeSpan & operator *=(int64_t y) {
+      _micros *= y;
+      return *this;
+    }
+
+    TimeSpan & operator /=(int64_t y) {
+      _micros /= y;
+      return *this;
+    }
+
+    TimeSpan & operator %=(TimeSpan y) {
+      _micros %= y._micros;
+      return *this;
+    }
+
   private:
     int64_t _micros;
   };
 
+  inline ZeroTimeSpan::operator ShortTimeSpan() const {
+    return ShortTimeSpan();
+  }
+
+  inline ZeroTimeSpan::operator TimeSpan() const {
+    return TimeSpan();
+  }
+
   inline ShortTimeSpan::operator TimeSpan() const {
     return TimeSpan(_micros);
+  }
+
+  inline ShortTimeSpan operator +(ShortTimeSpan x, ShortTimeSpan y) {
+    return ShortTimeSpan(x.to_micros() + y.to_micros());
+  }
+
+  inline ShortTimeSpan operator -(ShortTimeSpan x) {
+    return ShortTimeSpan(-x.to_micros());
+  }
+
+  inline ShortTimeSpan operator -(ShortTimeSpan x, ShortTimeSpan y) {
+    return ShortTimeSpan(x.to_micros() - y.to_micros());
+  }
+
+  inline ShortTimeSpan operator *(ShortTimeSpan x, int32_t y) {
+    return ShortTimeSpan(x.to_micros() * y);
+  }
+
+  inline ShortTimeSpan operator *(int32_t x, ShortTimeSpan y) {
+    return ShortTimeSpan(x * y.to_micros());
+  }
+
+  inline int64_t operator /(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() / y.to_micros();
+  }
+
+  inline ShortTimeSpan operator %(ShortTimeSpan x, ShortTimeSpan y) {
+    return ShortTimeSpan(x.to_micros() % y.to_micros());
+  }
+
+  inline bool operator <(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() < y.to_micros();
+  }
+
+  inline bool operator <=(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() <= y.to_micros();
+  }
+
+  inline bool operator >(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() > y.to_micros();
+  }
+
+  inline bool operator >=(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() >= y.to_micros();
+  }
+
+  inline bool operator ==(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() == y.to_micros();
+  }
+
+  inline bool operator !=(ShortTimeSpan x, ShortTimeSpan y) {
+    return x.to_micros() != y.to_micros();
   }
 
   inline TimeSpan operator +(TimeSpan x, TimeSpan y) {

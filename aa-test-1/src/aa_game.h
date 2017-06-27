@@ -10,6 +10,7 @@
 namespace aa {
   class Game {
   public:
+    static void init();
     static void update(ShortTimeSpan dt);
   };
 }
