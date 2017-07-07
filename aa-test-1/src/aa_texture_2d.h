@@ -20,6 +20,7 @@ namespace aa {
 
     size_t get_width() const { return _width; }
     size_t get_height() const { return _height; }
+    Color sample(size_t x, size_t y) const { return _data[(y * _width) + x]; }
 
     void fill_solid(Color c);
     void copy(Texture2D const * src);

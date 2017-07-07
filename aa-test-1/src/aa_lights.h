@@ -123,9 +123,9 @@ namespace aa {
     static void update_composite_layers(Texture2D * tex, size_t layer_start,
       size_t layer_count);
     static void update_encode_stalk_texture_to_output(size_t page,
-      Texture2D * tex);
+      Texture2D const * tex);
     static void update_encode_scoreboard_texture_to_output(size_t page_start,
-      Texture2D * tex);
+      size_t lines_per_page, Texture2D const * tex);
   };
 }
 

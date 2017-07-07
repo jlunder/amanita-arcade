@@ -220,7 +220,8 @@ namespace aa {
     update_encode_stalk_texture_to_output(STALK_PAGE_PINK, &tex);
 
     update_composite_layers(&tex, LAYER_SB_START, LAYER_SB_COUNT);
-    update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, &tex);
+    update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, 4,
+      &tex);
 /*
     memset(_output_buf, 0, sizeof _output_buf);
 
@@ -305,20 +306,41 @@ namespace aa {
 
 
   void Lights::update_encode_stalk_texture_to_output(size_t page,
-      Texture2D * tex) {
-    for(size_t i = 0; i < PAGE_COUNT; ++i) {
-      for(size_t j = 0; j < PAGE_SIZE; ++j) {
-        _output_buf[i][j] = Color(0.0f, 0.0f, 0.1f).to_ws2811_color32();
+      Texture2D const * tex) {
+    size_t w = tex->get_width();
+    size_t h = tex->get_height();
+    size_t i = 0;
+    for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
+      for(size_t x = 0; x < w; ++x) {
+        if(y % 2 == 0) {
+          _output_buf[page][i++] = tex->sample(x, y).to_ws2811_color32();
+        } else {
+          _output_buf[page][i++] = tex->sample(w - 1 - x, y).to_ws2811_color32();
+        }
       }
     }
   }
 
 
   void Lights::update_encode_scoreboard_texture_to_output(size_t page_start,
-      Texture2D * tex) {
-    for(size_t i = 0; i < PAGE_COUNT; ++i) {
-      for(size_t j = 0; j < PAGE_SIZE; ++j) {
-        _output_buf[i][j] = Color(0.0f, 0.0f, 0.1f).to_ws2811_color32();
+      size_t lines_per_page, Texture2D const * tex) {
+    size_t w = tex->get_width();
+    size_t h = tex->get_height();
+    size_t i = 0;
+    size_t page_lines = 0;
+    size_t page = page_start;
+    for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
+      for(size_t x = 0; x < w; ++x) {
+        if(y % 2 == 0) {
+          _output_buf[page][i++] = tex->sample(x, y).to_ws2811_color32();
+        } else {
+          _output_buf[page][i++] = tex->sample(w - 1 - x, y).to_ws2811_color32();
+        }
+      }
+      ++page_lines;
+      if(page_lines >= lines_per_page) {
+        ++page;
+        page_lines = 0;
       }
     }
   }

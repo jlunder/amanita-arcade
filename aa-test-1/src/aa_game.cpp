@@ -24,7 +24,8 @@ namespace aa {
     void GlowBackgroundAnimator::render(ShortTimeSpan t, float a,
         Texture2D * dest) const {
       float aa = fabsf(a - 0.5f) + 0.5f;
-      dest->fill_solid(_color.cie_scale(aa));
+      Color c = _color.cie_scale(aa);
+      dest->fill_solid(c);
     }
 
     GlowBackgroundAnimator bgR0(ShortTimeSpan::from_millis(1000), Color::red);
