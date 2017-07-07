@@ -117,10 +117,13 @@ namespace aa {
 
     static Layer _layers[LAYER_COUNT];
     static uint32_t _output_buf[PAGE_COUNT][PAGE_SIZE];
-    static Color _texture_temp[2][TEXTURE_TEMP_MAX];
+    static Texture2D _composite_tex;
+    static Texture2D _transition_tex;
+    static Color _composite_tex_data[TEXTURE_TEMP_MAX];
+    static Color _transition_tex_data[TEXTURE_TEMP_MAX];
 
     static void update_animators(ShortTimeSpan dt);
-    static void update_composite_layers(Texture2D * tex, size_t layer_start,
+    static void update_composite_layers_to_composite_tex(size_t layer_start,
       size_t layer_count);
     static void update_encode_stalk_texture_to_output(size_t page,
       Texture2D const * tex);

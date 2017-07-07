@@ -58,7 +58,10 @@ namespace aa {
     { .width = SCOREBOARD_WIDTH, .height = SCOREBOARD_HEIGHT },
   };
   uint32_t Lights::_output_buf[PAGE_COUNT][PAGE_SIZE];
-  Color Lights::_texture_temp[2][TEXTURE_TEMP_MAX];
+  Texture2D Lights::_composite_tex;
+  Texture2D Lights::_transition_tex;
+  Color Lights::_composite_tex_data[TEXTURE_TEMP_MAX];
+  Color Lights::_transition_tex_data[TEXTURE_TEMP_MAX];
 
 
   Lights::AnimatorPool::AnimatorPool() : _next() {
@@ -203,60 +206,35 @@ namespace aa {
 
 
   void Lights::update(ShortTimeSpan dt) {
+    Debug::tracef("hello! %d", dt.to_micros());
     update_animators(dt);
 
-    Texture2D tex;
+    update_composite_layers_to_composite_tex(LAYER_STALK_RED_START,
+      LAYER_STALK_COUNT);
+    update_encode_stalk_texture_to_output(STALK_PAGE_RED, &_composite_tex);
 
-    update_composite_layers(&tex, LAYER_STALK_RED_START, LAYER_STALK_COUNT);
-    update_encode_stalk_texture_to_output(STALK_PAGE_RED, &tex);
+    update_composite_layers_to_composite_tex(LAYER_STALK_GREEN_START,
+      LAYER_STALK_COUNT);
+    update_encode_stalk_texture_to_output(STALK_PAGE_GREEN, &_composite_tex);
 
-    update_composite_layers(&tex, LAYER_STALK_GREEN_START, LAYER_STALK_COUNT);
-    update_encode_stalk_texture_to_output(STALK_PAGE_GREEN, &tex);
+    update_composite_layers_to_composite_tex(LAYER_STALK_BLUE_START,
+      LAYER_STALK_COUNT);
+    update_encode_stalk_texture_to_output(STALK_PAGE_BLUE, &_composite_tex);
 
-    update_composite_layers(&tex, LAYER_STALK_BLUE_START, LAYER_STALK_COUNT);
-    update_encode_stalk_texture_to_output(STALK_PAGE_BLUE, &tex);
+    update_composite_layers_to_composite_tex(LAYER_STALK_PINK_START,
+      LAYER_STALK_COUNT);
+    update_encode_stalk_texture_to_output(STALK_PAGE_PINK, &_composite_tex);
 
-    update_composite_layers(&tex, LAYER_STALK_PINK_START, LAYER_STALK_COUNT);
-    update_encode_stalk_texture_to_output(STALK_PAGE_PINK, &tex);
-
-    update_composite_layers(&tex, LAYER_SB_START, LAYER_SB_COUNT);
+    update_composite_layers_to_composite_tex(LAYER_SB_START, LAYER_SB_COUNT);
     update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, 4,
-      &tex);
-/*
-    memset(_output_buf, 0, sizeof _output_buf);
-
-    uint32_t red_color = Color(1.0f, 0.0f, 0.0f).to_ws2811_color32();
-    uint32_t green_color = Color(0.0f, 1.0f, 0.0f).to_ws2811_color32();
-    uint32_t blue_color = Color(0.0f, 0.0f, 1.0f).to_ws2811_color32();
-    uint32_t pink_color = Color(1.0f, 0.3f, 0.3f).to_ws2811_color32();
-    if(!Input::button_state(Input::B_RED)) {
-      red_color = 0;
-    }
-    if(!Input::button_state(Input::B_GREEN)) {
-      green_color = 0;
-    }
-    if(!Input::button_state(Input::B_BLUE)) {
-      blue_color = 0;
-    }
-    if(!Input::button_state(Input::B_PINK)) {
-      pink_color = 0;
-    }
-    uint32_t combined_color =
-      red_color | green_color | blue_color | pink_color;
-    for(size_t i = 0; i < PAGE_SIZE; ++i) {
-      _output_buf[0][i] = combined_color;
-      _output_buf[1][i] = red_color;
-      _output_buf[2][i] = green_color;
-      _output_buf[3][i] = blue_color;
-      _output_buf[4][i] = pink_color;
-    }
-    */
+      &_composite_tex);
   }
 
 
   void Lights::update_animators(ShortTimeSpan dt) {
     for(size_t i = 0; i < LAYER_COUNT; ++i) {
       if(_layers[i].trans_animator != nullptr) {
+        Debug::tracef("up t");
         _layers[i].trans_time += dt;
         if((_layers[i].trans_time >= _layers[i].trans_length) ||
             !_layers[i].trans_animator->animate(dt)) {
@@ -275,29 +253,28 @@ namespace aa {
   }
 
 
-  void Lights::update_composite_layers(Texture2D * tex, size_t layer_start,
+  void Lights::update_composite_layers_to_composite_tex(size_t layer_start,
       size_t layer_count) {
     Debug::assertf(_layers[layer_start].width * _layers[layer_start].height
         <= TEXTURE_TEMP_MAX, "Layer %u too big for _texture_temp",
       layer_start);
-    tex->init(_layers[layer_start].width, _layers[layer_start].height,
-      _texture_temp[0]);
-    tex->fill_solid(Color::black);
-
-    Texture2D temp;
-    temp.init(tex->get_width(), tex->get_height(), _texture_temp[1]);
+    _composite_tex.init(_layers[layer_start].width,
+      _layers[layer_start].height, _composite_tex_data);
+    _composite_tex.fill_solid(Color::black);
 
     for(size_t i = layer_start; i < layer_start + layer_count; ++i) {
       bool do_transition = (_layers[i].trans_time < _layers[i].trans_length);
       if(do_transition) {
-        temp.copy(tex);
+        _transition_tex.init(_composite_tex.get_width(),
+          _composite_tex.get_height(), _transition_tex_data);
+        _transition_tex.copy(&_composite_tex);
       }
       if(_layers[i].animator != nullptr) {
-        _layers[i].animator->render(tex);
+        _layers[i].animator->render(&_composite_tex);
       }
       if(do_transition && _layers[i].trans_animator != nullptr) {
-        _layers[i].trans_animator->render(&temp);
-        tex->lerp(&temp,
+        _layers[i].trans_animator->render(&_transition_tex);
+        _composite_tex.lerp(&_transition_tex,
           1.0f - static_cast<float>(_layers[i].trans_time.to_micros()) /
             static_cast<float>(_layers[i].trans_length.to_micros()));
       }
@@ -310,7 +287,7 @@ namespace aa {
     size_t w = tex->get_width();
     size_t h = tex->get_height();
     size_t i = 0;
-    for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
+    for(size_t y = 0; y < h; ++y) {
       for(size_t x = 0; x < w; ++x) {
         if(y % 2 == 0) {
           _output_buf[page][i++] = tex->sample(x, y).to_ws2811_color32();
@@ -373,20 +350,22 @@ namespace aa {
         }
         hw::lights_ws2812_port = set;
         // Delay -- to ~200ns
-        for(int w = 0; w < 5; ++w) {
+        for(int w = 0; w < 7; ++w) {
           __NOP();
         }
         hw::lights_ws2812_port = data;
         // Delay -- to ~600 ns
-        for(int w = 0; w < 20; ++w) {
+        for(int w = 0; w < 15; ++w) {
           __NOP();
         }
         hw::lights_ws2812_port = reset;
         // Delay -- to ~600ns (doesn't have to be quite so long, but a little
         // extra increases stability)
-        for(int w = 0; w < 20; ++w) {
+
+        /*-
+        for(int w = 0; w < 10; ++w) {
           __NOP();
-        }
+        }*/
       }
     }
     hw::debug_lights_sync = 0;

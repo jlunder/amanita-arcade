@@ -23,22 +23,23 @@ namespace aa {
 
     void GlowBackgroundAnimator::render(ShortTimeSpan t, float a,
         Texture2D * dest) const {
-      float aa = fabsf(a - 0.5f) + 0.5f;
+      float aa = 0.25f * cosf((float)M_PI * 2.0f * a) + 0.75f;
       Color c = _color.cie_scale(aa);
       dest->fill_solid(c);
+      Debug::tracef("%.2f", aa);
     }
 
-    GlowBackgroundAnimator bgR0(ShortTimeSpan::from_millis(1000), Color::red);
-    GlowBackgroundAnimator bgR1(ShortTimeSpan::from_millis(1000), Color::red);
+    GlowBackgroundAnimator bgR0(ShortTimeSpan::from_millis(1023), Color::red);
+    GlowBackgroundAnimator bgR1(ShortTimeSpan::from_millis(1023), Color::red);
     Lights::AnimatorPool bgRPool;
-    GlowBackgroundAnimator bgG0(ShortTimeSpan::from_millis(1500), Color::green);
-    GlowBackgroundAnimator bgG1(ShortTimeSpan::from_millis(1500), Color::green);
+    GlowBackgroundAnimator bgG0(ShortTimeSpan::from_millis(1490), Color::green);
+    GlowBackgroundAnimator bgG1(ShortTimeSpan::from_millis(1490), Color::green);
     Lights::AnimatorPool bgGPool;
-    GlowBackgroundAnimator bgB0(ShortTimeSpan::from_millis(1750), Color::blue);
-    GlowBackgroundAnimator bgB1(ShortTimeSpan::from_millis(1750), Color::blue);
+    GlowBackgroundAnimator bgB0(ShortTimeSpan::from_millis(1717), Color::blue);
+    GlowBackgroundAnimator bgB1(ShortTimeSpan::from_millis(1717), Color::blue);
     Lights::AnimatorPool bgBPool;
-    GlowBackgroundAnimator bgP0(ShortTimeSpan::from_millis(1250), Color::pink);
-    GlowBackgroundAnimator bgP1(ShortTimeSpan::from_millis(1250), Color::pink);
+    GlowBackgroundAnimator bgP0(ShortTimeSpan::from_millis(1201), Color::pink);
+    GlowBackgroundAnimator bgP1(ShortTimeSpan::from_millis(1201), Color::pink);
     Lights::AnimatorPool bgPPool;
   }
 
@@ -67,13 +68,6 @@ namespace aa {
   }
 
   void Game::update(ShortTimeSpan dt) {
-    /*
-    Debug::tracef("%6d %c %c %c %c", dt.to_micros(),
-      Input::button_state(Input::B_RED) ? 'R' : 'r',
-      Input::button_state(Input::B_GREEN) ? 'G' : 'g',
-      Input::button_state(Input::B_BLUE) ? 'B' : 'b',
-      Input::button_state(Input::B_PINK) ? 'P' : 'p');
-      */
     if(Input::button_pressed(Input::B_RED)) {
       Debug::tracef("Red pressed");
     }

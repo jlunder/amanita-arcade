@@ -23,7 +23,7 @@ namespace aa {
     M_COUNT
   };
 
-  #if 1
+  #if 0
   static const size_t STALK_HEIGHT_RED   = 12;
   static const size_t STALK_HEIGHT_GREEN = 12;
   static const size_t STALK_HEIGHT_BLUE  = 12;
@@ -36,9 +36,9 @@ namespace aa {
   static const float SCOREBOARD_BRIGHTNESS = 0.25f;
   #else
   static const size_t STALK_HEIGHT_RED   = 36;
-  static const size_t STALK_HEIGHT_GREEN = 24;
-  static const size_t STALK_HEIGHT_BLUE  = 41;
-  static const size_t STALK_HEIGHT_PINK  = 32;
+  static const size_t STALK_HEIGHT_GREEN = 41;
+  static const size_t STALK_HEIGHT_BLUE  = 32;
+  static const size_t STALK_HEIGHT_PINK  = 24;
   static const size_t STALK_HEIGHT_MAX   = 41;
   static const size_t STALK_WIDTH = 3;
   static const size_t SCOREBOARD_WIDTH = 30;
