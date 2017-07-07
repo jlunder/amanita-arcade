@@ -72,15 +72,15 @@ char * printHexUint8(char * p, uint8_t val);
 void setup() {
   Serial.begin(115200);
 
-  pinMode(PWM_RED_PIN, OUTPUT);
-  pinMode(PWM_GREEN_PIN, OUTPUT);
-  pinMode(PWM_BLUE_PIN, OUTPUT);
-  pinMode(PWM_PINK_PIN, OUTPUT);
-
   pinMode(BUTTON_RED_PIN, INPUT_PULLUP);
   pinMode(BUTTON_GREEN_PIN, INPUT_PULLUP);
   pinMode(BUTTON_BLUE_PIN, INPUT_PULLUP);
   pinMode(BUTTON_PINK_PIN, INPUT_PULLUP);
+
+  pinMode(PWM_RED_PIN, OUTPUT);
+  pinMode(PWM_GREEN_PIN, OUTPUT);
+  pinMode(PWM_BLUE_PIN, OUTPUT);
+  pinMode(PWM_PINK_PIN, OUTPUT);
 
   analogWrite(PWM_RED_PIN, BUTTON_IDLE_PWM);
   analogWrite(PWM_GREEN_PIN, BUTTON_IDLE_PWM);
@@ -123,13 +123,13 @@ void pollGamepad() {
   lastReadDuration = micros() - lastReadMicros;
 
   extraButtons = 0;
-  if(!digitalRead(6)) {
+  if(!digitalRead(BUTTON_RED_PIN)) {
     extraButtons |= PSB_RED;
     analogWrite(PWM_RED_PIN, BUTTON_PRESSED_PWM);
   } else {
     analogWrite(PWM_RED_PIN, BUTTON_IDLE_PWM);
   }
-  if(!digitalRead(7)) {
+  if(!digitalRead(BUTTON_GREEN_PIN)) {
     extraButtons |= PSB_GREEN;
     analogWrite(PWM_GREEN_PIN, BUTTON_PRESSED_PWM);
   } else {
