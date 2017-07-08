@@ -23,6 +23,7 @@ namespace aa {
     Color sample(size_t x, size_t y) const { return _data[(y * _width) + x]; }
 
     void fill_solid(Color c);
+    void lerp_solid(Color c, float a);
     void copy(Texture2D const * src);
     void mix(Texture2D const * src);
     void lerp(Texture2D const * other, float a);

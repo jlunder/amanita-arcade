@@ -16,8 +16,9 @@ namespace aa {
     int32_t read_periods();
     TimeSpan get_time() const;
     TimeSpan get_time_remaining() const;
-
     void update(TimeSpan elapsed);
+    void cancel();
+    void restart();
 
   private:
     TimeSpan _period;

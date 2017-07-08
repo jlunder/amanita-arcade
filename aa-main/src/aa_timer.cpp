@@ -39,7 +39,22 @@ namespace aa {
         }
       }
     } else {
-      _current += elapsed;
+      if(elapsed < _period - _current) {
+        _current += elapsed;
+      } else {
+        _current = _period;
+        _periods = 1;
+      }
     }
+  }
+
+  void Timer::cancel() {
+    _periods = 1;
+    _current = _period;
+  }
+
+  void Timer::restart() {
+    _periods = 1;
+    _current = TimeSpan::zero;
   }
 }

@@ -683,6 +683,14 @@ namespace aa {
   }
 
 
+  void Texture2D::lerp_solid(Color c, float a) {
+    size_t count = _width * _height;
+    for(size_t i = 0; i < count; ++i) {
+      _data[i].lerp_this(c, a);
+    }
+  }
+
+
   void Texture2D::copy(Texture2D const * src) {
     if((_width == src->_width) && (_height == src->_height)) {
       size_t count = _width * _height;
