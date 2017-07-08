@@ -5,6 +5,7 @@
 
 namespace aa {
   Color const Color::black(0.0f, 0.0f, 0.0f);
+  Color const Color::white(1.0f, 1.0f, 1.0f);
   Color const Color::red(1.0f, 0.0f, 0.0f);
   Color const Color::green(0.0f, 1.0f, 0.0f);
   Color const Color::blue(0.0f, 0.0f, 1.0f);

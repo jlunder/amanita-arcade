@@ -9,6 +9,7 @@ namespace aa {
   class Color {
   public:
     static Color const black;
+    static Color const white;
     static Color const red;
     static Color const green;
     static Color const blue;
@@ -146,11 +147,11 @@ namespace aa {
     uint32_t to_ws2811_color32() const {
       return
         (_g >= 1.0f ? 0xFF0000 : (_g >= 0.0f ?
-          ((uint32_t)(_g * 256) << 16) : 0x000000)) |
+          ((uint32_t)(_b * 256) << 16) : 0x000000)) |
         (_r >= 1.0f ? 0x00FF00 : (_r >= 0.0f ?
           ((uint32_t)(_r * 256) << 8) : 0x000000)) |
         (_b >= 1.0f ? 0x0000FF : (_b >= 0.0f ?
-          ((uint32_t)(_b * 256) << 0) : 0x000000));
+          ((uint32_t)(_g * 256) << 0) : 0x000000));
     }
 
     // Takes a normalized float on [0..1] representing apparent brightness and

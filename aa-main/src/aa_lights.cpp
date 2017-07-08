@@ -206,7 +206,6 @@ namespace aa {
 
 
   void Lights::update(ShortTimeSpan dt) {
-    Debug::tracef("hello! %d", dt.to_micros());
     update_animators(dt);
 
     update_composite_layers_to_composite_tex(LAYER_STALK_RED_START,
@@ -260,7 +259,7 @@ namespace aa {
       layer_start);
     _composite_tex.init(_layers[layer_start].width,
       _layers[layer_start].height, _composite_tex_data);
-    _composite_tex.fill_solid(Color::black);
+    _composite_tex.fill_solid(Color::white);
 
     for(size_t i = layer_start; i < layer_start + layer_count; ++i) {
       bool do_transition = (_layers[i].trans_time < _layers[i].trans_length);
@@ -318,6 +317,7 @@ namespace aa {
       if(page_lines >= lines_per_page) {
         ++page;
         page_lines = 0;
+        i = 0;
       }
     }
   }

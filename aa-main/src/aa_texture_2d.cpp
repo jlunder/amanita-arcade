@@ -720,12 +720,22 @@ namespace aa {
   }
 
 
-  void Texture2D::bubble_x(float x, float r, Color c) {
-
+  void Texture2D::bubble_x(float px, float radius, Color c) {
+    float scale = 1.0f / radius;
+    size_t i = 0;
+    for(size_t y = 0; y < _height; ++y) {
+      for(size_t x = 0; x < _width; ++x) {
+        float delta = fabsf(px - x) * scale;
+        if(delta < 1.0f) {
+          _data[i].lerp_this(c, 1.0f - delta);
+        }
+        ++i;
+      }
+    }
   }
 
 
-  void Texture2D::char_5x5(int32_t x, int32_t y, char ch, Color c) {
+  void Texture2D::char_5x5(int32_t px, int32_t py, char ch, Color c) {
 
   }
 
