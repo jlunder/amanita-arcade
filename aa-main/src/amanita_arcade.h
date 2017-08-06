@@ -35,10 +35,11 @@ namespace aa {
   static const float STALK_BRIGHTNESS = 0.25f;
   static const float SCOREBOARD_BRIGHTNESS = 0.25f;
   #else
+  // Heights are 24, 32, 36, 41
   static const size_t STALK_HEIGHT_RED   = 36;
   static const size_t STALK_HEIGHT_GREEN = 41;
-  static const size_t STALK_HEIGHT_BLUE  = 32;
-  static const size_t STALK_HEIGHT_PINK  = 24;
+  static const size_t STALK_HEIGHT_BLUE  = 24;
+  static const size_t STALK_HEIGHT_PINK  = 32;
   static const size_t STALK_HEIGHT_MAX   = 41;
   static const size_t STALK_WIDTH = 3;
   static const size_t SCOREBOARD_WIDTH = 30;

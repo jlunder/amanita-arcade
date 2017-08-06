@@ -25,7 +25,7 @@ namespace aa {
 
     void GlowBackgroundAnimator::render(ShortTimeSpan t, float a,
         Texture2D * dest) const {
-      float aa = 0.25f * cosf((float)M_PI * 2.0f * a) + 0.75f;
+      float aa = 0.10f * cosf((float)M_PI * 2.0f * a) + 0.90f;
       Color c = _color.cie_scale(aa);
       dest->fill_solid(c);
     }
@@ -47,7 +47,7 @@ namespace aa {
 
     void BubbleAnimator::render(ShortTimeSpan t, float a,
         Texture2D * dest) const {
-      dest->bubble_x(a * 45.0f, 5.0f, _color);
+      dest->bubble_x(a * 45.0f, 10.0f, _color);
     }
 
 
@@ -64,7 +64,7 @@ namespace aa {
 
     void GameOverWinAnimator::render(ShortTimeSpan t, float a,
         Texture2D * dest) const {
-      dest->lerp_solid(Color::white, fabsf(2.0f * a - 1.0f));
+      dest->lerp_solid(Color::white, 1.0f - fabsf(2.0f * a - 1.0f));
     }
 
 
@@ -81,7 +81,7 @@ namespace aa {
 
     void GameOverLoseAnimator::render(ShortTimeSpan t, float a,
         Texture2D * dest) const {
-      dest->lerp_solid(Color::red, fabsf(2.0f * a - 1.0f));
+      dest->lerp_solid(Color::red, 1.0f - fabsf(2.0f * a - 1.0f));
     }
 
 
@@ -176,7 +176,7 @@ namespace aa {
     };
 
 
-    size_t const PATTERN_LENGTH_MAX = 3;
+    size_t const PATTERN_LENGTH_MAX = 99;
     char pattern[PATTERN_LENGTH_MAX];
     size_t pattern_length;
     size_t pattern_pos;
@@ -199,31 +199,17 @@ namespace aa {
     switch(state) {
     case ST_RESET:
       Debug::tracef("Reset");
-      pattern_length = 1;
+      pattern_length = 0;
       pattern_pos = 0;
-      pattern[0] = rand() % 4;
-      state = ST_PLAYING;
+      state = ST_LISTENING;
       state_timer.cancel();
       update(TimeSpan::zero);
       break;
     case ST_PLAYING:
       if(state_timer.get_time_remaining() <= TimeSpan::zero) {
         if(pattern_pos < pattern_length) {
-          Debug::tracef("Play pos %d = %d", pattern_pos, pattern[pattern_pos]);
-          switch(pattern[pattern_pos]) {
-            case 0:
-              red_stalk_vis.trigger_bubble();
-              break;
-            case 1:
-              green_stalk_vis.trigger_bubble();
-              break;
-            case 2:
-              blue_stalk_vis.trigger_bubble();
-              break;
-            case 3:
-              pink_stalk_vis.trigger_bubble();
-              break;
-          }
+          Debug::tracef("Play pos %d = %c", pattern_pos, pattern[pattern_pos]);
+          trigger_bubble(pattern[pattern_pos]);
           ++pattern_pos;
           state_timer = aa::Timer(TimeSpan::from_millis(500), false);
         } else {
@@ -234,55 +220,35 @@ namespace aa {
       }
       break;
     case ST_WAITING_RESPONSE:
-      if(Input::button_pressed(Input::B_RED) ||
-          Input::button_pressed(Input::B_GREEN) ||
-          Input::button_pressed(Input::B_BLUE) ||
-          Input::button_pressed(Input::B_PINK)) {
+      if(is_button_pressed()) {
         Debug::tracef("Button press, listening");
         state = ST_LISTENING;
         pattern_pos = 0;
         state_timer.cancel();
         update(TimeSpan::zero);
       } else if(state_timer.get_time_remaining() <= TimeSpan::zero) {
-        if(pattern_length > 1) {
-          Debug::tracef("Timeout, game over");
-          state = ST_GAME_OVER;
-          state_timer = aa::Timer(TimeSpan::from_millis(5000), false);
-          red_stalk_vis.trigger_game_over_lose();
-          green_stalk_vis.trigger_game_over_lose();
-          blue_stalk_vis.trigger_game_over_lose();
-          pink_stalk_vis.trigger_game_over_lose();
-        } else {
-          Debug::tracef("Timeout, playing again");
-          state = ST_PLAYING;
-          pattern_pos = 0;
-          state_timer.cancel();
-          update(TimeSpan::zero);
-        }
+        Debug::tracef("Timeout, game over");
+        state = ST_GAME_OVER;
+        state_timer = aa::Timer(TimeSpan::from_millis(5000), false);
+        red_stalk_vis.trigger_game_over_lose();
+        green_stalk_vis.trigger_game_over_lose();
+        blue_stalk_vis.trigger_game_over_lose();
+        pink_stalk_vis.trigger_game_over_lose();
       }
       break;
     case ST_LISTENING:
     {
-      int input = -1;
-      if(Input::button_pressed(Input::B_RED)) {
-        red_stalk_vis.trigger_bubble();
-        input = 0;
-      }
-      if(Input::button_pressed(Input::B_GREEN)) {
-        green_stalk_vis.trigger_bubble();
-        input = 1;
-      }
-      if(Input::button_pressed(Input::B_BLUE)) {
-        blue_stalk_vis.trigger_bubble();
-        input = 2;
-      }
-      if(Input::button_pressed(Input::B_PINK)) {
-        pink_stalk_vis.trigger_bubble();
-        input = 3;
-      }
-      if(input != -1) {
-        if(input == pattern[pattern_pos]) {
-          Debug::tracef("Correct input %d", input);
+      char input = get_pressed_button();
+      if(input != 0) {
+        if(pattern_length == 0) {
+          pattern[0] = input;
+          pattern[1] = get_random_button();
+          pattern_length = 2;
+          pattern_pos = 0;
+          state = ST_PLAYING;
+          state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
+        } else if(input == pattern[pattern_pos]) {
+          Debug::tracef("Correct input %c", input);
           ++pattern_pos;
           if(pattern_pos >= pattern_length) {
             if(pattern_length == PATTERN_LENGTH_MAX) {
@@ -294,15 +260,15 @@ namespace aa {
               state = ST_GAME_OVER;
               state_timer = aa::Timer(TimeSpan::from_millis(5000), false);
             } else {
-              pattern[pattern_length] = rand() % 4;
+              pattern[pattern_length] = get_random_button();
               ++pattern_length;
+              pattern_pos = 0;
               state = ST_PLAYING;
               state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
-              pattern_pos = 0;
             }
           }
         } else {
-          Debug::tracef("Wrong input %d, loss", input);
+          Debug::tracef("Wrong input %c, loss", input);
           red_stalk_vis.trigger_game_over_lose();
           green_stalk_vis.trigger_game_over_lose();
           blue_stalk_vis.trigger_game_over_lose();
@@ -321,6 +287,60 @@ namespace aa {
     default:
       state_timer.cancel();
       state = ST_RESET;
+    }
+  }
+
+  bool Game::is_button_pressed() {
+    return Input::button_pressed(Input::B_RED) ||
+        Input::button_pressed(Input::B_GREEN) ||
+        Input::button_pressed(Input::B_BLUE) ||
+        Input::button_pressed(Input::B_PINK);
+  }
+
+  char Game::get_pressed_button() {
+    if(Input::button_pressed(Input::B_RED)) {
+      red_stalk_vis.trigger_bubble();
+      return 'R';
+    }
+    if(Input::button_pressed(Input::B_GREEN)) {
+      green_stalk_vis.trigger_bubble();
+      return 'G';
+    }
+    if(Input::button_pressed(Input::B_BLUE)) {
+      blue_stalk_vis.trigger_bubble();
+      return 'B';
+    }
+    if(Input::button_pressed(Input::B_PINK)) {
+      pink_stalk_vis.trigger_bubble();
+      return 'P';
+    }
+    return 0;
+  }
+
+  char Game::get_random_button() {
+    switch(rand() % 4) {
+    case 0: return 'R';
+    case 1: return 'G';
+    case 2: return 'B';
+    case 3: return 'P';
+    default: return 0;
+    }
+  }
+
+  void Game::trigger_bubble(char button) {
+    switch(pattern[pattern_pos]) {
+      case 'R':
+        red_stalk_vis.trigger_bubble();
+        break;
+      case 'G':
+        green_stalk_vis.trigger_bubble();
+        break;
+      case 'B':
+        blue_stalk_vis.trigger_bubble();
+        break;
+      case 'P':
+        pink_stalk_vis.trigger_bubble();
+        break;
     }
   }
 }

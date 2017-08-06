@@ -47,10 +47,10 @@ namespace aa {
 
     Color & lerp_this(Color const & y, float a) {
       float negA = 1.0f - a;
-      _r = _r * a + y._r * negA;
-      _g = _g * a + y._g * negA;
-      _b = _b * a + y._b * negA;
-      _a = _a * a + y._a * negA;
+      _r = _r * negA + y._r * a;
+      _g = _g * negA + y._g * a;
+      _b = _b * negA + y._b * a;
+      _a = _a * negA + y._a * a;
       return *this;
     }
 
