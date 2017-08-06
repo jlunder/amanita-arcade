@@ -19,6 +19,12 @@
 
 void PSGamepad::begin(uint8_t attentionPin, bool useAnalog, bool usePressure,
     bool useRumble) {
+  _buttons = 0xFFFF;
+  _lastButtons = 0xFFFF;
+  for(size_t i = 0; i < NUM_ANALOG; ++i) {
+    _analogData[i] = 0x80;
+  }
+
   _attentionPin = attentionPin;
   _rumbleEnabled = useRumble;
   _analogEnabled = useAnalog;

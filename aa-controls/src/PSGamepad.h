@@ -61,6 +61,8 @@
 #define PSAB_L2          14
 #define PSAB_R2          15
 
+#define NUM_ANALOG 16
+
 // Controller statuses
 #define PSCS_DISCONNECTED 0
 #define PSCS_CONFIGURING  1
@@ -111,7 +113,7 @@ private:
   uint32_t _lastReadMillis;
   uint16_t _lastButtons;
   uint16_t _buttons;
-  uint8_t _analogData[16];
+  uint8_t _analogData[NUM_ANALOG];
   uint8_t _status;
 
   void configureGamepad();
