@@ -300,76 +300,160 @@ namespace aa {
 
   void Lights::update_encode_scoreboard_texture_to_output(size_t page_start,
       size_t lines_per_page, Texture2D const * tex) {
+
+    bool test_mode = true;
+
     size_t w = tex->get_width();
     size_t h = tex->get_height();
     size_t i = 0;
     size_t page_lines = 0;
     size_t page = page_start;
-    for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
-      for(size_t x = 0; x < w; ++x) {
-        if(y % 2 == 0) {
-          _output_buf[page][i++] = tex->sample(x, y).to_ws2811_color32();
-        } else {
-          _output_buf[page][i++] = tex->sample(w - 1 - x, y).to_ws2811_color32();
+
+    if(!test_mode) {
+      for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
+        for(size_t x = 0; x < w; ++x) {
+          if(y % 2 == 0) {
+            _output_buf[page][i++] = 0x00101010LU;//tex->sample(x, y).to_ws2811_color32();
+          } else {
+            _output_buf[page][i++] = 0x00001000LU;//tex->sample(w - 1 - x, y).to_ws2811_color32();
+          }
+        }
+        ++page_lines;
+        if(page_lines >= lines_per_page) {
+          ++page;
+          page_lines = 0;
+          i = 0;
         }
       }
-      ++page_lines;
-      if(page_lines >= lines_per_page) {
-        ++page;
-        page_lines = 0;
-        i = 0;
+    }
+    else {
+      static const uint32_t highlight_color = 0x00101010;
+      static const uint32_t page_colors[SCOREBOARD_PAGES_COUNT] = {
+        0x00001000,
+        0x00101000,
+        0x00100000,
+        0x00100010,
+        0x00000010,
+        0x00001010,
+        0x00080808,
+        0x00101010,
+      };
+
+      static size_t counter = 0;
+      static size_t page_counter = 0;
+      if(counter >= w + h) {
+        counter = 0;
+      }
+      if(page_counter >= PAGE_COUNT * 8) {
+        page_counter = 0;
+      }
+      size_t highlight_x = (counter < w) ? counter : w;
+      size_t highlight_y = (counter >= w) ? counter - w : h;
+      size_t highlight_page = page_counter / 8;
+      ++counter;
+      ++page_counter;
+
+      for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
+        uint32_t base_color = page_colors[page - SCOREBOARD_PAGES_START] +
+          (page == highlight_page ? highlight_color : 0);
+        for(size_t sx = 0; sx < w; ++sx) {
+          size_t x = (y % 2 == 0) ? sx : (w - 1 - sx);
+          _output_buf[page][i++] = base_color +
+            ((x == highlight_x || y == highlight_y) ? base_color : 0);
+        }
+        ++page_lines;
+        if(page_lines >= lines_per_page) {
+          ++page;
+          page_lines = 0;
+          i = 0;
+        }
       }
     }
   }
 
 
   void Lights::output() {
+    static uint32_t const set = 0b1111111111111111;
+    static uint32_t const reset = 0b0000000000000000;
+
     mbed::Timer tm;
+
+    uint32_t colors_buf[2][PAGE_COUNT];
+    uint32_t * colors;
+    uint32_t * colors_next = colors_buf[0];
+    uint_fast16_t data[24];
+    uint_fast16_t data_next;
+
     tm.start();
+
+    // Warm up the pipeline
+    for(size_t j = 0; j < PAGE_COUNT; ++j) {
+      colors_next[j] = _output_buf[j][0];
+    }
+
+    // Second stage warmup
+    colors = colors_next;
+    colors_next = colors_buf[1];
+    for(size_t j = 0; j < 24; ++j) {
+      data_next = 0;
+      for(size_t k = 0; k < PAGE_COUNT; ++k) {
+        // shift out MSB first
+        uint32_t c = colors[k];
+        colors[k] = c << 1;
+        data_next |= (c & (1 << 23)) >> (23 - k);
+      }
+      data[j] = data_next;
+      if(j < PAGE_COUNT) {
+        colors_next[j] = _output_buf[j][1];
+      }
+    }
+
     // This method is tuned for the STM32F407 DISCOVERY board, running at
     // 168MHz. If it's ported to any other board, it should be retuned.
     __disable_irq();
     hw::debug_lights_sync = 1;
-    for(size_t i = 0; i < PAGE_SIZE; ++i) {
-      uint32_t const set = 0b1111111111111111;
-      uint32_t const reset = 0b0000000000000000;
-
-      uint32_t colors[PAGE_COUNT];
-
-      for(size_t j = 0; j < PAGE_COUNT; ++j) {
-        colors[j] = _output_buf[j][i];
-      }
+    for(size_t i = 0; i < PAGE_SIZE - 1; ++i) {
+      colors = colors_next;
+      colors_next = colors_buf[i & 1];
 
       for(size_t j = 0; j < 24; ++j) {
-        uint32_t data = 0b0000000000000000;
-        for(size_t k = 0; k < PAGE_COUNT; ++k) {
+        data_next = 0;
+
+        hw::lights_ws2812_port = set;
+        // Do work to make up ~350ns (200ns < t < 500ns) (no __NOP() needed)
+        for(size_t k = 0; k < 4; ++k) {
           // shift out MSB first
           uint32_t c = colors[k];
           colors[k] = c << 1;
-          data |= (c & (1 << 23)) >> (23 - k);
+          data_next |= (c & (1 << 23)) >> (23 - k);
         }
-        hw::lights_ws2812_port = set;
-        // Delay -- to ~200ns
-        for(int w = 0; w < 7; ++w) {
-          __NOP();
-        }
-        hw::lights_ws2812_port = data;
-        // Delay -- to ~600 ns
-        for(int w = 0; w < 15; ++w) {
-          __NOP();
-        }
-        hw::lights_ws2812_port = reset;
-        // Delay -- to ~600ns (doesn't have to be quite so long, but a little
-        // extra increases stability)
 
-        /*-
-        for(int w = 0; w < 10; ++w) {
-          __NOP();
-        }*/
+        hw::lights_ws2812_port = data[j];
+        // Do work to make up >300ns (max 5000ns)
+        for(size_t k = 4; k < 12; ++k) {
+          // shift out MSB first
+          uint32_t c = colors[k];
+          colors[k] = c << 1;
+          data_next |= (c & (1 << 23)) >> (23 - k);
+        }
+
+        hw::lights_ws2812_port = reset;
+        // Do work to make up >250ns (max 5000ns)
+        for(size_t k = 12; k < PAGE_COUNT; ++k) {
+          // shift out MSB first
+          uint32_t c = colors[k];
+          colors[k] = c << 1;
+          data_next |= (c & (1 << 23)) >> (23 - k);
+        }
+        data[j] = data_next;
+        if(j < PAGE_COUNT) {
+          colors_next[j] = _output_buf[j][i + 2];
+        }
       }
     }
     hw::debug_lights_sync = 0;
     __enable_irq();
+
     tm.stop();
     //Debug::tracef("Lights output %uus", tm.read_us());
   }
