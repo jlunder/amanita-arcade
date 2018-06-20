@@ -372,7 +372,7 @@ namespace aa {
   }
 
 
-  void Lights::output() {
+  void __attribute__((optimize("O4"))) Lights::output() {
     static uint32_t const set = 0b1111111111111111;
     static uint32_t const reset = 0b0000000000000000;
 
@@ -419,7 +419,9 @@ namespace aa {
       for(size_t j = 0; j < 24; ++j) {
         data_next = 0;
 
+        __sync_synchronize();
         hw::lights_ws2812_port = set;
+        __sync_synchronize();
         // Do work to make up ~350ns (200ns < t < 500ns) (no __NOP() needed)
         for(size_t k = 0; k < 4; ++k) {
           // shift out MSB first
@@ -427,8 +429,9 @@ namespace aa {
           colors[k] = c << 1;
           data_next |= (c & (1 << 23)) >> (23 - k);
         }
-
+        __sync_synchronize();
         hw::lights_ws2812_port = data[j];
+        __sync_synchronize();
         // Do work to make up >300ns (max 5000ns)
         for(size_t k = 4; k < 12; ++k) {
           // shift out MSB first
@@ -436,8 +439,9 @@ namespace aa {
           colors[k] = c << 1;
           data_next |= (c & (1 << 23)) >> (23 - k);
         }
-
+        __sync_synchronize();
         hw::lights_ws2812_port = reset;
+        __sync_synchronize();
         // Do work to make up >250ns (max 5000ns)
         for(size_t k = 12; k < PAGE_COUNT; ++k) {
           // shift out MSB first
