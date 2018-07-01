@@ -19,6 +19,16 @@ namespace aa {
     operator TimeSpan() const;
   };
 
+  class InfinityTimeSpan {
+  public:
+    float to_seconds() const { return INFINITY; }
+    int32_t to_millis() const { return INT32_MAX; }
+    int32_t to_micros() const { return INT32_MAX; }
+
+    operator ShortTimeSpan() const;
+    operator TimeSpan() const;
+  };
+
   class ShortTimeSpan {
   public:
     ShortTimeSpan(): _micros() { }
@@ -74,6 +84,7 @@ namespace aa {
   class TimeSpan {
   public:
     static ZeroTimeSpan const zero;
+    static InfinityTimeSpan const infinity;
 
     TimeSpan(): _micros() { }
     explicit TimeSpan(int64_t micros): _micros(micros) { }
@@ -127,6 +138,14 @@ namespace aa {
 
   inline ZeroTimeSpan::operator TimeSpan() const {
     return TimeSpan();
+  }
+
+  inline InfinityTimeSpan::operator ShortTimeSpan() const {
+    return ShortTimeSpan(INT32_MAX);
+  }
+
+  inline InfinityTimeSpan::operator TimeSpan() const {
+    return TimeSpan(INT64_MAX);
   }
 
   inline ShortTimeSpan::operator TimeSpan() const {

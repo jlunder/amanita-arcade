@@ -157,6 +157,23 @@ namespace aa {
     }
 
 
+    class ScoreboardVis {
+    public:
+      ScoreboardVis(size_t layer_start, ShortTimeSpan period, Color bg_color);
+      void init();
+
+      void update();
+
+    private:
+      static size_t const COLUMNS = 5;
+      static size_t const ROWS = 5;
+      char _chars[ROWS][COLUMNS];
+      aa::Color _colors[ROWS][COLUMNS];
+
+      void renderText();
+    };
+
+
     StalkVis red_stalk_vis(Lights::LAYER_STALK_RED_START,
       ShortTimeSpan::from_millis(1023), Color::red);
     StalkVis green_stalk_vis(Lights::LAYER_STALK_GREEN_START,
@@ -166,21 +183,68 @@ namespace aa {
     StalkVis pink_stalk_vis(Lights::LAYER_STALK_PINK_START,
       ShortTimeSpan::from_millis(1201), Color::pink);
 
+    class PanelAnimator : public Lights::Animator {
+    public:
+      PanelAnimator()
+        : Animator(ShortTimeSpan::from_millis(1000), true) { }
 
-    enum State {
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const;
+
+    private:
+      Color _color;
+    };
+
+
+    void PanelAnimator::render(ShortTimeSpan t, float a, Texture2D * dest)
+        const {
+      dest->fill_solid(Color(0.0f, 0.0f, 0.25f));
+      dest->char_5x5(0, 0, 'H', Color::white);
+      dest->char_5x5(6, 0, 'E', Color::white);
+      dest->char_5x5(12, 0, 'L', Color::white);
+      dest->char_5x5(18, 0, 'L', Color::white);
+      dest->char_5x5(24, 0, 'O', Color::white);
+      dest->char_5x5(0, 6, 'W', Color::white);
+      dest->char_5x5(6, 6, 'O', Color::white);
+      dest->char_5x5(12,6, 'R', Color::white);
+      dest->char_5x5(18, 6, 'L', Color::white);
+      dest->char_5x5(24, 6, 'D', Color::white);
+
+      dest->char_10x15(0, 15, '2', Color::white);
+      dest->char_10x15(10, 15, '5', Color::white);
+      dest->char_10x15(20, 15, '6', Color::white);
+    }
+
+
+    PanelAnimator panel_animator;
+
+
+    enum GameState {
       ST_RESET,
+      ST_ATTRACT,
       ST_PLAYING,
       ST_WAITING_RESPONSE,
       ST_LISTENING,
       ST_GAME_OVER,
+      ST_ENTER_HIGH_SCORE,
     };
 
 
-    size_t const PATTERN_LENGTH_MAX = 99;
+    enum AttractState {
+      AT_DELAY_TOP,
+      AT_SCROLL_DOWN,
+      AT_DELAY_BOTTOM,
+      AT_SCROLL_UP,
+      AT_STATIC_IMAGE_0,
+      AT_STATIC_IMAGE_1,
+    };
+
+
+    size_t const PATTERN_LENGTH_MAX = 999;
     char pattern[PATTERN_LENGTH_MAX];
     size_t pattern_length;
     size_t pattern_pos;
-    State state = ST_RESET;
+    GameState state = ST_RESET;
     aa::Timer state_timer(TimeSpan::zero, false);
   }
 
@@ -190,6 +254,7 @@ namespace aa {
     green_stalk_vis.init();
     blue_stalk_vis.init();
     pink_stalk_vis.init();
+    //scoreboard_vis.init();
   }
 
 
@@ -204,6 +269,8 @@ namespace aa {
       state = ST_LISTENING;
       state_timer.cancel();
       update(TimeSpan::zero);
+      Lights::start_animator(
+        Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &panel_animator);
       break;
     case ST_PLAYING:
       if(state_timer.get_time_remaining() <= TimeSpan::zero) {

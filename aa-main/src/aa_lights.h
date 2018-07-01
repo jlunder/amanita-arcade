@@ -86,6 +86,8 @@ namespace aa {
 
     static void start_animator(size_t layer, AnimatorPool * pool,
       ShortTimeSpan transition = ShortTimeSpan::from_micros(0));
+    static void start_animator(size_t layer, Animator * anim,
+      ShortTimeSpan transition = ShortTimeSpan::from_micros(0));
 
     static void update(ShortTimeSpan dt);
     // BEWARE, output() will disable interrupts for approximately 5ms!

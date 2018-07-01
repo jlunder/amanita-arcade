@@ -29,6 +29,7 @@ namespace aa {
     void lerp(Texture2D const * other, float a);
     void bubble_x(float x, float r, Color c);
     void char_5x5(int32_t x, int32_t y, char ch, Color c);
+    void char_10x15(int32_t x, int32_t y, char ch, Color c);
 
     void write_ws2811_color32(uint32_t * dest, size_t dest_width,
       size_t dest_height, int32_t src_x, int32_t src_y);

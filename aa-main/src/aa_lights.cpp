@@ -165,6 +165,12 @@ namespace aa {
 
   void Lights::start_animator(size_t layer, AnimatorPool * pool,
       ShortTimeSpan transition) {
+    start_animator(layer, pool->get_animator(), transition);
+  }
+
+
+  void Lights::start_animator(size_t layer, Animator * animator,
+      ShortTimeSpan transition) {
     // Note that in this method we try not to disturb any existing
     // transitioning animators if it's not necessary... this is helpful in the
     // edge case where a very long transition is initiated to present a short
@@ -200,7 +206,7 @@ namespace aa {
     }
 
     // Start the new animator
-    _layers[layer].animator = pool->get_animator();
+    _layers[layer].animator = animator;
     _layers[layer].animator->on_play();
   }
 
@@ -288,7 +294,7 @@ namespace aa {
     size_t i = 0;
     for(size_t y = 0; y < h; ++y) {
       for(size_t sx = 0; sx < w; ++sx) {
-        size_t x = ((y % 2 == 0) ? x : w - 1 - x);
+        size_t x = ((y % 2 != 0) ? sx : w - 1 - sx);
         _output_buf[page][i++] = tex->sample(x, y).to_ws2811_color32();
       }
     }
@@ -308,7 +314,7 @@ namespace aa {
 #if 1
     for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
       for(size_t sx = 0; sx < w; ++sx) {
-        size_t x = ((y % 2 == 0) ? x : w - 1 - x);
+        size_t x = ((y % 2 != 0) ? sx : w - 1 - sx);
         uint32_t c = tex->sample(x, y).to_ws2811_color32();
         _output_buf[page][i++] =
           ((((c >> 2) & 0x3F3F3F) + 0x010101) >> 1) & 0x3F3F3F;
@@ -351,7 +357,7 @@ namespace aa {
       uint32_t base_color = page_colors[page - SCOREBOARD_PAGES_START] +
         (page == highlight_page ? highlight_color : 0);
       for(size_t sx = 0; sx < w; ++sx) {
-        size_t x = (y % 2 == 0) ? sx : (w - 1 - sx);
+        size_t x = (y % 2 != 0) ? sx : (w - 1 - sx);
         _output_buf[page][i++] = base_color +
           ((x == highlight_x || y == highlight_y) ? base_color : 0);
       }
