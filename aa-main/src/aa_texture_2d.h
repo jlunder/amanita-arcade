@@ -26,8 +26,17 @@ namespace aa {
     void set(size_t x, size_t y, Color c) const {
       _data[(y * _width) + x] = c;
     }
-    //Color sample_nn(float x, float y) const;
-    //Color sample_bilinear(size_t x, size_t y) const;
+    Color AA_OPTIMIZE sample_cn(int32_t x, int32_t y) const {
+      if(x < 0) x = 0;
+      if((size_t)x >= _width) x = _width - 1;
+      if(y < 0) y = 0;
+      if((size_t)y >= _height) y = _height - 1;
+      return get((size_t)x, (size_t)y);
+    }
+    //Color samplef_cn(float x, float y) const;
+    //Color samplef_cl(size_t x, size_t y) const;
+    //Color samplef_wn(float x, float y) const;
+    //Color samplef_wl(size_t x, size_t y) const;
 
     void fill_solid(Color c);
     void lerp_solid(Color c, float a);
@@ -36,14 +45,22 @@ namespace aa {
     //void hline_grad(int32_t x, int32_t y, int32_t w, Color ca, Color cb);
     //void vline_grad(int32_t x, int32_t y, int32_t h, Color ca, Color cb);
     void box_solid(int32_t x, int32_t y, int32_t w, int32_t h, Color c);
-    void box_grad(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
+    // closed gradient -- bottom right pixel is colored with exactly cx1y1
+    void box_grad_c(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
       Color cx1y0, Color cx0y1, Color cx1y1);
+    // open gradient -- bottom right pixel is colored second to cx1y1
+    void box_grad_o(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
+      Color cx1y0, Color cx0y1, Color cx1y1);
+    void box_mask(int32_t x, int32_t y, int32_t w, int32_t h,
+      Texture2D const * tex);
     void copy(Texture2D const * src);
     void mix(Texture2D const * src);
     void lerp(Texture2D const * other, float a);
     void bubble_x(float x, float r, Color c);
-    void char_5x5(int32_t x, int32_t y, char ch, Color c);
-    void char_10x15(int32_t x, int32_t y, char ch, Color c);
+    void char_5x5_solid(int32_t x, int32_t y, char ch, Color c);
+    void char_5x5_mask(int32_t x, int32_t y, char ch, Texture2D const * tex);
+    void char_10x15_solid(int32_t x, int32_t y, char ch, Color c);
+    void char_10x15_mask(int32_t x, int32_t y, char ch, Texture2D const * tex);
 
     void write_ws2811_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
       bool initial_invert_x, size_t src_x, size_t src_y) const;

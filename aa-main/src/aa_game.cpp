@@ -193,12 +193,14 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         if(a < 0.5f) {
-          dest->box_grad(0, 0, 30, 30, Color::black, Color::red, Color::green,
-            Color(1.0f, 1.0f, 0.0f));
+          dest->box_grad_o(0, 0, 30, 30, Color(0.0f, 0.0f, 0.0f),
+            Color(0.25f, 0.0f, 0.0f), Color(0.0f, 0.25f, 0.0f),
+            Color(0.25f, 0.25f, 0.0f));
         }
         else {
-          dest->box_grad(0, 0, 30, 30, Color::green, Color(0.0f, 1.0f, 1.0f),
-            Color::black, Color::blue);
+          dest->box_grad_o(0, 0, 30, 30, Color(0.0f, 0.25f, 0.0f),
+            Color(0.0f, 0.25f, 0.25f), Color(0.0f, 0.0f, 0.0f),
+            Color(0.0f, 0.0f, 0.25f));
         }
       }
     };
@@ -207,30 +209,52 @@ namespace aa {
     class HighScoreEntryForegroundAnimator : public Lights::Animator {
     public:
       HighScoreEntryForegroundAnimator()
-        : Animator(ShortTimeSpan::from_millis(500), true) { }
-
-        void set_state(int32_t x, int32_t y, char const * name,
-            int32_t cursor_pos) {
-          _x = x;
-          _y = y;
-          strncpy(_name, name, MAX_NAME_CHARS);
-          _cursor_pos = cursor_pos;
+          : Animator(ShortTimeSpan::from_millis(500), true) {
+        if(!_initialized) {
+          init();
         }
+      }
+
+      void set_state(int32_t x, int32_t y, char const * name,
+          int32_t cursor_pos) {
+        _x = x;
+        _y = y;
+        strncpy(_name, name, MAX_NAME_CHARS);
+        _cursor_pos = cursor_pos;
+      }
+
+      static void init() {
+        Color text_tl(1.0f, 0.5f, 0.0f);
+        Color text_br(0.5f, 0.0f, 0.0f);
+        Color cursor_tl(0.0f, 0.5f, 1.0f);
+        Color cursor_br(0.0f, 0.0f, 0.5f);
+
+        _text_tex.init(5, 5, _text_tex_data);
+        _text_tex.box_grad_c(0, 0, 5, 5, text_tl, text_tl.lerp(text_br, 0.5f),
+          text_tl.lerp(text_br, 0.5f), text_br);
+        _cursor_tex.init(5, 5, _cursor_tex_data);
+        _cursor_tex.box_grad_c(0, 0, 5, 5, cursor_tl,
+          cursor_tl.lerp(cursor_br, 0.5f), cursor_tl.lerp(cursor_br, 0.5f),
+          cursor_br);
+      }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        for(int32_t i = 0; i < MAX_NAME_CHARS; ++i) {
-          dest->char_5x5(_x + i * 5, _y, _name[i], _text_color);
+        for(size_t i = 0; i < MAX_NAME_CHARS; ++i) {
+          dest->char_5x5_mask(_x + i * 5, _y, _name[i], &_text_tex);
         }
         if(a >= 0.5f) {
-          dest->box_solid(_x + _cursor_pos * 5, _y, 5, 5, _cursor_color);
+          dest->box_mask(_x + _cursor_pos * 5, _y, 5, 5, &_cursor_tex);
         }
       }
 
     private:
       static size_t const MAX_NAME_CHARS = 4;
-      static Color const _text_color;
-      static Color const _cursor_color;
+      static bool _initialized;
+      static Texture2D _text_tex;
+      static Color _text_tex_data[5 * 5];
+      static Texture2D _cursor_tex;
+      static Color _cursor_tex_data[5 * 5];
 
       int32_t _x;
       int32_t _y;
@@ -238,10 +262,14 @@ namespace aa {
       int32_t _cursor_pos;
     };
 
-    Color const HighScoreEntryForegroundAnimator::_text_color =
-      Color(1.0f, 0.0f, 0.0f);
-    Color const HighScoreEntryForegroundAnimator::_cursor_color =
-      Color(1.0f, 1.0f, 1.0f);
+
+    bool HighScoreEntryForegroundAnimator::_initialized = false;
+    Texture2D HighScoreEntryForegroundAnimator::_text_tex;
+    Color HighScoreEntryForegroundAnimator::_text_tex_data[5 * 5];
+    Texture2D HighScoreEntryForegroundAnimator::_cursor_tex;
+    Color HighScoreEntryForegroundAnimator::_cursor_tex_data[5 * 5];
+
+
 /*
     class HighScoreEntryForegroundAnimator : public Lights::Animator {
     public:
