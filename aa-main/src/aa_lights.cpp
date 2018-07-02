@@ -232,7 +232,7 @@ namespace aa {
 
     update_composite_layers_to_composite_tex(LAYER_SB_START, LAYER_SB_COUNT);
     // LEDs can't handle more than 25% brightness, oy
-    _composite_tex.lerp_solid(Color::black, 0.75f);
+    _composite_tex.lerp_solid(Color::black, 0.875f);
     update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, 4,
       &_composite_tex);
   }

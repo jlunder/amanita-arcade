@@ -863,6 +863,27 @@ namespace aa {
     }
   }
 
+  void AA_OPTIMIZE Texture2D::box_solid(int32_t x, int32_t y,
+      int32_t w, int32_t h, aa::Color c) {
+    if((w < 0) || (h < 0)) {
+      Debug::error("Texture2D::box_grad() with negative size not implemented");
+      // swap colors, correct x/y,
+      return;
+    }
+    if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
+        (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
+      Debug::error("Texture2D::box_grad() with clipping not implemented");
+      return;
+    }
+
+    for(size_t yi = 0; yi < (size_t)h; ++yi) {
+      for(size_t xi = 0; xi < (size_t)w; ++xi) {
+        set((size_t)x + xi, (size_t)y + yi, c);
+      }
+    }
+  }
+
+
   void AA_OPTIMIZE Texture2D::box_grad(int32_t x, int32_t y, int32_t w,
       int32_t h, Color cx0y0, Color cx1y0, Color cx0y1, Color cx1y1) {
     if((w < 0) || (h < 0)) {

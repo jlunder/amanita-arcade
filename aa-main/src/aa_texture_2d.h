@@ -35,6 +35,7 @@ namespace aa {
     //void vline_solid(int32_t x, int32_t y, int32_t h, Color c);
     //void hline_grad(int32_t x, int32_t y, int32_t w, Color ca, Color cb);
     //void vline_grad(int32_t x, int32_t y, int32_t h, Color ca, Color cb);
+    void box_solid(int32_t x, int32_t y, int32_t w, int32_t h, Color c);
     void box_grad(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
       Color cx1y0, Color cx0y1, Color cx1y1);
     void copy(Texture2D const * src);

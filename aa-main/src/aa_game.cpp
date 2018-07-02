@@ -201,25 +201,48 @@ namespace aa {
             Color::black, Color::blue);
         }
       }
-
-    private:
-      static const Color _;
     };
 
-/*
+
     class HighScoreEntryForegroundAnimator : public Lights::Animator {
     public:
       HighScoreEntryForegroundAnimator()
         : Animator(ShortTimeSpan::from_millis(500), true) { }
 
+        void set_state(int32_t x, int32_t y, char const * name,
+            int32_t cursor_pos) {
+          _x = x;
+          _y = y;
+          strncpy(_name, name, MAX_NAME_CHARS);
+          _cursor_pos = cursor_pos;
+        }
+
     protected:
-      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const;
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        for(int32_t i = 0; i < MAX_NAME_CHARS; ++i) {
+          dest->char_5x5(_x + i * 5, _y, _name[i], _text_color);
+        }
+        if(a >= 0.5f) {
+          dest->box_solid(_x + _cursor_pos * 5, _y, 5, 5, _cursor_color);
+        }
+      }
 
     private:
-      static const Color _;
+      static size_t const MAX_NAME_CHARS = 4;
+      static Color const _text_color;
+      static Color const _cursor_color;
+
+      int32_t _x;
+      int32_t _y;
+      char _name[MAX_NAME_CHARS];
+      int32_t _cursor_pos;
     };
 
-
+    Color const HighScoreEntryForegroundAnimator::_text_color =
+      Color(1.0f, 0.0f, 0.0f);
+    Color const HighScoreEntryForegroundAnimator::_cursor_color =
+      Color(1.0f, 1.0f, 1.0f);
+/*
     class HighScoreEntryForegroundAnimator : public Lights::Animator {
     public:
       HighScoreEntryForegroundAnimator()
@@ -267,7 +290,8 @@ namespace aa {
 */
 
     //PanelAnimator panel_animator;
-    PanelColorTestAnimator panel_animator;
+    PanelColorTestAnimator panel_background_animator;
+    HighScoreEntryForegroundAnimator panel_animator;
 
 
     enum GameState {
@@ -320,8 +344,12 @@ namespace aa {
       state = ST_LISTENING;
       state_timer.cancel();
       update(TimeSpan::zero);
+      panel_animator.set_state(5, 12, "JOE", 3);
       Lights::start_animator(
-        Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &panel_animator);
+        Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
+        &panel_background_animator);
+      Lights::start_animator(
+        Lights::LAYER_SB_START + Lights::LAYER_SB_FOREGROUND, &panel_animator);
       break;
     case ST_PLAYING:
       if(state_timer.get_time_remaining() <= TimeSpan::zero) {
