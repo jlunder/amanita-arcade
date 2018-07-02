@@ -231,6 +231,8 @@ namespace aa {
     update_encode_stalk_texture_to_output(STALK_PAGE_PINK, &_composite_tex);
 
     update_composite_layers_to_composite_tex(LAYER_SB_START, LAYER_SB_COUNT);
+    // LEDs can't handle more than 25% brightness, oy
+    _composite_tex.lerp_solid(Color::black, 0.75f);
     update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, 4,
       &_composite_tex);
   }
@@ -289,86 +291,22 @@ namespace aa {
 
   void Lights::update_encode_stalk_texture_to_output(size_t page,
       Texture2D const * tex) {
-    size_t w = tex->get_width();
-    size_t h = tex->get_height();
-    size_t i = 0;
-    for(size_t y = 0; y < h; ++y) {
-      for(size_t sx = 0; sx < w; ++sx) {
-        size_t x = ((y % 2 != 0) ? sx : w - 1 - sx);
-        _output_buf[page][i++] = tex->sample(x, y).to_ws2811_color32();
-      }
-    }
+    tex->write_ws2811_color32(_output_buf[page], tex->get_width(),
+      tex->get_height(), false, 0, 0);
   }
 
 
-  void __attribute__((optimize("O4")))
-      Lights::update_encode_scoreboard_texture_to_output(size_t page_start,
+  void Lights::update_encode_scoreboard_texture_to_output(size_t page_start,
       size_t lines_per_page, Texture2D const * tex) {
-
-    size_t w = tex->get_width();
-    size_t h = tex->get_height();
-    size_t i = 0;
-    size_t page_lines = 0;
     size_t page = page_start;
-
-#if 1
-    for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
-      for(size_t sx = 0; sx < w; ++sx) {
-        size_t x = ((y % 2 != 0) ? sx : w - 1 - sx);
-        uint32_t c = tex->sample(x, y).to_ws2811_color32();
-        _output_buf[page][i++] =
-          ((((c >> 2) & 0x3F3F3F) + 0x010101) >> 1) & 0x3F3F3F;
+    for(size_t y = 0; y < tex->get_height(); ++page, y += lines_per_page) {
+      size_t h = lines_per_page;
+      if((y + h) > tex->get_height()) {
+        h = tex->get_height() - y;
       }
-      ++page_lines;
-      if(page_lines >= lines_per_page) {
-        ++page;
-        page_lines = 0;
-        i = 0;
-      }
+      tex->write_ws2811_color32(_output_buf[page],
+        tex->get_width(), h, true, 0, y);
     }
-#else
-    static const uint32_t highlight_color = 0x00101010;
-    static const uint32_t page_colors[SCOREBOARD_PAGES_COUNT] = {
-      0x00001000,
-      0x00101000,
-      0x00100000,
-      0x00100010,
-      0x00000010,
-      0x00001010,
-      0x00080808,
-      0x00101010,
-    };
-
-    static size_t counter = 0;
-    static size_t page_counter = 0;
-    if(counter >= w + h) {
-      counter = 0;
-    }
-    if(page_counter >= PAGE_COUNT * 8) {
-      page_counter = 0;
-    }
-    size_t highlight_x = (counter < w) ? counter : w;
-    size_t highlight_y = (counter >= w) ? counter - w : h;
-    size_t highlight_page = page_counter / 8;
-    ++counter;
-    ++page_counter;
-
-    for(size_t y = 0; y < h && page < PAGE_COUNT; ++y) {
-      uint32_t base_color = page_colors[page - SCOREBOARD_PAGES_START] +
-        (page == highlight_page ? highlight_color : 0);
-      for(size_t sx = 0; sx < w; ++sx) {
-        size_t x = (y % 2 != 0) ? sx : (w - 1 - sx);
-        _output_buf[page][i++] = base_color +
-          ((x == highlight_x || y == highlight_y) ? base_color : 0);
-      }
-      ++page_lines;
-      if(page_lines >= lines_per_page) {
-        ++page;
-        page_lines = 0;
-        i = 0;
-      }
-    }
-#endif
   }
 
 

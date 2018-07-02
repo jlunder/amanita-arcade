@@ -848,7 +848,7 @@ namespace aa {
   }
 
 
-  void Texture2D::fill_solid(Color c) {
+  void AA_OPTIMIZE Texture2D::fill_solid(Color c) {
     size_t count = _width * _height;
     for(size_t i = 0; i < count; ++i) {
       _data[i] = c;
@@ -856,15 +856,43 @@ namespace aa {
   }
 
 
-  void Texture2D::lerp_solid(Color c, float a) {
+  void AA_OPTIMIZE Texture2D::lerp_solid(Color c, float a) {
     size_t count = _width * _height;
     for(size_t i = 0; i < count; ++i) {
       _data[i].lerp_this(c, a);
     }
   }
 
+  void AA_OPTIMIZE Texture2D::box_grad(int32_t x, int32_t y, int32_t w,
+      int32_t h, Color cx0y0, Color cx1y0, Color cx0y1, Color cx1y1) {
+    if((w < 0) || (h < 0)) {
+      Debug::error("Texture2D::box_grad() with negative size not implemented");
+      // swap colors, correct x/y,
+      return;
+    }
+    if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
+        (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
+      Debug::error("Texture2D::box_grad() with clipping not implemented");
+      return;
+    }
 
-  void Texture2D::copy(Texture2D const * src) {
+    float dy = 1.0f / (h - 1);
+    float dx = 1.0f / (w - 1);
+    float ay = 0.0f;
+    for(size_t yi = 0; yi < (size_t)h; ++yi) {
+      Color cx0 = cx0y0.lerp(cx0y1, ay);
+      Color cx1 = cx1y0.lerp(cx1y1, ay);
+      float ax = 0.0f;
+      for(size_t xi = 0; xi < (size_t)w; ++xi) {
+        set((size_t)x + xi, (size_t)y + yi, cx0.lerp(cx1, ax));
+        ax += dx;
+      }
+      ay += dy;
+    }
+  }
+
+
+  void AA_OPTIMIZE Texture2D::copy(Texture2D const * src) {
     if((_width == src->_width) && (_height == src->_height)) {
       size_t count = _width * _height;
       memcpy(_data, src->_data, count * sizeof (Color));
@@ -875,7 +903,7 @@ namespace aa {
   }
 
 
-  void Texture2D::mix(Texture2D const * src) {
+  void AA_OPTIMIZE Texture2D::mix(Texture2D const * src) {
     if((_width == src->_width) && (_height == src->_height)) {
       size_t count = _width * _height;
       for(size_t i = 0; i < count; ++i) {
@@ -888,7 +916,7 @@ namespace aa {
   }
 
 
-  void Texture2D::lerp(Texture2D const * other, float a) {
+  void AA_OPTIMIZE Texture2D::lerp(Texture2D const * other, float a) {
     if((_width == other->_width) && (_height == other->_height)) {
       size_t count = _width * _height;
       for(size_t i = 0; i < count; ++i) {
@@ -901,7 +929,7 @@ namespace aa {
   }
 
 
-  void Texture2D::bubble_x(float px, float radius, Color c) {
+  void AA_OPTIMIZE Texture2D::bubble_x(float px, float radius, Color c) {
     float scale = 1.0f / radius;
     size_t i = 0;
     for(size_t y = 0; y < _height; ++y) {
@@ -916,17 +944,18 @@ namespace aa {
   }
 
 
-  void Texture2D::char_5x5(int32_t px, int32_t py, char ch, Color c) {
-    if((px >= 0) && (px + 5 <= (int32_t)_width) &&
-        (py >= 0) && (py + 5 <= (int32_t)_height)) {
+  void AA_OPTIMIZE Texture2D::char_5x5(int32_t px, int32_t py, char ch,
+      Color c) {
+    if((px >= 0) && ((size_t)px + 5 <= _width) &&
+        (py >= 0) && ((size_t)py + 5 <= _height)) {
       if((ch < 32) || (ch >= 128)) {
         return;
       }
       uint8_t const * glyph = font_5x5[ch - 32];
-      for(int32_t y = 0; y < 5; ++y) {
-        for(int32_t x = 0; x < 5; ++x) {
-          if(glyph[y] & (0b10000 >> x)) {
-            _data[(py + y) * _width + (px + x)] = c;
+      for(size_t yi = 0; yi < 5; ++yi) {
+        for(size_t xi = 0; xi < 5; ++xi) {
+          if(glyph[yi] & (0b10000 >> xi)) {
+            _data[((size_t)py + yi) * _width + ((size_t)px + xi)] = c;
           }
         }
       }
@@ -937,17 +966,18 @@ namespace aa {
   }
 
 
-  void Texture2D::char_10x15(int32_t px, int32_t py, char ch, Color c) {
-    if((px >= 0) && (px + 10 <= (int32_t)_width) &&
-        (py >= 0) && (py + 15 <= (int32_t)_height)) {
+  void AA_OPTIMIZE Texture2D::char_10x15(int32_t px, int32_t py, char ch,
+      Color c) {
+    if((px >= 0) && ((size_t)px + 10 <= _width) &&
+        (py >= 0) && ((size_t)py + 15 <= _height)) {
       if(ch < '0' || ch > '9') {
         return;
       }
       uint16_t const * glyph = font_10x15_numerals[ch - '0'];
-      for(int32_t y = 0; y < 15; ++y) {
-        for(int32_t x = 0; x < 10; ++x) {
-          if(glyph[y] & (0b1000000000 >> x)) {
-            _data[(py + y) * _width + (px + x)] = c;
+      for(size_t yi = 0; yi < 15; ++yi) {
+        for(size_t xi = 0; xi < 10; ++xi) {
+          if(glyph[yi] & (0b1000000000 >> xi)) {
+            _data[((size_t)py + yi) * _width + ((size_t)px + xi)] = c;
           }
         }
       }
@@ -958,8 +988,19 @@ namespace aa {
   }
 
 
-  void Texture2D::write_ws2811_color32(uint32_t * dest, size_t dest_width,
-      size_t dest_height, int32_t src_x, int32_t src_y) {
-
+  void AA_OPTIMIZE Texture2D::write_ws2811_color32(uint32_t * dest,
+      size_t dest_w, size_t dest_h, bool initial_invert_x,
+      size_t src_x, size_t src_y) const {
+    //Debug::tracef("w: %p %2lu %2lu %c %2lu %2lu", dest, dest_w, dest_h,
+    //  initial_invert_x ? 'y' : 'n', src_x, src_y);
+    ptrdiff_t p_inc = initial_invert_x ? -1 : 1;
+    for(size_t yi = 0; yi < dest_h; ++yi) {
+      uint32_t * p = dest + ((p_inc < 0) ? (dest_w - 1) : 0) + dest_w * yi;
+      for(size_t xi = 0; xi < dest_w; ++xi) {
+        *p = get(src_x + xi, src_y + yi).to_ws2811_color32();
+        p += p_inc;
+      }
+      p_inc = -p_inc;
+    }
   }
 }

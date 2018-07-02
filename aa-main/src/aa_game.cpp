@@ -157,6 +157,17 @@ namespace aa {
     }
 
 
+    StalkVis red_stalk_vis(Lights::LAYER_STALK_RED_START,
+      ShortTimeSpan::from_millis(1023), Color::red);
+    StalkVis green_stalk_vis(Lights::LAYER_STALK_GREEN_START,
+      ShortTimeSpan::from_millis(1490), Color::green);
+    StalkVis blue_stalk_vis(Lights::LAYER_STALK_BLUE_START,
+      ShortTimeSpan::from_millis(1717), Color::blue);
+    StalkVis pink_stalk_vis(Lights::LAYER_STALK_PINK_START,
+      ShortTimeSpan::from_millis(1201), Color::pink);
+
+
+
     class ScoreboardVis {
     public:
       ScoreboardVis(size_t layer_start, ShortTimeSpan period, Color bg_color);
@@ -174,16 +185,55 @@ namespace aa {
     };
 
 
-    StalkVis red_stalk_vis(Lights::LAYER_STALK_RED_START,
-      ShortTimeSpan::from_millis(1023), Color::red);
-    StalkVis green_stalk_vis(Lights::LAYER_STALK_GREEN_START,
-      ShortTimeSpan::from_millis(1490), Color::green);
-    StalkVis blue_stalk_vis(Lights::LAYER_STALK_BLUE_START,
-      ShortTimeSpan::from_millis(1717), Color::blue);
-    StalkVis pink_stalk_vis(Lights::LAYER_STALK_PINK_START,
-      ShortTimeSpan::from_millis(1201), Color::pink);
+    class PanelColorTestAnimator : public Lights::Animator {
+    public:
+      PanelColorTestAnimator()
+        : Animator(ShortTimeSpan::from_millis(4000), true) { }
 
-    class PanelAnimator : public Lights::Animator {
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        if(a < 0.5f) {
+          dest->box_grad(0, 0, 30, 30, Color::black, Color::red, Color::green,
+            Color(1.0f, 1.0f, 0.0f));
+        }
+        else {
+          dest->box_grad(0, 0, 30, 30, Color::green, Color(0.0f, 1.0f, 1.0f),
+            Color::black, Color::blue);
+        }
+      }
+
+    private:
+      static const Color _;
+    };
+
+/*
+    class HighScoreEntryForegroundAnimator : public Lights::Animator {
+    public:
+      HighScoreEntryForegroundAnimator()
+        : Animator(ShortTimeSpan::from_millis(500), true) { }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const;
+
+    private:
+      static const Color _;
+    };
+
+
+    class HighScoreEntryForegroundAnimator : public Lights::Animator {
+    public:
+      HighScoreEntryForegroundAnimator()
+        : Animator(ShortTimeSpan::from_millis(500), true) { }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const;
+
+    private:
+      static const Color _;
+    };
+
+
+    class HighScoreListAnimator : public Lights::Animator {
     public:
       PanelAnimator()
         : Animator(ShortTimeSpan::from_millis(1000), true) { }
@@ -214,9 +264,10 @@ namespace aa {
       dest->char_10x15(10, 15, '5', Color::white);
       dest->char_10x15(20, 15, '6', Color::white);
     }
+*/
 
-
-    PanelAnimator panel_animator;
+    //PanelAnimator panel_animator;
+    PanelColorTestAnimator panel_animator;
 
 
     enum GameState {

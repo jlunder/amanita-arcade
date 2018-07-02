@@ -20,10 +20,23 @@ namespace aa {
 
     size_t get_width() const { return _width; }
     size_t get_height() const { return _height; }
-    Color sample(size_t x, size_t y) const { return _data[(y * _width) + x]; }
+    size_t get_stride() const { return _width; }
+    Color const * get_data() const { return _data; }
+    Color get(size_t x, size_t y) const { return _data[(y * _width) + x]; }
+    void set(size_t x, size_t y, Color c) const {
+      _data[(y * _width) + x] = c;
+    }
+    //Color sample_nn(float x, float y) const;
+    //Color sample_bilinear(size_t x, size_t y) const;
 
     void fill_solid(Color c);
     void lerp_solid(Color c, float a);
+    //void hline_solid(int32_t x, int32_t y, int32_t w, Color c);
+    //void vline_solid(int32_t x, int32_t y, int32_t h, Color c);
+    //void hline_grad(int32_t x, int32_t y, int32_t w, Color ca, Color cb);
+    //void vline_grad(int32_t x, int32_t y, int32_t h, Color ca, Color cb);
+    void box_grad(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
+      Color cx1y0, Color cx0y1, Color cx1y1);
     void copy(Texture2D const * src);
     void mix(Texture2D const * src);
     void lerp(Texture2D const * other, float a);
@@ -31,8 +44,8 @@ namespace aa {
     void char_5x5(int32_t x, int32_t y, char ch, Color c);
     void char_10x15(int32_t x, int32_t y, char ch, Color c);
 
-    void write_ws2811_color32(uint32_t * dest, size_t dest_width,
-      size_t dest_height, int32_t src_x, int32_t src_y);
+    void write_ws2811_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
+      bool initial_invert_x, size_t src_x, size_t src_y) const;
 
   private:
     size_t _width;

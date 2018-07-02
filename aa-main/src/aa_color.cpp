@@ -31,7 +31,7 @@ namespace aa {
     1.0f,
   };
 
-  float Color::cie(float l) {
+  float AA_OPTIMIZE Color::cie(float l) {
     if(l >= 1.0f) {
       return 1.0f;
     } else if(l >= 0.0f) {

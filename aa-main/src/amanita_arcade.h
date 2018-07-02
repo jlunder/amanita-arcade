@@ -13,6 +13,8 @@
 #define AA_AUTO_ASSERT(expr) \
   expr, "%s: %d: expression not true: %s", __FILE__, __LINE__, #expr
 
+#define AA_OPTIMIZE __attribute__((optimize("O4")))
+
 
 namespace aa {
   enum MushroomID {
