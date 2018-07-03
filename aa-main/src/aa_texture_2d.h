@@ -57,10 +57,12 @@ namespace aa {
     void mix(Texture2D const * src);
     void lerp(Texture2D const * other, float a);
     void bubble_x(float x, float r, Color c);
-    void char_5x5_solid(int32_t x, int32_t y, char ch, Color c);
-    void char_5x5_mask(int32_t x, int32_t y, char ch, Texture2D const * tex);
-    void char_10x15_solid(int32_t x, int32_t y, char ch, Color c);
-    void char_10x15_mask(int32_t x, int32_t y, char ch, Texture2D const * tex);
+    void char_5x5_solid(int32_t x, int32_t y, char ch, bool invert, Color c);
+    void char_5x5_mask(int32_t x, int32_t y, char ch, bool invert,
+      Texture2D const * tex);
+    void char_10x15_solid(int32_t x, int32_t y, char ch, bool invert, Color c);
+    void char_10x15_mask(int32_t x, int32_t y, char ch, bool invert,
+      Texture2D const * tex);
 
     void write_ws2811_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
       bool initial_invert_x, size_t src_x, size_t src_y) const;

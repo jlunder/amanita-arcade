@@ -193,12 +193,12 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         if(a < 0.5f) {
-          dest->box_grad_o(0, 0, 30, 30, Color(0.0f, 0.0f, 0.0f),
+          dest->box_grad_c(0, 0, 30, 30, Color(0.0f, 0.0f, 0.0f),
             Color(0.25f, 0.0f, 0.0f), Color(0.0f, 0.25f, 0.0f),
             Color(0.25f, 0.25f, 0.0f));
         }
         else {
-          dest->box_grad_o(0, 0, 30, 30, Color(0.0f, 0.25f, 0.0f),
+          dest->box_grad_c(0, 0, 30, 30, Color(0.0f, 0.25f, 0.0f),
             Color(0.0f, 0.25f, 0.25f), Color(0.0f, 0.0f, 0.0f),
             Color(0.0f, 0.0f, 0.25f));
         }
@@ -241,10 +241,8 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         for(size_t i = 0; i < MAX_NAME_CHARS; ++i) {
-          dest->char_5x5_mask(_x + i * 5, _y, _name[i], &_text_tex);
-        }
-        if(a >= 0.5f) {
-          dest->box_mask(_x + _cursor_pos * 5, _y, 5, 5, &_cursor_tex);
+          dest->char_5x5_mask(_x + i * 5, _y, _name[i],
+            (i == _cursor_pos) && (a >= 0.5f), &_text_tex);
         }
       }
 
@@ -372,7 +370,7 @@ namespace aa {
       state = ST_LISTENING;
       state_timer.cancel();
       update(TimeSpan::zero);
-      panel_animator.set_state(5, 12, "JOE", 3);
+      panel_animator.set_state(5, 12, "JOE", 1);
       Lights::start_animator(
         Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
         &panel_background_animator);

@@ -947,7 +947,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::box_mask(int32_t x, int32_t y,
-      int32_t w, int32_t h, Texture2D const * mask) {
+      int32_t w, int32_t h, Texture2D const * tex) {
     if((w < 0) || (h < 0)) {
       Debug::error("Texture2D::box_mask() with negative size not implemented");
       // swap colors, correct x/y,
@@ -958,13 +958,13 @@ namespace aa {
       Debug::error("Texture2D::box_grad() with clipping not implemented");
       return;
     }
-    if(((size_t)w > mask->get_width()) || ((size_t)h > mask->get_height())) {
+    if(((size_t)w > tex->get_width()) || ((size_t)h > tex->get_height())) {
       Debug::error("Texture2D::box_grad() with clamping not implemented");
       return;
     }
 
     for(size_t yi = 0; yi < (size_t)h; ++yi) {
-      memcpy(_data + _width * (y + yi) + x, mask->_data + mask->_width * yi,
+      memcpy(_data + _width * (y + yi) + x, tex->_data + tex->_width * yi,
         sizeof (Color) * w);
     }
   }
@@ -1023,7 +1023,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_5x5_solid(int32_t px, int32_t py, char ch,
-      Color c) {
+      bool invert, Color c) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
       // with clipping
@@ -1032,13 +1032,18 @@ namespace aa {
       return;
     }
     if((ch < 32) || (ch >= 128)) {
+      if(invert) {
+        box_solid(px, py, 5, 5, c);
+      }
       return;
     }
 
     uint8_t const * glyph = font_5x5[ch - 32];
+    uint_fast8_t invert_mask = invert ? ~0 : 0;
     for(size_t yi = 0; yi < 5; ++yi) {
+      uint_fast8_t row = glyph[yi] ^ invert_mask;
       for(size_t xi = 0; xi < 5; ++xi) {
-        if(glyph[yi] & (0b10000 >> xi)) {
+        if(row & (0b10000 >> xi)) {
           _data[((size_t)py + yi) * _width + ((size_t)px + xi)] = c;
         }
       }
@@ -1047,28 +1052,33 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_5x5_mask(int32_t px, int32_t py, char ch,
-      Texture2D const * mask) {
+      bool invert, Texture2D const * tex) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
       // with clipping
       Debug::error("Texture2D::char_5x5_mask() with clipping not implemented");
       return;
     }
-    if((mask->get_width() < 5) || (mask->get_height() < 5)) {
+    if((tex->get_width() < 5) || (tex->get_height() < 5)) {
       Debug::error(
         "Texture2D::char_5x5_mask() with clamping not implemented");
       return;
     }
     if((ch < 32) || (ch >= 128)) {
+      if(invert) {
+        box_mask(px, py, 5, 5, tex);
+      }
       return;
     }
 
     uint8_t const * glyph = font_5x5[ch - 32];
+    uint_fast8_t invert_mask = invert ? ~0 : 0;
     for(size_t yi = 0; yi < 5; ++yi) {
+      uint_fast8_t row = glyph[yi] ^ invert_mask;
       for(size_t xi = 0; xi < 5; ++xi) {
-        if(glyph[yi] & (0b10000 >> xi)) {
+        if(row & (0b10000 >> xi)) {
           _data[((size_t)py + yi) * _width + ((size_t)px + xi)] =
-            mask->get(xi, yi);
+            tex->get(xi, yi);
         }
       }
     }
@@ -1076,7 +1086,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_10x15_solid(int32_t px, int32_t py, char ch,
-      Color c) {
+      bool invert, Color c) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
       // with clipping
@@ -1085,13 +1095,18 @@ namespace aa {
       return;
     }
     if(ch < '0' || ch > '9') {
+      if(invert) {
+        box_solid(px, py, 10, 15, c);
+      }
       return;
     }
 
     uint16_t const * glyph = font_10x15_numerals[ch - '0'];
+    uint_fast16_t invert_mask = invert ? ~0 : 0;
     for(size_t yi = 0; yi < 15; ++yi) {
+      uint_fast16_t row = glyph[yi] ^ invert_mask;
       for(size_t xi = 0; xi < 10; ++xi) {
-        if(glyph[yi] & (0b1000000000 >> xi)) {
+        if(row & (0b1000000000 >> xi)) {
           _data[((size_t)py + yi) * _width + ((size_t)px + xi)] = c;
         }
       }
@@ -1100,7 +1115,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_10x15_mask(int32_t px, int32_t py, char ch,
-      Texture2D const * mask) {
+      bool invert, Texture2D const * tex) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
       // with clipping
@@ -1108,21 +1123,26 @@ namespace aa {
         "Texture2D::char_10x15_mask() with clipping not implemented");
       return;
     }
-    if((mask->get_width() < 10) || (mask->get_height() < 15)) {
+    if((tex->get_width() < 10) || (tex->get_height() < 15)) {
       Debug::error(
         "Texture2D::char_10x15_mask() with clamping not implemented");
       return;
     }
     if(ch < '0' || ch > '9') {
+      if(invert) {
+        box_mask(px, py, 10, 15, tex);
+      }
       return;
     }
 
     uint16_t const * glyph = font_10x15_numerals[ch - '0'];
+    uint_fast16_t invert_mask = invert ? ~0 : 0;
     for(size_t yi = 0; yi < 15; ++yi) {
+      uint_fast16_t row = glyph[yi] ^ invert_mask;
       for(size_t xi = 0; xi < 10; ++xi) {
-        if(glyph[yi] & (0b1000000000 >> xi)) {
+        if(row & (0b1000000000 >> xi)) {
           _data[((size_t)py + yi) * _width + ((size_t)px + xi)] =
-            mask->get(xi, yi);
+            tex->get(xi, yi);
         }
       }
     }
