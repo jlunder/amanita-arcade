@@ -214,6 +214,12 @@ namespace aa {
   void Lights::update(ShortTimeSpan dt) {
     update_animators(dt);
 
+    for(size_t j = 0; j < PAGE_COUNT; ++j) {
+      for(size_t i = 0; i < PAGE_SIZE; ++i) {
+        _output_buf[j][i] = 0x00FFFF;
+      }
+    }
+
     update_composite_layers_to_composite_tex(LAYER_STALK_RED_START,
       LAYER_STALK_COUNT);
     update_encode_stalk_texture_to_output(STALK_PAGE_RED, &_composite_tex);
@@ -361,7 +367,7 @@ namespace aa {
         hw::lights_ws2812_port = set;
         __sync_synchronize();
         // Do work to make up ~350ns (200ns < t < 500ns) (no __NOP() needed)
-        for(size_t k = 0; k < 4; ++k) {
+        for(size_t k = 0; k < 6; ++k) {
           // shift out MSB first
           uint32_t c = colors[k];
           colors[k] = c << 1;
@@ -371,7 +377,7 @@ namespace aa {
         hw::lights_ws2812_port = data[j];
         __sync_synchronize();
         // Do work to make up >300ns (max 5000ns)
-        for(size_t k = 4; k < 12; ++k) {
+        for(size_t k = 6; k < 12; ++k) {
           // shift out MSB first
           uint32_t c = colors[k];
           colors[k] = c << 1;

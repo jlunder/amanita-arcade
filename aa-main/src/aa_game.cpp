@@ -241,8 +241,10 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         for(size_t i = 0; i < MAX_NAME_CHARS; ++i) {
-          dest->char_5x5_mask(_x + i * 5, _y, _name[i],
-            (i == _cursor_pos) && (a >= 0.5f), &_text_tex);
+          dest->char_5x5_mask(_x + i * 5, _y, _name[i], false, &_text_tex);
+        }
+        if(a >= 0.5f) {
+          dest->box_mask(_x + _cursor_pos * 5, _y, 5, 5, &_cursor_tex);
         }
       }
 
