@@ -144,7 +144,7 @@ namespace aa {
           ((uint32_t)(_b * 256) << 0) : 0x000000));
     }
 
-    uint32_t AA_OPTIMIZE to_ws2811_color32() const {
+    uint32_t AA_OPTIMIZE to_grb_color32() const {
       return
         (_g >= 1.0f ? 0xFF0000 : (_g >= 0.0f ?
           ((uint32_t)(_g * 256) << 16) : 0x000000)) |
@@ -152,6 +152,16 @@ namespace aa {
           ((uint32_t)(_r * 256) << 8) : 0x000000)) |
         (_b >= 1.0f ? 0x0000FF : (_b >= 0.0f ?
           ((uint32_t)(_b * 256) << 0) : 0x000000));
+    }
+
+    uint32_t AA_OPTIMIZE to_brg_color32() const {
+      return
+        (_b >= 1.0f ? 0xFF0000 : (_b >= 0.0f ?
+          ((uint32_t)(_b * 256) << 16) : 0x000000)) |
+        (_r >= 1.0f ? 0x00FF00 : (_r >= 0.0f ?
+          ((uint32_t)(_r * 256) << 8) : 0x000000)) |
+        (_g >= 1.0f ? 0x0000FF : (_g >= 0.0f ?
+          ((uint32_t)(_g * 256) << 0) : 0x000000));
     }
 
     // Takes a normalized float on [0..1] representing apparent brightness and

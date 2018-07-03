@@ -1149,7 +1149,7 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::write_ws2811_color32(uint32_t * dest,
+  void AA_OPTIMIZE Texture2D::write_grb_color32(uint32_t * dest,
       size_t dest_w, size_t dest_h, bool initial_invert_x,
       size_t src_x, size_t src_y) const {
     //Debug::tracef("w: %p %2lu %2lu %c %2lu %2lu", dest, dest_w, dest_h,
@@ -1158,7 +1158,24 @@ namespace aa {
     for(size_t yi = 0; yi < dest_h; ++yi) {
       uint32_t * p = dest + ((p_inc < 0) ? (dest_w - 1) : 0) + dest_w * yi;
       for(size_t xi = 0; xi < dest_w; ++xi) {
-        *p = get(src_x + xi, src_y + yi).to_ws2811_color32();
+        *p = get(src_x + xi, src_y + yi).to_grb_color32();
+        p += p_inc;
+      }
+      p_inc = -p_inc;
+    }
+  }
+
+
+  void AA_OPTIMIZE Texture2D::write_brg_color32(uint32_t * dest,
+      size_t dest_w, size_t dest_h, bool initial_invert_x,
+      size_t src_x, size_t src_y) const {
+    //Debug::tracef("w: %p %2lu %2lu %c %2lu %2lu", dest, dest_w, dest_h,
+    //  initial_invert_x ? 'y' : 'n', src_x, src_y);
+    ptrdiff_t p_inc = initial_invert_x ? -1 : 1;
+    for(size_t yi = 0; yi < dest_h; ++yi) {
+      uint32_t * p = dest + ((p_inc < 0) ? (dest_w - 1) : 0) + dest_w * yi;
+      for(size_t xi = 0; xi < dest_w; ++xi) {
+        *p = get(src_x + xi, src_y + yi).to_brg_color32();
         p += p_inc;
       }
       p_inc = -p_inc;

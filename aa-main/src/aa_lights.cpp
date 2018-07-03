@@ -153,7 +153,7 @@ namespace aa {
 
 
   void Lights::init() {
-    uint32_t c = Color(0.0f, 0.0f, 0.0f).to_ws2811_color32();
+    uint32_t c = Color(0.0f, 0.0f, 0.0f).to_grb_color32();
     for(size_t i = 0; i < 8; ++i) {
       for(size_t j = 0; j < 8; ++j) {
         // 0x00GGRRBB
@@ -297,7 +297,7 @@ namespace aa {
 
   void Lights::update_encode_stalk_texture_to_output(size_t page,
       Texture2D const * tex) {
-    tex->write_ws2811_color32(_output_buf[page], tex->get_width(),
+    tex->write_brg_color32(_output_buf[page], tex->get_width(),
       tex->get_height(), false, 0, 0);
   }
 
@@ -310,7 +310,7 @@ namespace aa {
       if((y + h) > tex->get_height()) {
         h = tex->get_height() - y;
       }
-      tex->write_ws2811_color32(_output_buf[page],
+      tex->write_grb_color32(_output_buf[page],
         tex->get_width(), h, true, 0, y);
     }
   }

@@ -64,7 +64,9 @@ namespace aa {
     void char_10x15_mask(int32_t x, int32_t y, char ch, bool invert,
       Texture2D const * tex);
 
-    void write_ws2811_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
+    void write_grb_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
+      bool initial_invert_x, size_t src_x, size_t src_y) const;
+    void write_brg_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
       bool initial_invert_x, size_t src_x, size_t src_y) const;
 
   private:
