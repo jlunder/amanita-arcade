@@ -12,30 +12,77 @@
 namespace aa {
   class Lights {
   public:
-    static const size_t POOL_COUNT = 2;
-
     class Animator;
 
     class AnimatorPool {
     public:
-      AnimatorPool();
-      void add_animator(Animator * anim);
-      Animator * get_animator();
+      virtual Animator * acquire() = 0;
+
+    protected:
+      bool _initialized;
+    };
+
+    template<typename T, size_t POOL_COUNT>
+    class StaticAnimatorPool : public AnimatorPool {
+    public:
+      StaticAnimatorPool() : _next(0) { }
+
+      void default_init() {
+        Debug::assertf(AA_AUTO_ASSERT(!_initialized));
+        for(size_t i = 0; i < POOL_COUNT; ++i) {
+          _animators[i].init();
+        }
+        _initialized = true;
+      }
+
+      template<typename F>
+      void init(F init_func) {
+        Debug::assertf(AA_AUTO_ASSERT(!_initialized));
+        for(size_t i = 0; i < POOL_COUNT; ++i) {
+          init_func(&_animators[i]);
+        }
+        _initialized = true;
+      }
+
+      virtual Animator * acquire() {
+        // Try to find an idle animator
+        for(size_t i = 0; i < POOL_COUNT; ++i) {
+          if(!_animators[_next].is_in_use()) {
+            _animators[_next].acquire();
+            return &_animators[_next];
+          }
+          _next = (_next + 1) % POOL_COUNT;
+        }
+        // Because there are two animators in every pool, and Lights discards
+        // all but one for any given layer before it tries to get a new
+        // animator, this should only happen if you're sharing AnimatorPools
+        // between multiple layers (which shouldn't be done!)
+        Debug::error("No free animators in this pool!");
+        return nullptr;
+      }
 
     private:
-      Animator * _animators[POOL_COUNT];
       size_t _next;
+      T _animators[POOL_COUNT];
     };
 
     class Animator {
     public:
-      Animator(ShortTimeSpan anim_length, bool looping)
-        : _looping(looping), _playing(false), _transitioning(false),
-        _anim_length(anim_length), _total_time() { }
+      Animator() : _playing(false), _transitioning(false) { }
       virtual ~Animator() { }
 
-      bool is_playing() { return _playing; }
-      bool is_transitioning() { return _transitioning; }
+      void acquire() {
+        Debug::assertf(AA_AUTO_ASSERT(!_in_use));
+        _in_use = true;
+      }
+      void release() {
+        Debug::assertf(AA_AUTO_ASSERT(_in_use));
+        _in_use = false;
+      }
+
+      bool is_in_use() const { return _in_use; }
+      bool is_playing() const { return _playing; }
+      bool is_transitioning() const { return _transitioning; }
 
       void on_play();
       void on_transition();
@@ -45,10 +92,18 @@ namespace aa {
       void render(Texture2D * dest) const;
 
     protected:
+      void init(ShortTimeSpan anim_length, bool looping) {
+        Debug::assertf(AA_AUTO_ASSERT(!_playing && !_transitioning));
+        _looping = looping;
+        _anim_length = anim_length;
+        _total_time = TimeSpan::zero;
+      }
+
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
         const = 0;
 
     private:
+      bool _in_use;
       bool _looping;
       bool _playing;
       bool _transitioning;
@@ -84,9 +139,9 @@ namespace aa {
 
     static void init();
 
-    static void start_animator(size_t layer, AnimatorPool * pool,
-      ShortTimeSpan transition = ShortTimeSpan::from_micros(0));
     static void start_animator(size_t layer, Animator * anim,
+      ShortTimeSpan transition = ShortTimeSpan::from_micros(0));
+    static void transition_out(size_t layer,
       ShortTimeSpan transition = ShortTimeSpan::from_micros(0));
 
     static void update(ShortTimeSpan dt);

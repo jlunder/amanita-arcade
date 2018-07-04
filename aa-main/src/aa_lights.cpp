@@ -64,46 +64,8 @@ namespace aa {
   Color Lights::_transition_tex_data[TEXTURE_TEMP_MAX];
 
 
-  Lights::AnimatorPool::AnimatorPool() : _next() {
-    for(size_t i = 0; i < POOL_COUNT; ++i) {
-      _animators[i] = nullptr;
-    }
-  }
-
-
-  void Lights::AnimatorPool::add_animator(Animator * anim) {
-    for(size_t i = 0; i < POOL_COUNT; ++i) {
-      if(_animators[(_next + i) % POOL_COUNT] == nullptr) {
-        _next = (_next + i) % POOL_COUNT;
-        break;
-      }
-    }
-    Debug::assert(_animators[_next] == nullptr,
-      "No room left in AnimatorPool");
-    _animators[_next] = anim;
-    _next = (_next + 1) % POOL_COUNT;
-  }
-
-
-  Lights::Animator * Lights::AnimatorPool::get_animator() {
-    // Try to find an idle animator
-    for(size_t i = 0; i < POOL_COUNT; ++i) {
-      Animator * anim = _animators[(_next + i) % POOL_COUNT];
-      if(!anim->is_playing()) {
-        _next = (_next + i + 1) % POOL_COUNT;
-        return anim;
-      }
-    }
-    // Because there are two animators in every pool, and Lights discards all
-    // but one for any given layer before it tries to get a new animator, this
-    // should only happen if you're sharing AnimatorPools between multiple
-    // layers (which shouldn't be done!)
-    Debug::error("No free animators in this pool!");
-    return nullptr;
-  }
-
-
   void Lights::Animator::on_play() {
+    Debug::assertf(AA_AUTO_ASSERT(_in_use));
     Debug::assert(!_transitioning, "Animator on_play() and _transitioning");
     Debug::assert(!_playing, "Animator on_play() and _playing");
     _total_time = ShortTimeSpan::from_micros(0);
@@ -112,6 +74,7 @@ namespace aa {
 
 
   void Lights::Animator::on_transition() {
+    Debug::assertf(AA_AUTO_ASSERT(_in_use));
     Debug::assert(_playing, "Animator on_stopping() and !_playing");
     Debug::assert(!_transitioning, "Animator on_play() and _transitioning");
     _transitioning = true;
@@ -119,6 +82,7 @@ namespace aa {
 
 
   void Lights::Animator::on_stop() {
+    Debug::assertf(AA_AUTO_ASSERT(_in_use));
     Debug::assert(_playing, "Animator on_stop() and !_playing");
     _playing = false;
     _transitioning = false;
@@ -126,6 +90,8 @@ namespace aa {
 
 
   bool Lights::Animator::animate(ShortTimeSpan dt) {
+    Debug::assertf(AA_AUTO_ASSERT(_in_use));
+    Debug::assert(_playing, "Animator animate() and !_playing");
     _total_time += dt;
     if(_total_time > _anim_length) {
       if(_looping) {
@@ -141,6 +107,7 @@ namespace aa {
 
 
   void Lights::Animator::render(Texture2D * dest) const {
+    Debug::assertf(AA_AUTO_ASSERT(_in_use));
     if(_total_time >= _anim_length) {
       render(_total_time, 1.0f, dest);
     } else {
@@ -163,14 +130,18 @@ namespace aa {
   }
 
 
-  void Lights::start_animator(size_t layer, AnimatorPool * pool,
+  void Lights::start_animator(size_t layer, Animator * animator,
       ShortTimeSpan transition) {
-    start_animator(layer, pool->get_animator(), transition);
+    transition_out(layer, transition);
+
+    Debug::assertf(AA_AUTO_ASSERT(_layers[layer].animator == nullptr));
+    // Start the new animator
+    _layers[layer].animator = animator;
+    _layers[layer].animator->on_play();
   }
 
 
-  void Lights::start_animator(size_t layer, Animator * animator,
-      ShortTimeSpan transition) {
+  void Lights::transition_out(size_t layer, ShortTimeSpan transition) {
     // Note that in this method we try not to disturb any existing
     // transitioning animators if it's not necessary... this is helpful in the
     // edge case where a very long transition is initiated to present a short
@@ -185,29 +156,29 @@ namespace aa {
     // controlled well enough to get consistent results.
 
     // Is there an animator playing?
-    if(_layers[layer].animator != nullptr) {
-      // Is there a transition?
-      if(transition > TimeSpan::zero) {
-        // Yes: if anything was still transitioning, get rid of it
-        if(_layers[layer].trans_animator != nullptr) {
-          _layers[layer].trans_animator->on_stop();
-          _layers[layer].trans_animator = nullptr;
-        }
-
-        // Next, move the current animator into transitioning
-        _layers[layer].trans_animator = _layers[layer].animator;
-        _layers[layer].trans_animator->on_transition();
-        _layers[layer].animator = nullptr;
-      } else {
-        // No: stop the current animator
-        _layers[layer].animator->on_stop();
-        _layers[layer].animator = nullptr;
-      }
+    if(_layers[layer].animator == nullptr) {
+      return;
     }
 
-    // Start the new animator
-    _layers[layer].animator = animator;
-    _layers[layer].animator->on_play();
+    // Is there a transition?
+    if(transition > TimeSpan::zero) {
+      // Yes: if anything was still transitioning, get rid of it
+      if(_layers[layer].trans_animator != nullptr) {
+        _layers[layer].trans_animator->on_stop();
+        _layers[layer].trans_animator->release();
+        _layers[layer].trans_animator = nullptr;
+      }
+
+      // Next, move the current animator into transitioning
+      _layers[layer].trans_animator = _layers[layer].animator;
+      _layers[layer].animator = nullptr;
+      _layers[layer].trans_animator->on_transition();
+    } else {
+      // No: stop the current animator
+      _layers[layer].animator->on_stop();
+      _layers[layer].animator->release();
+      _layers[layer].animator = nullptr;
+    }
   }
 
 
@@ -252,6 +223,7 @@ namespace aa {
         if((_layers[i].trans_time >= _layers[i].trans_length) ||
             !_layers[i].trans_animator->animate(dt)) {
           _layers[i].trans_animator->on_stop();
+          _layers[i].trans_animator->release();
           _layers[i].trans_animator = nullptr;
         }
       }
@@ -259,6 +231,7 @@ namespace aa {
       if(_layers[i].animator != nullptr) {
         if(!_layers[i].animator->animate(dt)) {
           _layers[i].animator->on_stop();
+          _layers[i].animator->release();
           _layers[i].animator = nullptr;
         }
       }

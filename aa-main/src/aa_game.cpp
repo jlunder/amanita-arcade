@@ -11,82 +11,64 @@ namespace aa {
   namespace {
     class GlowBackgroundAnimator : public Lights::Animator {
     public:
-      GlowBackgroundAnimator(ShortTimeSpan period, Color color)
-        : Animator(period, true), _color(color) { }
+      void init(ShortTimeSpan period, Color color) {
+        Animator::init(period, true);
+        _color = color;
+      }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
-        const;
+          const {
+        float aa = 0.10f * cosf((float)M_PI * 2.0f * a) + 0.90f;
+        Color c = _color.cie_scale(aa);
+        dest->fill_solid(c);
+      }
 
     private:
       Color _color;
     };
-
-
-    void GlowBackgroundAnimator::render(ShortTimeSpan t, float a,
-        Texture2D * dest) const {
-      float aa = 0.10f * cosf((float)M_PI * 2.0f * a) + 0.90f;
-      Color c = _color.cie_scale(aa);
-      dest->fill_solid(c);
-    }
 
 
     class BubbleAnimator : public Lights::Animator {
     public:
-      BubbleAnimator(ShortTimeSpan duration, Color color)
-        : Animator(duration, false), _color(color) { }
+      void init(ShortTimeSpan duration, Color color) {
+        Animator::init(duration, false);
+        _color = color;
+      }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
-        const;
+          const {
+        dest->bubble_x(a * 45.0f, 10.0f, _color);
+      }
 
     private:
       Color _color;
     };
 
 
-    void BubbleAnimator::render(ShortTimeSpan t, float a,
-        Texture2D * dest) const {
-      dest->bubble_x(a * 45.0f, 10.0f, _color);
-    }
-
-
     class GameOverWinAnimator : public Lights::Animator {
     public:
-      GameOverWinAnimator()
-        : Animator(ShortTimeSpan::from_millis(4000), false) { }
+      void init() { Animator::init(ShortTimeSpan::from_millis(4000), false); }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
-        const;
+          const {
+        dest->lerp_solid(Color::white, 1.0f - fabsf(2.0f * a - 1.0f));
+      }
     };
-
-
-    void GameOverWinAnimator::render(ShortTimeSpan t, float a,
-        Texture2D * dest) const {
-      dest->lerp_solid(Color::white, 1.0f - fabsf(2.0f * a - 1.0f));
-    }
 
 
     class GameOverLoseAnimator : public Lights::Animator {
     public:
-      GameOverLoseAnimator()
-        : Animator(ShortTimeSpan::from_millis(4000), false) { }
+      void init() { Animator::init(ShortTimeSpan::from_millis(4000), false); }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
-        const;
+          const {
+        dest->lerp_solid(Color::red, 1.0f - fabsf(2.0f * a - 1.0f));
+      }
     };
-
-
-    void GameOverLoseAnimator::render(ShortTimeSpan t, float a,
-        Texture2D * dest) const {
-      dest->lerp_solid(Color::red, 1.0f - fabsf(2.0f * a - 1.0f));
-    }
-
-
-    ShortTimeSpan const BUBBLE_DURATION = ShortTimeSpan::from_millis(500);
-    Color const BUBBLE_COLOR(1.0f, 1.0f, 1.0f);
 
 
     class StalkVis {
@@ -99,61 +81,49 @@ namespace aa {
 
     private:
       size_t _layer_start;
-      GlowBackgroundAnimator _base_color_0;
-      GlowBackgroundAnimator _base_color_1;
-      Lights::AnimatorPool _base_color_pool;
-      BubbleAnimator _bubble_0;
-      BubbleAnimator _bubble_1;
-      Lights::AnimatorPool _bubble_pool;
-      GameOverWinAnimator _game_over_win_0;
-      GameOverWinAnimator _game_over_win_1;
-      Lights::AnimatorPool _game_over_win_pool;
-      GameOverLoseAnimator _game_over_lose_0;
-      GameOverLoseAnimator _game_over_lose_1;
-      Lights::AnimatorPool _game_over_lose_pool;
+      Lights::StaticAnimatorPool<GlowBackgroundAnimator, 3> _base_color_pool;
+      Lights::StaticAnimatorPool<BubbleAnimator, 3> _bubble_pool;
+      Lights::StaticAnimatorPool<GameOverWinAnimator, 3> _game_over_win_pool;
+      Lights::StaticAnimatorPool<GameOverLoseAnimator, 3> _game_over_lose_pool;
     };
 
 
     StalkVis::StalkVis(size_t layer_start, ShortTimeSpan period,
         Color bg_color)
-        : _layer_start(layer_start),
-        _base_color_0(period, bg_color),
-        _base_color_1(period, bg_color),
-        _bubble_0(BUBBLE_DURATION, BUBBLE_COLOR),
-        _bubble_1(BUBBLE_DURATION, BUBBLE_COLOR)
+        : _layer_start(layer_start)
     {
-      _base_color_pool.add_animator(&_base_color_1);
-      _base_color_pool.add_animator(&_base_color_1);
-      _bubble_pool.add_animator(&_bubble_1);
-      _bubble_pool.add_animator(&_bubble_1);
-      _game_over_win_pool.add_animator(&_game_over_win_0);
-      _game_over_win_pool.add_animator(&_game_over_win_1);
-      _game_over_lose_pool.add_animator(&_game_over_lose_0);
-      _game_over_lose_pool.add_animator(&_game_over_lose_1);
+      _base_color_pool.init([=] (GlowBackgroundAnimator * anim) {
+        anim->init(period, bg_color);
+      });
+      _bubble_pool.init([=] (BubbleAnimator * anim) {
+        anim->init(ShortTimeSpan::from_millis(500), Color::white);
+      });
+      _game_over_win_pool.default_init();
+      _game_over_lose_pool.default_init();
     }
 
 
     void StalkVis::init() {
       Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
-        &_base_color_pool);
+        _base_color_pool.acquire());
     }
 
 
     void StalkVis::trigger_bubble() {
       Lights::start_animator(_layer_start + Lights::LAYER_STALK_BUBBLE,
-        &_bubble_pool);
+        _bubble_pool.acquire());
     }
 
 
     void StalkVis::trigger_game_over_win() {
       Lights::start_animator(_layer_start + Lights::LAYER_STALK_GAME_OVER_FADE,
-        &_game_over_win_pool);
+        _game_over_win_pool.acquire());
     }
 
 
     void StalkVis::trigger_game_over_lose() {
       Lights::start_animator(_layer_start + Lights::LAYER_STALK_GAME_OVER_FADE,
-        &_game_over_lose_pool);
+        _game_over_lose_pool.acquire());
     }
 
 
@@ -187,8 +157,9 @@ namespace aa {
 
     class PanelColorTestAnimator : public Lights::Animator {
     public:
-      PanelColorTestAnimator()
-        : Animator(ShortTimeSpan::from_millis(4000), true) { }
+      void init() {
+        Animator::init(ShortTimeSpan::from_millis(4000), true);
+      }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
@@ -208,11 +179,11 @@ namespace aa {
 
     class HighScoreEntryForegroundAnimator : public Lights::Animator {
     public:
-      HighScoreEntryForegroundAnimator()
-          : Animator(ShortTimeSpan::from_millis(500), true) {
-        if(!_initialized) {
-          init();
+      void init() {
+        if(!_textures_initialized) {
+          init_textures();
         }
+        Animator::init(ShortTimeSpan::from_millis(500), true);
       }
 
       void set_state(int32_t x, int32_t y, char const * name,
@@ -221,21 +192,6 @@ namespace aa {
         _y = y;
         strncpy(_name, name, MAX_NAME_CHARS);
         _cursor_pos = cursor_pos;
-      }
-
-      static void init() {
-        Color text_tl(1.0f, 0.5f, 0.0f);
-        Color text_br(0.5f, 0.0f, 0.0f);
-        Color cursor_tl(0.0f, 0.5f, 1.0f);
-        Color cursor_br(0.0f, 0.0f, 0.5f);
-
-        _text_tex.init(5, 5, _text_tex_data);
-        _text_tex.box_grad_c(0, 0, 5, 5, text_tl, text_tl.lerp(text_br, 0.5f),
-          text_tl.lerp(text_br, 0.5f), text_br);
-        _cursor_tex.init(5, 5, _cursor_tex_data);
-        _cursor_tex.box_grad_c(0, 0, 5, 5, cursor_tl,
-          cursor_tl.lerp(cursor_br, 0.5f), cursor_tl.lerp(cursor_br, 0.5f),
-          cursor_br);
       }
 
     protected:
@@ -250,7 +206,7 @@ namespace aa {
 
     private:
       static size_t const MAX_NAME_CHARS = 4;
-      static bool _initialized;
+      static bool _textures_initialized;
       static Texture2D _text_tex;
       static Color _text_tex_data[5 * 5];
       static Texture2D _cursor_tex;
@@ -260,10 +216,25 @@ namespace aa {
       int32_t _y;
       char _name[MAX_NAME_CHARS];
       int32_t _cursor_pos;
+
+      static void init_textures() {
+        Color text_tl(1.0f, 0.5f, 0.0f);
+        Color text_br(0.5f, 0.0f, 0.0f);
+        Color cursor_tl(1.0f, 0.75f, 0.25f);
+        Color cursor_br(0.5f, 0.25f, 0.12f);
+
+        _text_tex.init(5, 5, _text_tex_data);
+        _text_tex.box_grad_c(0, 0, 5, 5, text_tl, text_tl.lerp(text_br, 0.5f),
+          text_tl.lerp(text_br, 0.5f), text_br);
+        _cursor_tex.init(5, 5, _cursor_tex_data);
+        _cursor_tex.box_grad_c(0, 0, 5, 5, cursor_tl,
+          cursor_tl.lerp(cursor_br, 0.5f), cursor_tl.lerp(cursor_br, 0.5f),
+          cursor_br);
+      }
     };
 
 
-    bool HighScoreEntryForegroundAnimator::_initialized = false;
+    bool HighScoreEntryForegroundAnimator::_textures_initialized = false;
     Texture2D HighScoreEntryForegroundAnimator::_text_tex;
     Color HighScoreEntryForegroundAnimator::_text_tex_data[5 * 5];
     Texture2D HighScoreEntryForegroundAnimator::_cursor_tex;
@@ -358,6 +329,18 @@ namespace aa {
     blue_stalk_vis.init();
     pink_stalk_vis.init();
     //scoreboard_vis.init();
+
+    panel_background_animator.init();
+    panel_background_animator.acquire();
+    Lights::start_animator(
+      Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
+      &panel_background_animator);
+
+    panel_animator.init();
+    panel_animator.acquire();
+    panel_animator.set_state(5, 12, "JOE", 1);
+    Lights::start_animator(
+      Lights::LAYER_SB_START + Lights::LAYER_SB_FOREGROUND, &panel_animator);
   }
 
 
@@ -372,12 +355,6 @@ namespace aa {
       state = ST_LISTENING;
       state_timer.cancel();
       update(TimeSpan::zero);
-      panel_animator.set_state(5, 12, "JOE", 1);
-      Lights::start_animator(
-        Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-        &panel_background_animator);
-      Lights::start_animator(
-        Lights::LAYER_SB_START + Lights::LAYER_SB_FOREGROUND, &panel_animator);
       break;
     case ST_PLAYING:
       if(state_timer.get_time_remaining() <= TimeSpan::zero) {
