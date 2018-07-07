@@ -17,6 +17,8 @@
 
 
 namespace aa {
+  class TimeSpan;
+  
   enum MushroomID {
     M_RED,   // Stalk labeled "1"
     M_GREEN, // Stalk labeled "B"
@@ -47,7 +49,7 @@ namespace aa {
   static const size_t SCOREBOARD_WIDTH = 30;
   static const size_t SCOREBOARD_HEIGHT = 30;
   static const float STALK_BRIGHTNESS = 1.0f;
-  static const float SCOREBOARD_BRIGHTNESS = 0.5f;
+  static const float SCOREBOARD_BRIGHTNESS = 0.25f;
   #endif
 
   static const size_t STALK_LIGHTS_COUNT_RED =
@@ -131,6 +133,11 @@ namespace aa {
   public:
     explicit LogContext(char const * name) { Debug::push_context(name); }
     ~LogContext() { Debug::pop_context(); }
+  };
+
+  class System {
+  public:
+    static TimeSpan uptime();
   };
 
 }

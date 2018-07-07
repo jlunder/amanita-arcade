@@ -48,7 +48,6 @@ namespace aa {
         // Try to find an idle animator
         for(size_t i = 0; i < POOL_COUNT; ++i) {
           if(!_animators[_next].is_in_use()) {
-            _animators[_next].acquire();
             return &_animators[_next];
           }
           _next = (_next + 1) % POOL_COUNT;
@@ -71,22 +70,13 @@ namespace aa {
       Animator() : _playing(false), _transitioning(false) { }
       virtual ~Animator() { }
 
-      void acquire() {
-        Debug::assertf(AA_AUTO_ASSERT(!_in_use));
-        _in_use = true;
-      }
-      void release() {
-        Debug::assertf(AA_AUTO_ASSERT(_in_use));
-        _in_use = false;
-      }
-
-      bool is_in_use() const { return _in_use; }
+      bool is_in_use() const { return _playing || _transitioning; }
       bool is_playing() const { return _playing; }
       bool is_transitioning() const { return _transitioning; }
 
-      void on_play();
-      void on_transition();
-      void on_stop();
+      void play();
+      void transition();
+      void stop();
 
       bool animate(ShortTimeSpan dt);
       void render(Texture2D * dest) const;
@@ -121,9 +111,9 @@ namespace aa {
     static size_t const LAYER_STALK_COUNT          = 3;
 
     // Scoreboard layers
-    static size_t const LAYER_SB_BACKGROUND = 0;
-    static size_t const LAYER_SB_FOREGROUND = 1;
-    static size_t const LAYER_SB_COUNT      = 2;
+    static size_t const LAYER_SB_MAIN    = 0;
+    static size_t const LAYER_SB_OVERLAY = 1;
+    static size_t const LAYER_SB_COUNT   = 2;
 
     static size_t const LAYER_STALK_RED_START   = 0;
     static size_t const LAYER_STALK_GREEN_START =

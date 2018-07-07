@@ -6,41 +6,6 @@
 
 
 namespace aa {
-  namespace {
-    //uint8_t const font[64][5];
-    char const * const splash_image =
-      "      WWRRRRRRRRRWW           "
-      "   RWWWWWRRRRRRRWWWWRR        "
-      " RRRWWWWWRRRRRRRWWWWWRRR      "
-      "RRRRRWWWRRRRRRRRWWWWWRRRR     "
-      "WWWRRRRRRRRRRRRRRWWWRRRRRR    "
-      "WWWRRRRRRWWWWRRRRRRRRRRRRR    "
-      "RRRRRRRRWWWWWWRRRRRRRWWWWR    "
-      " RRRRRRRRWWWWRRRRRRRWWWWW     "
-      "  RWWWRRRRRRRRRRRRRRWWW       "
-      "    WWWRRRRRRRRRRRRRR         "
-      "        .ww.www.ww.           "
-      "        .ww.www.ww.           "
-      "       .www.www.ww.           "
-      "       .www.wwww.ww.          "
-      "         XwXw    wX           "
-      "         XwXw    wX           "
-      "         XwXw r  wX           "
-      "         XwXw r  wX           "
-      "         XwwXwrwwwwX          "
-      "         XwwXwrwrwwX          "
-      "         XwwwXwwwwXwX         "
-      "         XwwwXwwXXwwX         "
-      "         XwwwXXXwwwwX         "
-      "         XwwwXwwwwwwX         "
-      "         XwwwXwwwwwwX         "
-      "          XwwXwwwwwwX         "
-      "           XwXwwwwwXX         "
-      "            XXwwwwXX          "
-      "             XwwXX            "
-      "              XX              ";
-  }
-
   Lights::Layer Lights::_layers[LAYER_COUNT] = {
     { .width = STALK_HEIGHT_RED, .height = STALK_WIDTH },
     { .width = STALK_HEIGHT_RED, .height = STALK_WIDTH },
@@ -64,26 +29,26 @@ namespace aa {
   Color Lights::_transition_tex_data[TEXTURE_TEMP_MAX];
 
 
-  void Lights::Animator::on_play() {
+  void Lights::Animator::play() {
     Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(!_transitioning, "Animator on_play() and _transitioning");
-    Debug::assert(!_playing, "Animator on_play() and _playing");
+    Debug::assert(!_transitioning, "Animator play() and _transitioning");
+    Debug::assert(!_playing, "Animator play() and _playing");
     _total_time = ShortTimeSpan::from_micros(0);
     _playing = true;
   }
 
 
-  void Lights::Animator::on_transition() {
+  void Lights::Animator::transition() {
     Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(_playing, "Animator on_stopping() and !_playing");
-    Debug::assert(!_transitioning, "Animator on_play() and _transitioning");
+    Debug::assert(_playing, "Animator stopping() and !_playing");
+    Debug::assert(!_transitioning, "Animator play() and _transitioning");
     _transitioning = true;
   }
 
 
-  void Lights::Animator::on_stop() {
+  void Lights::Animator::stop() {
     Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(_playing, "Animator on_stop() and !_playing");
+    Debug::assert(_playing, "Animator stop() and !_playing");
     _playing = false;
     _transitioning = false;
   }
@@ -132,12 +97,21 @@ namespace aa {
 
   void Lights::start_animator(size_t layer, Animator * animator,
       ShortTimeSpan transition) {
+    if(_layers[layer].animator == animator) {
+      return;
+    }
+    if(_layers[layer].trans_animator == animator) {
+      // transition_out would do this anyway, but only if transition is nonzero
+      animator->stop();
+      _layers[layer].trans_animator = nullptr;
+    }
+
     transition_out(layer, transition);
 
     Debug::assertf(AA_AUTO_ASSERT(_layers[layer].animator == nullptr));
     // Start the new animator
     _layers[layer].animator = animator;
-    _layers[layer].animator->on_play();
+    _layers[layer].animator->play();
   }
 
 
@@ -164,19 +138,17 @@ namespace aa {
     if(transition > TimeSpan::zero) {
       // Yes: if anything was still transitioning, get rid of it
       if(_layers[layer].trans_animator != nullptr) {
-        _layers[layer].trans_animator->on_stop();
-        _layers[layer].trans_animator->release();
+        _layers[layer].trans_animator->stop();
         _layers[layer].trans_animator = nullptr;
       }
 
       // Next, move the current animator into transitioning
       _layers[layer].trans_animator = _layers[layer].animator;
       _layers[layer].animator = nullptr;
-      _layers[layer].trans_animator->on_transition();
+      _layers[layer].trans_animator->transition();
     } else {
       // No: stop the current animator
-      _layers[layer].animator->on_stop();
-      _layers[layer].animator->release();
+      _layers[layer].animator->stop();
       _layers[layer].animator = nullptr;
     }
   }
@@ -222,16 +194,14 @@ namespace aa {
         _layers[i].trans_time += dt;
         if((_layers[i].trans_time >= _layers[i].trans_length) ||
             !_layers[i].trans_animator->animate(dt)) {
-          _layers[i].trans_animator->on_stop();
-          _layers[i].trans_animator->release();
+          _layers[i].trans_animator->stop();
           _layers[i].trans_animator = nullptr;
         }
       }
 
       if(_layers[i].animator != nullptr) {
         if(!_layers[i].animator->animate(dt)) {
-          _layers[i].animator->on_stop();
-          _layers[i].animator->release();
+          _layers[i].animator->stop();
           _layers[i].animator = nullptr;
         }
       }

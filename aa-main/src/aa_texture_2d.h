@@ -53,15 +53,24 @@ namespace aa {
       Color cx1y0, Color cx0y1, Color cx1y1);
     void box_mask(int32_t x, int32_t y, int32_t w, int32_t h,
       Texture2D const * tex);
-    void copy(Texture2D const * src);
-    void mix(Texture2D const * src);
-    void lerp(Texture2D const * other, float a);
+    void copy(Texture2D const * src) { copy(src, 0, 0); }
+    void copy(Texture2D const * src, size_t x_ofs, size_t y_ofs);
+    void mix(Texture2D const * src) { mix(src, 0, 0); }
+    void mix(Texture2D const * src, size_t x_ofs, size_t y_ofs);
+    void lerp(Texture2D const * src, float a) { lerp(src, a, 0, 0); }
+    void lerp(Texture2D const * src, float a, size_t x_ofs, size_t y_ofs);
     void bubble_x(float x, float r, Color c);
     void char_5x5_solid(int32_t x, int32_t y, char ch, bool invert, Color c);
+    void char_5x5_solid(int32_t x, int32_t y, char const * str, Color c);
     void char_5x5_mask(int32_t x, int32_t y, char ch, bool invert,
       Texture2D const * tex);
+    void char_5x5_mask(int32_t x, int32_t y, char const * str,
+      Texture2D const * tex);
     void char_10x15_solid(int32_t x, int32_t y, char ch, bool invert, Color c);
+    void char_10x15_solid(int32_t x, int32_t y, char const * str, Color c);
     void char_10x15_mask(int32_t x, int32_t y, char ch, bool invert,
+      Texture2D const * tex);
+    void char_10x15_mask(int32_t x, int32_t y, char const * str,
       Texture2D const * tex);
 
     void write_grb_color32(uint32_t * dest, size_t dest_w, size_t dest_h,
@@ -73,6 +82,19 @@ namespace aa {
     size_t _width;
     size_t _height;
     Color * _data;
+  };
+
+
+  template<size_t W, size_t H>
+  class AutoTexture2D : public Texture2D
+  {
+  public:
+    AutoTexture2D() {
+      init(W, H, _data_alloc);
+    }
+
+  private:
+    Color _data_alloc[W * H];
   };
 }
 

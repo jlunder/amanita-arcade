@@ -6,9 +6,135 @@
 #include "aa_lights.h"
 #include "aa_timer.h"
 
+#include "aa_game_logo.inl"
+
 
 namespace aa {
   namespace {
+    bool textures_initialized = false;
+
+    AutoTexture2D<5, 5> orange_5x5_grad_tex;
+    AutoTexture2D<5, 5> bright_orange_5x5_grad_tex;
+    AutoTexture2D<5, 5> aqua_5x5_grad_tex;
+
+    AutoTexture2D<SCOREBOARD_WIDTH, SCOREBOARD_HEIGHT> logo_tex;
+    AutoTexture2D<SCOREBOARD_WIDTH, SCOREBOARD_HEIGHT + 10> scroll_tex;
+
+    char const amanita_arcade_text[3][SCOREBOARD_WIDTH / 5 + 1] = {
+      " AMA- ",
+      " NITA ",
+      "ARCADE",
+    };
+    char const instructions_title_text[3][SCOREBOARD_WIDTH / 5 + 1] = {
+      "REPEAT",
+      "AFTER ",
+      "  ME! ",
+    };
+    char const instructions_text[29][SCOREBOARD_WIDTH / 5 + 1] = {
+      "I WILL",
+      " SHOW ",
+      "YOU A ",
+      " PAT- ",
+      " TERN ",
+      "ON THE",
+      " BIG  ",
+      " MUSH-",
+      "ROOMS,",
+      " YOU  ",
+      " PLAY ",
+      "IT ON ",
+      " THE  ",
+      "SMALL ",
+      "ONES. ",
+      " HOW  ",
+      " MUCH ",
+      " CAN  ",
+      " YOU  ",
+      "REMEM-",
+      " BER? ",
+      "PRESS ",
+      "ON ANY",
+      "OF THE",
+      "SMALL ",
+      "MUSH- ",
+      "ROOMS ",
+      "  TO  ",
+      "BEGIN!",
+    };
+
+
+    void init_textures() {
+      if(textures_initialized) {
+        return;
+      }
+
+      Color orange_tl(1.0f, 0.5f, 0.0f);
+      Color orange_br(0.5f, 0.0f, 0.0f);
+      Color bright_orange_tl(1.0f, 0.75f, 0.25f);
+      Color bright_orange_br(0.5f, 0.25f, 0.12f);
+      Color aqua_tl(0.0f, 0.5f, 1.0f);
+      Color aqua_br(0.0f, 0.0f, 0.5f);
+
+      orange_5x5_grad_tex.box_grad_c(0, 0, 5, 5, orange_tl,
+        orange_tl.lerp(orange_br, 0.5f), orange_tl.lerp(orange_br, 0.5f),
+        orange_br);
+      bright_orange_5x5_grad_tex.box_grad_c(0, 0, 5, 5, bright_orange_tl,
+        bright_orange_tl.lerp(bright_orange_br, 0.5f),
+        bright_orange_tl.lerp(bright_orange_br, 0.5f), bright_orange_br);
+      aqua_5x5_grad_tex.box_grad_c(0, 0, 5, 5, aqua_tl,
+        aqua_tl.lerp(aqua_br, 0.5f), aqua_tl.lerp(aqua_br, 0.5f), aqua_br);
+
+      for(size_t y = 0; y < SCOREBOARD_WIDTH; ++y) {
+        for(size_t x = 0; x < SCOREBOARD_WIDTH; ++x) {
+          switch(logo_image[y * SCOREBOARD_WIDTH + x]) {
+            case 'W': logo_tex.set(x, y, Color(1.0f, 1.0f, 1.0f)); break;
+            case 'w': logo_tex.set(x, y, Color(0.5f, 0.5f, 0.5f)); break;
+            case ',': logo_tex.set(x, y, Color(0.2f, 0.2f, 0.2f)); break;
+            case '.': logo_tex.set(x, y, Color(0.1f, 0.1f, 0.1f)); break;
+            case 'R': logo_tex.set(x, y, Color(1.0f, 0.0f, 0.0f)); break;
+            case 'r': logo_tex.set(x, y, Color(0.5f, 0.0f, 0.0f)); break;
+            case ' ': logo_tex.set(x, y, Color(0.0f, 0.0f, 0.0f, 0.0f)); break;
+            default:  logo_tex.set(x, y, Color(1.0f, 0.0f, 1.0f)); break;
+          }
+        }
+      }
+    }
+
+
+    void scroll_scoreboard_text(Texture2D * dest, int32_t y,
+        char text[][SCOREBOARD_WIDTH / 5 + 1], size_t line_count,
+        Texture2D const * tex) {
+      static AutoTexture2D<SCOREBOARD_WIDTH, SCOREBOARD_HEIGHT + 5> temp;
+      int32_t h = line_count * 5;
+
+      if((y + h <= 0) || (y >= (int32_t)SCOREBOARD_HEIGHT)) {
+        return;
+      }
+
+      size_t begin_line;
+      size_t y_ofs;
+      if(y > -5) {
+        y_ofs = y + 5;
+        begin_line = 0;
+      }
+      else {
+        y_ofs = (-y) % 5;
+        begin_line = -y / 5;
+      }
+
+      size_t end_line = (SCOREBOARD_HEIGHT + 4 - y) / 5;
+      if(end_line > line_count) {
+        end_line = line_count;
+      }
+
+      temp.fill_solid(Color::transparent);
+      for(size_t line = begin_line; line < end_line; ++line) {
+        temp.char_5x5_mask(0, (line - begin_line) * 5, text[line], tex);
+      }
+      dest->mix(&temp, 0, y_ofs);
+    }
+
+
     class GlowBackgroundAnimator : public Lights::Animator {
     public:
       void init(ShortTimeSpan period, Color color) {
@@ -137,25 +263,7 @@ namespace aa {
       ShortTimeSpan::from_millis(1201), Color::pink);
 
 
-
-    class ScoreboardVis {
-    public:
-      ScoreboardVis(size_t layer_start, ShortTimeSpan period, Color bg_color);
-      void init();
-
-      void update();
-
-    private:
-      static size_t const COLUMNS = 5;
-      static size_t const ROWS = 5;
-      char _chars[ROWS][COLUMNS];
-      aa::Color _colors[ROWS][COLUMNS];
-
-      void renderText();
-    };
-
-
-    class PanelColorTestAnimator : public Lights::Animator {
+    class ScoreboardSplashAnimator : public Lights::Animator {
     public:
       void init() {
         Animator::init(ShortTimeSpan::from_millis(4000), true);
@@ -163,20 +271,164 @@ namespace aa {
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        if(a < 0.5f) {
-          dest->box_grad_c(0, 0, 30, 30, Color(0.0f, 0.0f, 0.0f),
-            Color(0.25f, 0.0f, 0.0f), Color(0.0f, 0.25f, 0.0f),
-            Color(0.25f, 0.25f, 0.0f));
-        }
-        else {
-          dest->box_grad_c(0, 0, 30, 30, Color(0.0f, 0.25f, 0.0f),
-            Color(0.0f, 0.25f, 0.25f), Color(0.0f, 0.0f, 0.0f),
-            Color(0.0f, 0.0f, 0.25f));
+        //dest->copy(logo_tex);
+        dest->char_5x5_mask(0, 3, " AMA- ", &orange_5x5_grad_tex);
+        dest->char_5x5_mask(0, 3, " NITA ", &orange_5x5_grad_tex);
+        dest->char_5x5_mask(0, 3, "ARCADE", &orange_5x5_grad_tex);
+      }
+    };
+
+
+    class ScoreboardInstructionsAnimator : public Lights::Animator {
+    public:
+      void init() {
+        Animator::init(ShortTimeSpan::from_millis(4000), true);
+      }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        dest->fill_solid(Color::red);
+      }
+    };
+
+
+    class ScoreboardInGameAnimator : public Lights::Animator {
+    public:
+      void init() {
+        Animator::init(ShortTimeSpan::from_millis(4000), true);
+      }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        size_t w = dest->get_width();
+        size_t h = dest->get_height();
+        for(size_t y = 0; y < h; ++y) {
+          for(size_t x = 0; x < w; ++x) {
+            dest->set(x, y, Color::black);
+          }
         }
       }
     };
 
 
+    class ScoreboardCorrectAnimator : public Lights::Animator {
+    public:
+      void init() {
+        Animator::init(ShortTimeSpan::from_millis(500), true);
+      }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        dest->fill_solid(Color(1.0f, 1.0f, 1.0f, 1.0f - a));
+      }
+    };
+
+
+    class ScoreboardGameOverWinAnimator : public Lights::Animator {
+    public:
+      void init() {
+        Animator::init(ShortTimeSpan::from_millis(4000), true);
+      }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        dest->fill_solid(Color::red);
+      }
+    };
+
+
+    class ScoreboardGameOverLoseAnimator : public Lights::Animator {
+    public:
+      void init() {
+        Animator::init(ShortTimeSpan::from_millis(4000), true);
+      }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        dest->fill_solid(Color::black);
+        dest->char_5x5_mask( 2, 10, "WRONG", &orange_5x5_grad_tex);
+      }
+    };
+
+
+    class ScoreboardVis {
+    public:
+      ScoreboardVis() : _current_score(0), _best_score(0) { };
+      void init();
+
+      void set_mode_attract();
+      void set_mode_in_game();
+
+      void trigger_correct();
+      void trigger_game_over_win();
+      void trigger_game_over_lose();
+
+      void set_score(size_t score);
+
+    private:
+      ScoreboardSplashAnimator _splash;
+      ScoreboardInstructionsAnimator _instructions;
+      ScoreboardInGameAnimator _in_game;
+      Lights::StaticAnimatorPool<ScoreboardCorrectAnimator, 3> _correct_pool;
+      ScoreboardGameOverWinAnimator _game_over_win;
+      ScoreboardGameOverLoseAnimator _game_over_lose;
+
+      size_t _current_score;
+      size_t _best_score;
+    };
+
+
+    void ScoreboardVis::init() {
+      _splash.init();
+      _instructions.init();
+      _in_game.init();
+      _correct_pool.default_init();
+      _game_over_win.init();
+      _game_over_lose.init();
+    }
+
+
+    void ScoreboardVis::set_mode_attract() {
+      Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+        &_splash);
+      _current_score = 0;
+    }
+
+
+    void ScoreboardVis::set_mode_in_game() {
+      //Lights::start_animator(LAYER_SB_START + LAYER_SB_MAIN, &_in_game);
+    }
+
+
+    void ScoreboardVis::trigger_correct() {
+      //Lights::start_animator(LAYER_SB_START + LAYER_SB_OVERLAY,
+      //  &_correct_pool);
+    }
+
+
+    void ScoreboardVis::trigger_game_over_win() {
+      //Lights::start_animator(LAYER_SB_START + LAYER_SB_MAIN, &_game_over_win,
+      //  ShortTimeSpan::from_millis(250));
+    }
+
+
+    void ScoreboardVis::trigger_game_over_lose() {
+      //Lights::start_animator(LAYER_SB_START + LAYER_SB_MAIN, &_game_over_lose,
+      //  ShortTimeSpan::from_millis(250));
+    }
+
+
+    void ScoreboardVis::set_score(size_t score) {
+      _current_score = score;
+      if(score > _best_score) {
+        _best_score = score;
+      }
+    }
+
+
+    ScoreboardVis scoreboard_vis;
+
+/*
     class HighScoreEntryForegroundAnimator : public Lights::Animator {
     public:
       void init() {
@@ -206,96 +458,17 @@ namespace aa {
 
     private:
       static size_t const MAX_NAME_CHARS = 4;
-      static bool _textures_initialized;
-      static Texture2D _text_tex;
-      static Color _text_tex_data[5 * 5];
-      static Texture2D _cursor_tex;
-      static Color _cursor_tex_data[5 * 5];
 
       int32_t _x;
       int32_t _y;
       char _name[MAX_NAME_CHARS];
       int32_t _cursor_pos;
-
-      static void init_textures() {
-        Color text_tl(1.0f, 0.5f, 0.0f);
-        Color text_br(0.5f, 0.0f, 0.0f);
-        Color cursor_tl(1.0f, 0.75f, 0.25f);
-        Color cursor_br(0.5f, 0.25f, 0.12f);
-
-        _text_tex.init(5, 5, _text_tex_data);
-        _text_tex.box_grad_c(0, 0, 5, 5, text_tl, text_tl.lerp(text_br, 0.5f),
-          text_tl.lerp(text_br, 0.5f), text_br);
-        _cursor_tex.init(5, 5, _cursor_tex_data);
-        _cursor_tex.box_grad_c(0, 0, 5, 5, cursor_tl,
-          cursor_tl.lerp(cursor_br, 0.5f), cursor_tl.lerp(cursor_br, 0.5f),
-          cursor_br);
-      }
     };
-
-
-    bool HighScoreEntryForegroundAnimator::_textures_initialized = false;
-    Texture2D HighScoreEntryForegroundAnimator::_text_tex;
-    Color HighScoreEntryForegroundAnimator::_text_tex_data[5 * 5];
-    Texture2D HighScoreEntryForegroundAnimator::_cursor_tex;
-    Color HighScoreEntryForegroundAnimator::_cursor_tex_data[5 * 5];
-
-
-/*
-    class HighScoreEntryForegroundAnimator : public Lights::Animator {
-    public:
-      HighScoreEntryForegroundAnimator()
-        : Animator(ShortTimeSpan::from_millis(500), true) { }
-
-    protected:
-      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const;
-
-    private:
-      static const Color _;
-    };
-
-
-    class HighScoreListAnimator : public Lights::Animator {
-    public:
-      PanelAnimator()
-        : Animator(ShortTimeSpan::from_millis(1000), true) { }
-
-    protected:
-      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const;
-
-    private:
-      Color _color;
-    };
-
-
-    void PanelAnimator::render(ShortTimeSpan t, float a, Texture2D * dest)
-        const {
-      dest->fill_solid(Color(0.0f, 0.0f, 0.25f));
-      dest->char_5x5(0, 0, 'H', Color::white);
-      dest->char_5x5(6, 0, 'E', Color::white);
-      dest->char_5x5(12, 0, 'L', Color::white);
-      dest->char_5x5(18, 0, 'L', Color::white);
-      dest->char_5x5(24, 0, 'O', Color::white);
-      dest->char_5x5(0, 6, 'W', Color::white);
-      dest->char_5x5(6, 6, 'O', Color::white);
-      dest->char_5x5(12,6, 'R', Color::white);
-      dest->char_5x5(18, 6, 'L', Color::white);
-      dest->char_5x5(24, 6, 'D', Color::white);
-
-      dest->char_10x15(0, 15, '2', Color::white);
-      dest->char_10x15(10, 15, '5', Color::white);
-      dest->char_10x15(20, 15, '6', Color::white);
-    }
-*/
-
-    //PanelAnimator panel_animator;
-    PanelColorTestAnimator panel_background_animator;
-    HighScoreEntryForegroundAnimator panel_animator;
+    */
 
 
     enum GameState {
       ST_RESET,
-      ST_ATTRACT,
       ST_PLAYING,
       ST_WAITING_RESPONSE,
       ST_LISTENING,
@@ -324,23 +497,13 @@ namespace aa {
 
 
   void Game::init() {
+    init_textures();
+
     red_stalk_vis.init();
     green_stalk_vis.init();
     blue_stalk_vis.init();
     pink_stalk_vis.init();
-    //scoreboard_vis.init();
-
-    panel_background_animator.init();
-    panel_background_animator.acquire();
-    Lights::start_animator(
-      Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-      &panel_background_animator);
-
-    panel_animator.init();
-    panel_animator.acquire();
-    panel_animator.set_state(5, 12, "JOE", 1);
-    Lights::start_animator(
-      Lights::LAYER_SB_START + Lights::LAYER_SB_FOREGROUND, &panel_animator);
+    scoreboard_vis.init();
   }
 
 
@@ -355,6 +518,7 @@ namespace aa {
       state = ST_LISTENING;
       state_timer.cancel();
       update(TimeSpan::zero);
+      scoreboard_vis.set_mode_attract();
       break;
     case ST_PLAYING:
       if(state_timer.get_time_remaining() <= TimeSpan::zero) {
@@ -398,16 +562,21 @@ namespace aa {
           pattern_pos = 0;
           state = ST_PLAYING;
           state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
+          scoreboard_vis.set_mode_in_game();
+          scoreboard_vis.set_score(1);
         } else if(input == pattern[pattern_pos]) {
           Debug::tracef("Correct input %c", input);
+          scoreboard_vis.trigger_correct();
           ++pattern_pos;
           if(pattern_pos >= pattern_length) {
+            scoreboard_vis.set_score(pattern_length);
             if(pattern_length == PATTERN_LENGTH_MAX) {
               Debug::tracef("Win!!");
               red_stalk_vis.trigger_game_over_win();
               green_stalk_vis.trigger_game_over_win();
               blue_stalk_vis.trigger_game_over_win();
               pink_stalk_vis.trigger_game_over_win();
+              scoreboard_vis.trigger_game_over_win();
               state = ST_GAME_OVER;
               state_timer = aa::Timer(TimeSpan::from_millis(5000), false);
             } else {
@@ -424,6 +593,7 @@ namespace aa {
           green_stalk_vis.trigger_game_over_lose();
           blue_stalk_vis.trigger_game_over_lose();
           pink_stalk_vis.trigger_game_over_lose();
+          scoreboard_vis.trigger_game_over_lose();
           state = ST_GAME_OVER;
           state_timer = aa::Timer(TimeSpan::from_millis(5000), false);
         }

@@ -6,6 +6,7 @@
 namespace aa {
   Timer::Timer(TimeSpan period, bool periodic)
       : _period(period), _current(), _periodic(periodic) {
+    Debug::assertf(AA_AUTO_ASSERT(period > TimeSpan::zero));
   }
 
   int32_t Timer::read_periods() {

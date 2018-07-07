@@ -3,6 +3,7 @@
 #include "aa_game.h"
 #include "aa_input.h"
 #include "aa_lights.h"
+#include "aa_time_span.h"
 
 
 #define AA_MAX_INDENT 16
@@ -152,9 +153,29 @@ namespace aa {
     }
   }
 
-  void Program::main() {
-    mbed::Timer timer;
 
+  TimeSpan System::uptime() {
+    static mbed::Timer timer;
+    static bool timer_started = false;
+    static uint32_t last_reading;
+    static int64_t total_micros;
+
+    if(!timer_started) {
+      timer_started = true;
+      timer.start();
+      last_reading = timer.read_us();
+    }
+
+    uint32_t this_reading = timer.read_us();
+    uint32_t delta = this_reading - last_reading;
+
+    total_micros += delta;
+
+    return TimeSpan::from_micros(total_micros);
+  }
+
+
+  void Program::main() {
     // Somehow stdio knows to hook into USART2...?
     hw::debug_ser.baud(115200);
 
@@ -169,21 +190,16 @@ namespace aa {
 
     Debug::trace("Beginning main loop");
 
-    timer.start();
+    // Calling uptime() incidentally initializes that system!
+    TimeSpan next_frame_time = System::uptime();
+    TimeSpan last_frame_time = next_frame_time -
+      TimeSpan::from_micros(AA_FRAME_MICROS);
+    uint32_t delta = AA_FRAME_MICROS;
 
-    uint32_t last_micros = timer.read_us();
     for(;;) {
-      uint32_t micros = timer.read_us();
-      uint32_t delta = micros - last_micros;
+      TimeSpan now = System::uptime();
 
-      if(delta >= AA_FRAME_MICROS) {
-        if(delta < AA_FRAME_MICROS * 2) {
-          last_micros += AA_FRAME_MICROS;
-        } else {
-          last_micros = micros;
-          delta = AA_FRAME_MICROS * 2;
-        }
-
+      if(now - next_frame_time >= TimeSpan::zero) {
         LogContext c("frame");
         hw::debug_frame_sync = 1;
         // Frame timing is somewhat subtle: Lights::update() disables
@@ -212,15 +228,17 @@ namespace aa {
         Input::read_buttons();
         Game::update(ShortTimeSpan(delta));
         Lights::update(ShortTimeSpan(delta));
-        // Save some time for a rainy day...
-        wait_ms(5);
         hw::debug_frame_sync = 0;
 
-        uint32_t frame_us = timer.read_us() - last_micros;
+        uint32_t frame_us = (System::uptime() - now).to_micros();
         if(frame_us > AA_FRAME_MICROS - 2000) {
           Debug::tracef("Frame time of %uus exceeds budget (%uus)", frame_us,
             AA_FRAME_MICROS - 2000);
-          last_micros = timer.read_us();
+        }
+        last_frame_time = now;
+        next_frame_time += TimeSpan::from_micros(AA_FRAME_MICROS);
+        if(next_frame_time - now < TimeSpan::zero) {
+          next_frame_time = now;
         }
       }
     }

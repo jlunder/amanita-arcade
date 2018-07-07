@@ -14,6 +14,7 @@ namespace aa {
     static Color const green;
     static Color const blue;
     static Color const pink;
+    static Color const transparent;
 
     AA_OPTIMIZE Color() { }
     AA_OPTIMIZE Color(float r, float g, float b, float a = 1.0f)
