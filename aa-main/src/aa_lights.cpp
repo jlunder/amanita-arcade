@@ -30,49 +30,45 @@ namespace aa {
 
 
   void Lights::Animator::play() {
-    Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(!_transitioning, "Animator play() and _transitioning");
-    Debug::assert(!_playing, "Animator play() and _playing");
+    Debug::assertf(AA_AUTO_ASSERT(_state == AS_RESET));
     _total_time = ShortTimeSpan::from_micros(0);
-    _playing = true;
+    _state = AS_PLAYING;
   }
 
 
   void Lights::Animator::transition() {
-    Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(_playing, "Animator stopping() and !_playing");
-    Debug::assert(!_transitioning, "Animator play() and _transitioning");
-    _transitioning = true;
+    Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING));
+    _state = AS_TRANSITIONING;
   }
 
 
   void Lights::Animator::stop() {
-    Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(_playing, "Animator stop() and !_playing");
-    _playing = false;
-    _transitioning = false;
+    Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING));
+    _state = AS_RESET;
   }
 
 
   bool Lights::Animator::animate(ShortTimeSpan dt) {
-    Debug::assertf(AA_AUTO_ASSERT(_in_use));
-    Debug::assert(_playing, "Animator animate() and !_playing");
+    Debug::assertf(AA_AUTO_ASSERT(_state != AS_RESET));
     _total_time += dt;
-    if(_total_time > _anim_length) {
-      if(_looping) {
-        _total_time %= _anim_length;
-        return true;
-      } else {
-        return false;
-      }
-    } else {
+    if(_total_time < _anim_length) {
       return true;
+    }
+    else if(_end_behavior == EB_LOOP) {
+      _total_time %= _anim_length;
+      return true;
+    }
+    else if(_end_behavior == EB_PAUSE) {
+      _total_time = _anim_length;
+      return true;
+    }
+    else {
+      return false;
     }
   }
 
 
   void Lights::Animator::render(Texture2D * dest) const {
-    Debug::assertf(AA_AUTO_ASSERT(_in_use));
     if(_total_time >= _anim_length) {
       render(_total_time, 1.0f, dest);
     } else {
@@ -228,8 +224,11 @@ namespace aa {
       if(_layers[i].animator != nullptr) {
         _layers[i].animator->render(&_composite_tex);
       }
-      if(do_transition && _layers[i].trans_animator != nullptr) {
-        _layers[i].trans_animator->render(&_transition_tex);
+      if(do_transition) {
+        if(_layers[i].trans_animator != nullptr) {
+          _layers[i].trans_animator->render(&_transition_tex);
+        }
+        // Otherwise, _transition_tex just gets whatever was in _composite_tex
         _composite_tex.lerp(&_transition_tex,
           1.0f - static_cast<float>(_layers[i].trans_time.to_micros()) /
             static_cast<float>(_layers[i].trans_length.to_micros()));

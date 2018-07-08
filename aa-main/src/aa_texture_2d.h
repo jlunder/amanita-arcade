@@ -23,7 +23,7 @@ namespace aa {
     size_t get_stride() const { return _width; }
     Color const * get_data() const { return _data; }
     Color get(size_t x, size_t y) const { return _data[(y * _width) + x]; }
-    void set(size_t x, size_t y, Color c) const {
+    void set(size_t x, size_t y, Color const & c) const {
       _data[(y * _width) + x] = c;
     }
     Color AA_OPTIMIZE sample_cn(int32_t x, int32_t y) const {
@@ -38,19 +38,21 @@ namespace aa {
     //Color samplef_wn(float x, float y) const;
     //Color samplef_wl(size_t x, size_t y) const;
 
-    void fill_solid(Color c);
-    void lerp_solid(Color c, float a);
-    //void hline_solid(int32_t x, int32_t y, int32_t w, Color c);
-    //void vline_solid(int32_t x, int32_t y, int32_t h, Color c);
-    //void hline_grad(int32_t x, int32_t y, int32_t w, Color ca, Color cb);
-    //void vline_grad(int32_t x, int32_t y, int32_t h, Color ca, Color cb);
-    void box_solid(int32_t x, int32_t y, int32_t w, int32_t h, Color c);
+    void fill_solid(Color const & c);
+    void lerp_solid(Color const & c, float a);
+    //void hline_solid(int32_t x, int32_t y, int32_t w, Color const & c);
+    //void vline_solid(int32_t x, int32_t y, int32_t h, Color const & c);
+    //void hline_grad(int32_t x, int32_t y, int32_t w, Color const & ca,
+    //  Color const & cb);
+    //void vline_grad(int32_t x, int32_t y, int32_t h, Color const & ca,
+    //  Color const & cb);
+    void box_solid(int32_t x, int32_t y, int32_t w, int32_t h, Color const & c);
     // closed gradient -- bottom right pixel is colored with exactly cx1y1
-    void box_grad_c(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
-      Color cx1y0, Color cx0y1, Color cx1y1);
+    void box_grad_c(int32_t x, int32_t y, int32_t w, int32_t h, Color const & cx0y0,
+      Color const & cx1y0, Color const & cx0y1, Color const & cx1y1);
     // open gradient -- bottom right pixel is colored second to cx1y1
-    void box_grad_o(int32_t x, int32_t y, int32_t w, int32_t h, Color cx0y0,
-      Color cx1y0, Color cx0y1, Color cx1y1);
+    void box_grad_o(int32_t x, int32_t y, int32_t w, int32_t h, Color const & cx0y0,
+      Color const & cx1y0, Color const & cx0y1, Color const & cx1y1);
     void box_mask(int32_t x, int32_t y, int32_t w, int32_t h,
       Texture2D const * tex);
     void copy(Texture2D const * src) { copy(src, 0, 0); }
@@ -59,15 +61,15 @@ namespace aa {
     void mix(Texture2D const * src, size_t x_ofs, size_t y_ofs);
     void lerp(Texture2D const * src, float a) { lerp(src, a, 0, 0); }
     void lerp(Texture2D const * src, float a, size_t x_ofs, size_t y_ofs);
-    void bubble_x(float x, float r, Color c);
-    void char_5x5_solid(int32_t x, int32_t y, char ch, bool invert, Color c);
-    void char_5x5_solid(int32_t x, int32_t y, char const * str, Color c);
+    void bubble_x(float x, float r, Color const & c);
+    void char_5x5_solid(int32_t x, int32_t y, char ch, bool invert, Color const & c);
+    void char_5x5_solid(int32_t x, int32_t y, char const * str, Color const & c);
     void char_5x5_mask(int32_t x, int32_t y, char ch, bool invert,
       Texture2D const * tex);
     void char_5x5_mask(int32_t x, int32_t y, char const * str,
       Texture2D const * tex);
-    void char_10x15_solid(int32_t x, int32_t y, char ch, bool invert, Color c);
-    void char_10x15_solid(int32_t x, int32_t y, char const * str, Color c);
+    void char_10x15_solid(int32_t x, int32_t y, char ch, bool invert, Color const & c);
+    void char_10x15_solid(int32_t x, int32_t y, char const * str, Color const & c);
     void char_10x15_mask(int32_t x, int32_t y, char ch, bool invert,
       Texture2D const * tex);
     void char_10x15_mask(int32_t x, int32_t y, char const * str,

@@ -5,7 +5,7 @@
 
 
 namespace aa {
-  void AA_OPTIMIZE Texture2D::fill_solid(Color c) {
+  void AA_OPTIMIZE Texture2D::fill_solid(Color const & c) {
     size_t count = _width * _height;
     for(size_t i = 0; i < count; ++i) {
       _data[i] = c;
@@ -13,7 +13,7 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::lerp_solid(Color c, float a) {
+  void AA_OPTIMIZE Texture2D::lerp_solid(Color const & c, float a) {
     size_t count = _width * _height;
     for(size_t i = 0; i < count; ++i) {
       _data[i].lerp_this(c, a);
@@ -21,7 +21,7 @@ namespace aa {
   }
 
   void AA_OPTIMIZE Texture2D::box_solid(int32_t x, int32_t y,
-      int32_t w, int32_t h, aa::Color c) {
+      int32_t w, int32_t h, aa::Color const & c) {
     if((w < 0) || (h < 0)) {
       Debug::error("Texture2D::box_grad() with negative size not implemented");
       // swap colors, correct x/y,
@@ -42,7 +42,8 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::box_grad_c(int32_t x, int32_t y, int32_t w,
-      int32_t h, Color cx0y0, Color cx1y0, Color cx0y1, Color cx1y1) {
+      int32_t h, Color const & cx0y0, Color const & cx1y0, Color const & cx0y1,
+      Color const & cx1y1) {
     if((w < 0) || (h < 0)) {
       Debug::error(
         "Texture2D::box_grad_o() with negative size not implemented");
@@ -73,7 +74,8 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::box_grad_o(int32_t x, int32_t y, int32_t w,
-      int32_t h, Color cx0y0, Color cx1y0, Color cx0y1, Color cx1y1) {
+      int32_t h, Color const & cx0y0, Color const & cx1y0, Color const & cx0y1,
+      Color const & cx1y1) {
     if((w < 0) || (h < 0)) {
       Debug::error(
         "Texture2D::box_grad_c() with negative size not implemented");
@@ -203,7 +205,8 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::bubble_x(float px, float radius, Color c) {
+  void AA_OPTIMIZE Texture2D::bubble_x(float px, float radius,
+      Color const & c) {
     float scale = 1.0f / radius;
     size_t i = 0;
     for(size_t y = 0; y < _height; ++y) {
@@ -219,7 +222,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_5x5_solid(int32_t px, int32_t py, char ch,
-      bool invert, Color c) {
+      bool invert, Color const & c) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
       // with clipping
@@ -247,7 +250,7 @@ namespace aa {
   }
 
   void AA_OPTIMIZE Texture2D::char_5x5_solid(int32_t px, int32_t py,
-      char const * str, Color c) {
+      char const * str, Color const & c) {
     int32_t x = px;
     for(char const * p = str; *p; ++p) {
       char_5x5_solid(x, py, *p, false, c);
@@ -300,7 +303,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_10x15_solid(int32_t px, int32_t py, char ch,
-      bool invert, Color c) {
+      bool invert, Color const & c) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
       // with clipping
@@ -329,7 +332,7 @@ namespace aa {
 
 
   void AA_OPTIMIZE Texture2D::char_10x15_solid(int32_t px, int32_t py,
-      char const * str, Color c) {
+      char const * str, Color const & c) {
     int32_t x = px;
     for(char const * p = str; *p; ++p) {
       char_10x15_solid(x, py, *p, false, c);

@@ -18,7 +18,8 @@
 
 namespace aa {
   class TimeSpan;
-  
+  class ShortTimeSpan;
+
   enum MushroomID {
     M_RED,   // Stalk labeled "1"
     M_GREEN, // Stalk labeled "B"
@@ -138,6 +139,10 @@ namespace aa {
   class System {
   public:
     static TimeSpan uptime();
+    static void write_nv(uint32_t id, void const * data, size_t size);
+    static void const * read_nv(uint32_t id, size_t * size);
+    static void start_watchdog(ShortTimeSpan timeout);
+    static void service_watchdog();
   };
 
 }

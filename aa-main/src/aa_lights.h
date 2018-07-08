@@ -67,12 +67,14 @@ namespace aa {
 
     class Animator {
     public:
-      Animator() : _playing(false), _transitioning(false) { }
+      Animator()
+          : _end_behavior(), _state(AS_RESET), _anim_length(), _total_time() {
+      }
       virtual ~Animator() { }
 
-      bool is_in_use() const { return _playing || _transitioning; }
-      bool is_playing() const { return _playing; }
-      bool is_transitioning() const { return _transitioning; }
+      bool is_in_use() const { return _state != AS_RESET; }
+      bool is_playing() const { return _state == AS_PLAYING; }
+      bool is_transitioning() const { return _state == AS_TRANSITIONING; }
 
       void play();
       void transition();
@@ -82,9 +84,24 @@ namespace aa {
       void render(Texture2D * dest) const;
 
     protected:
-      void init(ShortTimeSpan anim_length, bool looping) {
-        Debug::assertf(AA_AUTO_ASSERT(!_playing && !_transitioning));
-        _looping = looping;
+      enum EndBehavior : uint8_t {
+        EB_STOP,
+        EB_LOOP,
+        EB_PAUSE,
+      };
+
+      enum AnimationState : uint8_t {
+        AS_RESET,
+        AS_PLAYING,
+        AS_TRANSITIONING,
+      };
+
+      void init() { init(TimeSpan::zero, EB_PAUSE); }
+
+      void init(ShortTimeSpan anim_length,
+          EndBehavior end_behavior = EB_STOP) {
+        Debug::assertf(AA_AUTO_ASSERT(_state == AS_RESET));
+        _end_behavior = end_behavior;
         _anim_length = anim_length;
         _total_time = TimeSpan::zero;
       }
@@ -93,10 +110,8 @@ namespace aa {
         const = 0;
 
     private:
-      bool _in_use;
-      bool _looping;
-      bool _playing;
-      bool _transitioning;
+      EndBehavior _end_behavior;
+      AnimationState _state;
       ShortTimeSpan _anim_length;
       ShortTimeSpan _total_time;
     };
@@ -105,15 +120,16 @@ namespace aa {
     static const size_t PAGE_SIZE = 128;
 
     // Stalk layers
-    static size_t const LAYER_STALK_BASE_COLOR     = 0;
-    static size_t const LAYER_STALK_BUBBLE         = 1;
-    static size_t const LAYER_STALK_GAME_OVER_FADE = 2;
-    static size_t const LAYER_STALK_COUNT          = 3;
+    static size_t const LAYER_STALK_BASE_COLOR = 0;
+    static size_t const LAYER_STALK_BUBBLE     = 1;
+    static size_t const LAYER_STALK_OVERLAY    = 2;
+    static size_t const LAYER_STALK_COUNT      = 3;
 
     // Scoreboard layers
-    static size_t const LAYER_SB_MAIN    = 0;
-    static size_t const LAYER_SB_OVERLAY = 1;
-    static size_t const LAYER_SB_COUNT   = 2;
+    static size_t const LAYER_SB_BACKGROUND = 0;
+    static size_t const LAYER_SB_MAIN       = 1;
+    static size_t const LAYER_SB_OVERLAY    = 2;
+    static size_t const LAYER_SB_COUNT      = 3;
 
     static size_t const LAYER_STALK_RED_START   = 0;
     static size_t const LAYER_STALK_GREEN_START =
