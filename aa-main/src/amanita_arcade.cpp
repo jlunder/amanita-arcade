@@ -37,8 +37,8 @@ namespace aa {
     DigitalOut debug_green_led(LED4);
     DigitalOut debug_red_led(LED5);
     DigitalOut debug_blue_led(LED6);
-    DigitalOut debug_frame_sync(PA_14);
-    DigitalOut debug_lights_sync(PA_15);
+    DigitalOut debug_frame_sync(PD_0);
+    DigitalOut debug_lights_sync(PD_1);
   }
 
   int32_t Debug::_indent_depth;
