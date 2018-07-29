@@ -597,7 +597,7 @@ namespace aa {
     size_t pattern_length;
     size_t pattern_pos;
     GameState state = ST_RESET;
-    aa::Timer state_timer(TimeSpan::zero, false);
+    aa::Timer state_timer(TimeSpan::infinity, false);
 
     StalkVis red_stalk_vis('R', Lights::LAYER_STALK_RED_START,
       ShortTimeSpan::from_millis(1023), Color::red);

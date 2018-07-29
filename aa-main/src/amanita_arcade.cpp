@@ -184,6 +184,7 @@ namespace aa {
     static int64_t total_micros;
 
     if(!timer_started) {
+      Debug::tracef("Starting timer for the first time");
       timer_started = true;
       timer.start();
       last_reading = timer.read_us();
@@ -192,6 +193,7 @@ namespace aa {
     uint32_t this_reading = timer.read_us();
     uint32_t delta = this_reading - last_reading;
 
+    last_reading = this_reading;
     total_micros += delta;
 
     return TimeSpan::from_micros(total_micros);
@@ -287,10 +289,12 @@ namespace aa {
 
 
   void Program::main() {
+    System::start_watchdog(ShortTimeSpan::from_millis(10000));
+
     // This line is important -- it implicitly inits debug_ser
     Debug::trace("Amanita Arcade 2018 initializing");
-
-    System::start_watchdog(ShortTimeSpan::from_millis(10000));
+    // implicitly init uptime()
+    System::uptime();
 
     // Give external hardware time to wake up... some of it is sloooow
     wait_ms(500);
@@ -301,7 +305,6 @@ namespace aa {
 
     Debug::trace("Beginning main loop");
 
-    // Calling uptime() incidentally initializes that system!
     TimeSpan next_frame_time = System::uptime();
     TimeSpan last_frame_time = next_frame_time -
       TimeSpan::from_micros(AA_FRAME_MICROS);
@@ -351,8 +354,8 @@ namespace aa {
       now = System::uptime();
       uint32_t frame_us = (now - frame_start).to_micros();
       if(frame_us > AA_FRAME_MICROS - 2000) {
-        Debug::tracef("Frame time of %uus exceeds budget (%uus)", frame_us,
-          AA_FRAME_MICROS - 2000);
+        Debug::tracef("Frame time of %luus exceeds budget (%luus) -> %lldus, %lldus", frame_us,
+          AA_FRAME_MICROS - 2000, now.to_micros(), frame_start.to_micros());
       }
       now = System::uptime();
       last_frame_time = frame_start;
