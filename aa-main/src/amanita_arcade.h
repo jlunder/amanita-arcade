@@ -9,7 +9,6 @@
 
 #include <mbed.h>
 
-
 #define AA_AUTO_ASSERT(expr) \
   expr, "%s: %d: expression not true: %s", __FILE__, __LINE__, #expr
 
@@ -146,6 +145,5 @@ namespace aa {
   };
 
 }
-
 
 #endif // AMANITA_ARCADE_H

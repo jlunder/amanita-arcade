@@ -8,7 +8,6 @@
 
 #include "aa_game_logo.inl"
 
-
 namespace aa {
   namespace {
     bool textures_initialized = false;
@@ -403,7 +402,8 @@ namespace aa {
           _in_game_over = false;
           Lights::transition_out(_layer_start + Lights::LAYER_STALK_OVERLAY,
             ShortTimeSpan::from_millis(2000));
-        } else {
+        }
+        else {
           Lights::transition_out(_layer_start + Lights::LAYER_STALK_OVERLAY,
             TimeSpan::zero);
         }
@@ -650,7 +650,8 @@ namespace aa {
           vis.game_start();
           vis.press_color(input, true);
           vis.score_change(1);
-        } else if(input == pattern[pattern_pos]) {
+        }
+        else if(input == pattern[pattern_pos]) {
           Debug::tracef("Correct input %c", input);
           vis.press_color(input, true);
           ++pattern_pos;
@@ -661,7 +662,8 @@ namespace aa {
               state = ST_GAME_OVER;
               state_timer = aa::Timer(TimeSpan::from_millis(3000), false);
               vis.game_over_win();
-            } else {
+            }
+            else {
               pattern[pattern_length] = get_random_button();
               ++pattern_length;
               pattern_pos = 0;
@@ -669,7 +671,8 @@ namespace aa {
               state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
             }
           }
-        } else {
+        }
+        else {
           Debug::tracef("Wrong input %c, loss", input);
           vis.press_color(input, false);
           vis.game_over_lose();
@@ -686,7 +689,8 @@ namespace aa {
           vis.play_color(pattern[pattern_pos]);
           ++pattern_pos;
           state_timer = aa::Timer(TimeSpan::from_millis(500), false);
-        } else {
+        }
+        else {
           Debug::tracef("Awaiting response");
           state = ST_WAITING_RESPONSE;
           state_timer = aa::Timer(TimeSpan::from_millis(15000), false);
@@ -702,7 +706,8 @@ namespace aa {
         state_timer.cancel();
         vis.game_over_lose();
         update(TimeSpan::zero);
-      } else if(state_timer.get_time_remaining() <= TimeSpan::zero) {
+      }
+      else if(state_timer.get_time_remaining() <= TimeSpan::zero) {
         Debug::tracef("Timeout, game over");
         state = ST_GAME_OVER;
         state_timer = aa::Timer(TimeSpan::from_millis(3000), false);

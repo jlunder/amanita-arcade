@@ -19,6 +19,7 @@ namespace aa {
     static void main();
   };
 
+
   namespace {
     static char const indent_chars[AA_MAX_INDENT] = {
       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
@@ -35,7 +36,6 @@ namespace aa {
 
     Serial debug_ser(PA_2, PA_3); // USART2 -- also accessible via stdio?
     Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
-    //Serial lights_ws2812_ser(PA_0, PA_1); // USART4
     PortOut lights_ws2812_port(PortE, 0xFFFF);
     DigitalOut debug_amber_led(LED3);
     DigitalOut debug_green_led(LED4);
@@ -45,7 +45,9 @@ namespace aa {
     DigitalOut debug_lights_sync(PD_1);
   }
 
+
   int32_t Debug::_indent_depth;
+
 
   void Debug::pause() {
     // TODO debug breakpoint
@@ -53,6 +55,7 @@ namespace aa {
     trace("paused, any input to resume");
     getchar();
   }
+
 
   void Debug::abort() {
     // TODO reboot
@@ -72,6 +75,7 @@ namespace aa {
     }
   }
 
+
   void Debug::assertf(bool expr, char const * fail_format, ...) {
     if(!expr) {
       va_list va;
@@ -81,11 +85,13 @@ namespace aa {
     }
   }
 
+
   void Debug::vassertf(bool expr, char const * fail_format, va_list va) {
     if(!expr) {
       verrorf(fail_format, va);
     }
   }
+
 
   void Debug::trace(char const * message) {
     if(!hw::initialized) {
@@ -105,7 +111,8 @@ namespace aa {
       p = q;
       if(p == message) {
         putchar('>');
-      } else {
+      }
+      else {
         putchar(':');
       }
       while(*q != 0 && *q != '\n') {
@@ -120,12 +127,14 @@ namespace aa {
     }
   }
 
+
   void Debug::tracef(char const * format, ...) {
     va_list va;
     va_start(va, format);
     vtracef(format, va);
     va_end(va);
   }
+
 
   void Debug::vtracef(char const * format, va_list va) {
     if(!hw::initialized && preinit_trace_buf_used) {
@@ -135,10 +144,12 @@ namespace aa {
     trace(trace_buf);
   }
 
+
   void Debug::error(char const * message) {
     trace(message);
     abort();
   }
+
 
   void Debug::errorf(char const * format, ...) {
     va_list va;
@@ -147,10 +158,12 @@ namespace aa {
     va_end(va);
   }
 
+
   void Debug::verrorf(char const * format, va_list va) {
     vtracef(format, va);
     abort();
   }
+
 
   void Debug::push_context(char const * name) {
     /*
@@ -164,6 +177,7 @@ namespace aa {
     assertf(AA_AUTO_ASSERT(_indent_depth < AA_MAX_INDENT));
     ++_indent_depth;
   }
+
 
   void Debug::pop_context() {
     assertf(AA_AUTO_ASSERT(_indent_depth > 0));

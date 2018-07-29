@@ -29,6 +29,7 @@ namespace aa {
     IPS_EOL,
   };
 
+
   namespace {
     static bool new_sample_available;
     static uint32_t sample_micros;
@@ -49,6 +50,7 @@ namespace aa {
     static void input_test_io_isr_parse_digit(char in_c, uint32_t * v,
         int pos);
 
+
     static void input_test_io_isr() {
       for(int i = 0; i < 10; ++i) {
         while(hw::input_ser.readable()) {
@@ -56,7 +58,8 @@ namespace aa {
           if(c >= 0) {
             input_test_io_isr_parse(c);
             //hw::input_ser.putc('A' + (char)parser_state);
-          } else {
+          }
+          else {
             parser_state = IPS_IDLE;
           }
           //Debug::tracef("%2d %08X %08X %08X %c", parser_state, parser_micros, parser_status, parser_buttons, new_sample_available ? 'T' : 'f');
@@ -75,6 +78,7 @@ namespace aa {
       }
       __enable_irq();
     }
+
 
     static void input_test_io_isr_parse(char in_c) {
       switch(in_c) {
@@ -117,9 +121,11 @@ namespace aa {
       }
     }
 
+
     static void input_test_io_isr_parse_reset() {
       parser_state = IPS_IDLE;
     }
+
 
     static void input_test_io_isr_parse_begin() {
       parser_state = IPS_SEPARATOR_A;
@@ -128,35 +134,43 @@ namespace aa {
       parser_buttons = 0;
     }
 
+
     static void input_test_io_isr_parse_literal(char in_c, char c) {
       if(in_c == c) {
         parser_state = static_cast<InputParserState>(parser_state + 1);
-      } else {
+      }
+      else {
         input_test_io_isr_parse_reset();
       }
     }
+
 
     static void input_test_io_isr_parse_digit(char in_c, uint32_t * v,
         int pos) {
       if(in_c >= '0' && in_c <= '9') {
         *v |= (in_c - '0') << pos;
         parser_state = static_cast<InputParserState>(parser_state + 1);
-      } else if(in_c >= 'A' && in_c <= 'F') {
+      }
+      else if(in_c >= 'A' && in_c <= 'F') {
         *v |= (in_c - 'A' + 10) << pos;
         parser_state = static_cast<InputParserState>(parser_state + 1);
-      } else if(in_c >= 'a' && in_c <= 'f') {
+      }
+      else if(in_c >= 'a' && in_c <= 'f') {
         *v |= (in_c - 'a' + 10) << pos;
         parser_state = static_cast<InputParserState>(parser_state + 1);
-      } else {
+      }
+      else {
         input_test_io_isr_parse_reset();
         return;
       }
     }
   }
 
+
   uint32_t Input::_last_buttons;
   uint32_t Input::_buttons;
   ShortTimeSpan Input::_time_since_last_sample;
+
 
   void Input::init() {
     _last_buttons = 0;
@@ -187,11 +201,13 @@ namespace aa {
       _last_buttons = _buttons;
       Debug::tracef("Test input alive, first sample: %08X %04X",
         last_sample_micros, _buttons);
-    } else {
+    }
+    else {
       Debug::trace("Test input not responding");
       Debug::pause();
     }
   }
+
 
   void Input::read_buttons() {
     bool got_new = new_sample_available;

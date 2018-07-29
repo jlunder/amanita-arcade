@@ -32,16 +32,19 @@ namespace aa {
     1.0f,
   };
 
+
   float AA_OPTIMIZE Color::cie(float l) {
     if(l >= 1.0f) {
       return 1.0f;
-    } else if(l >= 0.0f) {
+    }
+    else if(l >= 0.0f) {
       float il = l * (CIE_TABLE_SIZE - 1);
       size_t i = static_cast<size_t>(il);
       float a = il - floorf(il);
       float negA = 1.0f - a;
       return cie_table[i] * negA + cie_table[i + 1] * a;
-    } else {
+    }
+    else {
       return 0.0f;
     }
   }

@@ -71,7 +71,8 @@ namespace aa {
   void Lights::Animator::render(Texture2D * dest) const {
     if(_total_time >= _anim_length) {
       render(_total_time, 1.0f, dest);
-    } else {
+    }
+    else {
       render(_total_time,
         static_cast<float>(_total_time.to_micros()) /
           static_cast<float>(_anim_length.to_micros()),
@@ -142,7 +143,8 @@ namespace aa {
       _layers[layer].trans_animator = _layers[layer].animator;
       _layers[layer].animator = nullptr;
       _layers[layer].trans_animator->transition();
-    } else {
+    }
+    else {
       // No: stop the current animator
       _layers[layer].animator->stop();
       _layers[layer].animator = nullptr;
