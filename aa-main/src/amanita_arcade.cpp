@@ -26,9 +26,13 @@ namespace aa {
     };
 
     static char trace_buf[256];
+    static bool preinit_trace_buf_used = false;
   }
 
+
   namespace hw {
+    bool initialized = false;
+
     Serial debug_ser(PA_2, PA_3); // USART2 -- also accessible via stdio?
     Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
     //Serial lights_ws2812_ser(PA_0, PA_1); // USART4
@@ -52,6 +56,10 @@ namespace aa {
 
   void Debug::abort() {
     // TODO reboot
+    if(!hw::initialized) {
+      // continue -- we have to get to HW init for our message to get out
+      return;
+    }
     trace("aborting execution");
     for(;;) {
       // wait forever
@@ -80,6 +88,14 @@ namespace aa {
   }
 
   void Debug::trace(char const * message) {
+    if(!hw::initialized) {
+      if(message != trace_buf && !preinit_trace_buf_used) {
+        snprintf(trace_buf, sizeof trace_buf, "%s", message);
+      }
+      preinit_trace_buf_used = true;
+      return;
+    }
+
     char const * q = message;
     char const * p;
     for(;;) {
@@ -112,6 +128,9 @@ namespace aa {
   }
 
   void Debug::vtracef(char const * format, va_list va) {
+    if(!hw::initialized && preinit_trace_buf_used) {
+      return;
+    }
     vsnprintf(trace_buf, sizeof trace_buf, format, va);
     trace(trace_buf);
   }
@@ -266,6 +285,14 @@ namespace aa {
   void Program::main() {
     // Somehow stdio knows to hook into USART2...?
     hw::debug_ser.baud(115200);
+    hw::initialized = true;
+
+    if(preinit_trace_buf_used) {
+      hw::debug_ser.puts("Error during initialization: ");
+      hw::debug_ser.puts(trace_buf);
+      hw::debug_ser.puts("\r\n");
+      abort();
+    }
 
     Debug::trace("Amanita Arcade 2018 initializing");
 
