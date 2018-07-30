@@ -27,11 +27,14 @@ namespace aa {
     };
 
     static char trace_buf[256];
+
+    static __attribute__((section(".text"),aligned(4096)))
+      uint8_t nv_data[4096] = { 0xFF, 0xFF, 0xFF, 0xFF, };
   }
 
 
   namespace hw {
-    Serial * debug_ser = nullptr; // (PA_2, PA_3); // USART2 -- also accessible via stdio?
+    Serial * debug_ser = nullptr; // (PA_2, PA_3); // USART2
     Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
     PortOut lights_ws2812_port(PortE, 0xFFFF);
     DigitalOut debug_amber_led(LED3);
@@ -50,7 +53,13 @@ namespace aa {
     // TODO debug breakpoint
     //__BKPT(0);
     trace("paused, any input to resume");
-    getchar();
+    for(;;) {
+      System::service_watchdog();
+      if(hw::debug_ser->readable()) {
+        hw::debug_ser->getc();
+        break;
+      }
+    }
   }
 
 
@@ -58,7 +67,7 @@ namespace aa {
     // TODO reboot
     trace("aborting execution");
     for(;;) {
-      // wait forever
+      // wait forever -- watchdog will reboot us
     }
   }
 
@@ -203,9 +212,8 @@ namespace aa {
   void System::write_nv(uint32_t id, void const * data, size_t size) {
     /*
     HAL_StatusTypeDef status = HAL_FLASH_Unlock();
-    FLASH_PageErase(EEPROM_START_ADDRESS); // required to re-write
-    CLEAR_BIT(FLASH->CR, FLASH_CR_PER); // Bug fix: bit PER has been set in Flash_PageErase(), must clear it here
-    //...
+    //FLASH_Erase_Sector((uint32_t)nv_data, FLASH_VOLTAGE_RANGE_3);
+    //FLASH->CR &= ~FLASH_CR_PER; // Bug fix: bit PER has been set in Flash_PageErase(), must clear it here
     HAL_FLASH_Lock();
     */
   }
@@ -225,37 +233,36 @@ namespace aa {
 
 
   void System::start_watchdog(ShortTimeSpan timeout) {
-    /*
     // see http://embedded-lab.com/blog/?p=9662
-    static uint64_t const lsi_freq = 45000;
+    static uint64_t const lsi_freq = 32768;
 
     uint64_t timeout_micros = timeout.to_micros();
     uint16_t prescaler_code;
     uint16_t prescaler;
     uint16_t reload_value;
-    uint32_t calculated_timeout_micros;
+    uint64_t calculated_timeout_micros;
 
-    if ((timeout_micros * (LsiFreq/4)) < 0x7FF * 1000000) {
+    if ((timeout_micros * (lsi_freq / 4)) < 0x7FF * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_4;
       prescaler = 4;
     }
-    else if ((timeout_micros * (LsiFreq/8)) < 0xFF0 * 1000000) {
+    else if ((timeout_micros * (lsi_freq / 8)) < 0xFF0 * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_8;
       prescaler = 8;
     }
-    else if ((timeout_micros * (LsiFreq/16)) < 0xFF0 * 1000000) {
+    else if ((timeout_micros * (lsi_freq / 16)) < 0xFF0 * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_16;
       prescaler = 16;
     }
-    else if ((timeout_micros * (LsiFreq/32)) < 0xFF0 * 1000000) {
+    else if ((timeout_micros * (lsi_freq / 32)) < 0xFF0 * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_32;
       prescaler = 32;
     }
-    else if ((timeout_micros * (LsiFreq/64)) < 0xFF0 * 1000000) {
+    else if ((timeout_micros * (lsi_freq / 64)) < 0xFF0 * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_64;
       prescaler = 64;
     }
-    else if ((timeout_micros * (LsiFreq/128)) < 0xFF0 * 1000000) {
+    else if ((timeout_micros * (lsi_freq / 128)) < 0xFF0 * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_128;
       prescaler = 128;
     }
@@ -266,30 +273,33 @@ namespace aa {
 
     // specifies the IWDG Reload value. This parameter must be a number between 0 and 0x0FFF.
     reload_value =
-      (uint32_t)((timeout_micros * (lsi_freq / prescaler) + 500000) / 1000000);
+      (uint32_t)((timeout_micros * (lsi_freq / prescaler) + 500000)
+        / 1000000);
 
-    Calculated_timeout = ((float)(prescaler * reload_value)) / lsi_freq;
-    Debug::tracef("Set WDT to %dx%d from desired timeout %dus; actual %dus",
-      prescaler, reload_value, calculated_timeout_micros);
+    calculated_timeout_micros =
+      (uint32_t)(((float)(prescaler * reload_value) * 1e6f)
+        / lsi_freq + 0.5f);
+    Debug::tracef(
+      "Set WDT to %dx%d from desired timeout %lluus; actual %lluus",
+      prescaler, reload_value, timeout_micros, calculated_timeout_micros);
 
-    IWDG->KR = 0x5555; //Disable write protection of IWDG registers
-    IWDG->PR = prescaler_code;      //Set PR value
-    IWDG->RLR = reload_value;      //Set RLR value
-    IWDG->KR = 0xAAAA;    //Reload IWDG
-    IWDG->KR = 0xCCCC;    //Start IWDG - See more at: http://embedded-lab.com/blog/?p=9662#sthash.6VNxVSn0.dpuf
+    IWDG->KR = 0x5555; // Disable write protection of IWDG registers
+    IWDG->PR = prescaler_code; // Set PR value
+    IWDG->RLR = reload_value; // Set RLR value
+    IWDG->KR = 0xAAAA; // Reload IWDG
+    IWDG->KR = 0xCCCC; // Start IWDG
 
     service_watchdog();
-    */
   }
 
 
   void System::service_watchdog() {
-    //IWDG->KR = 0xAAAA;         //Reload IWDG - See more at: http://embedded-lab.com/blog/?p=9662#sthash.6VNxVSn0.dpuf
+    IWDG->KR = 0xAAAA;
   }
 
 
   void Program::main() {
-    System::start_watchdog(ShortTimeSpan::from_millis(10000));
+    System::start_watchdog(ShortTimeSpan::from_millis(15000));
 
     // This line is important -- it implicitly inits debug_ser
     Debug::trace("Amanita Arcade 2018 initializing");
@@ -298,6 +308,7 @@ namespace aa {
 
     // Give external hardware time to wake up... some of it is sloooow
     wait_ms(500);
+    System::service_watchdog();
 
     Input::init();
     Lights::init();

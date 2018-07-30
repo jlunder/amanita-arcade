@@ -186,10 +186,12 @@ namespace aa {
     for(int i = 0; !alive && i < 20; ++i) {
       hw::input_ser.puts("A0M0V00");
       wait_ms(100);
+      System::service_watchdog();
 
       for(int j = 0; !alive && j < 20; ++j) {
         hw::input_ser.putc('P');
         wait_ms(10);
+        System::service_watchdog();
         if(new_sample_available) {
           alive = true;
         }
