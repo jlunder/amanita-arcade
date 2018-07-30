@@ -28,13 +28,16 @@ namespace aa {
 
     static char trace_buf[256];
 
+    /*
     static __attribute__((section(".text"),aligned(4096)))
       uint8_t nv_data[4096] = { 0xFF, 0xFF, 0xFF, 0xFF, };
+    */
   }
 
 
   namespace hw {
-    Serial * debug_ser = nullptr; // (PA_2, PA_3); // USART2
+    __attribute__((aligned(4))) uint8_t debug_ser_alloc[sizeof (Serial)];
+    Serial & debug_ser = *(Serial *)debug_ser_alloc; // PA_2, PA_3: USART2
     Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
     PortOut lights_ws2812_port(PortE, 0xFFFF);
     DigitalOut debug_amber_led(LED3);
@@ -43,6 +46,15 @@ namespace aa {
     DigitalOut debug_blue_led(LED6);
     DigitalOut debug_frame_sync(PD_0);
     DigitalOut debug_lights_sync(PD_1);
+
+    static void debug_ser_init() {
+      static bool initialized = false;
+      if(!initialized) {
+        initialized = true;
+        new(&debug_ser) Serial(PA_2, PA_3, 115200);
+        debug_ser.puts("!DEBUG OUTPUT BEGIN\r\n");
+      }
+    }
   }
 
 
@@ -55,8 +67,8 @@ namespace aa {
     trace("paused, any input to resume");
     for(;;) {
       System::service_watchdog();
-      if(hw::debug_ser->readable()) {
-        hw::debug_ser->getc();
+      if(hw::debug_ser.readable()) {
+        hw::debug_ser.getc();
         break;
       }
     }
@@ -96,13 +108,7 @@ namespace aa {
 
 
   void Debug::trace(char const * message) {
-    static Serial debug_ser_actual(PA_2, PA_3); // USART2 -- also accessible via stdio
-
-    if(hw::debug_ser == nullptr) {
-      debug_ser_actual.baud(115200);
-      hw::debug_ser = &debug_ser_actual;
-      debug_ser_actual.puts("!DEBUG OUTPUT BEGIN\r\n");
-    }
+    hw::debug_ser_init();
 
     char const * q = message;
     char const * p;
@@ -186,6 +192,32 @@ namespace aa {
   }
 
 
+  bool Debug::in_available() {
+    hw::debug_ser_init();
+
+    return hw::debug_ser.readable();
+  }
+
+
+  int Debug::in_read_nb() {
+    hw::debug_ser_init();
+
+    if(hw::debug_ser.readable()) {
+      return hw::debug_ser.getc();
+    }
+    else {
+      return -1;
+    }
+  }
+
+
+  char Debug::in_read() {
+    hw::debug_ser_init();
+
+    return hw::debug_ser.getc();
+  }
+
+
   TimeSpan System::uptime() {
     static mbed::Timer timer;
     static bool timer_started = false;
@@ -240,7 +272,6 @@ namespace aa {
     uint16_t prescaler_code;
     uint16_t prescaler;
     uint16_t reload_value;
-    uint64_t calculated_timeout_micros;
 
     if ((timeout_micros * (lsi_freq / 4)) < 0x7FF * 1000000LLU) {
       prescaler_code = IWDG_PRESCALER_4;
@@ -276,12 +307,14 @@ namespace aa {
       (uint32_t)((timeout_micros * (lsi_freq / prescaler) + 500000)
         / 1000000);
 
-    calculated_timeout_micros =
+    /*
+    uint64_t calculated_timeout_micros =
       (uint32_t)(((float)(prescaler * reload_value) * 1e6f)
         / lsi_freq + 0.5f);
     Debug::tracef(
       "Set WDT to %dx%d from desired timeout %lluus; actual %lluus",
       prescaler, reload_value, timeout_micros, calculated_timeout_micros);
+    */
 
     IWDG->KR = 0x5555; // Disable write protection of IWDG registers
     IWDG->PR = prescaler_code; // Set PR value

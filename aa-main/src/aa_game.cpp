@@ -323,9 +323,10 @@ namespace aa {
       virtual void reset() { }
       virtual void update(ShortTimeSpan dt) { }
       virtual void game_start() { }
+      virtual void play_sequence_start() { }
       virtual void play_color(char id) { }
-      virtual void press_color(char id, bool correct) { }
       virtual void await_press() { }
+      virtual void press_color(char id, bool correct) { }
       virtual void score_change(int32_t score) { }
       virtual void game_over_win() { }
       virtual void game_over_lose() { }
@@ -338,26 +339,52 @@ namespace aa {
     public:
       MultiVis() : _count(0) { }
 
-      virtual void reset() { foreach_vis([=] (Vis * vis) { vis->reset(); }); }
-      virtual void update(ShortTimeSpan dt)
-        { foreach_vis([=] (Vis * vis) { vis->update(dt); }); }
-      virtual void game_start()
-        { foreach_vis([=] (Vis * vis) { vis->game_start(); }); }
-      virtual void play_color(char id)
-        { foreach_vis([=] (Vis * vis) { vis->play_color(id); }); }
-      virtual void press_color(char id, bool correct)
-        { foreach_vis([=] (Vis * vis) { vis->press_color(id, correct); }); }
-      virtual void await_press()
-        { foreach_vis([=] (Vis * vis) { vis->await_press(); }); }
-      virtual void score_change(int32_t score)
-        { foreach_vis([=] (Vis * vis) { vis->score_change(score); }); }
-      virtual void game_over_win()
-        { foreach_vis([=] (Vis * vis) { vis->game_over_win(); }); }
-      virtual void game_over_lose()
-        { foreach_vis([=] (Vis * vis) { vis->game_over_lose(); }); }
-      virtual void game_stop()
-        { foreach_vis([=] (Vis * vis) { vis->game_stop(); }); }
+      virtual void reset() {
+        Debug::tracef("vis: reset");
+        foreach_vis([=] (Vis * vis) { vis->reset(); });
+      }
+      virtual void update(ShortTimeSpan dt) {
+        //Debug::tracef("vis: update dt=%ldus", (int32_t)dt.to_micros());
+        foreach_vis([=] (Vis * vis) { vis->update(dt); });
+      }
+      virtual void game_start() {
+        Debug::tracef("vis: game_start");
+        foreach_vis([=] (Vis * vis) { vis->game_start(); });
+      }
+      virtual void play_sequence_start() {
+        Debug::tracef("vis: play_sequence_start");
+        foreach_vis([=] (Vis * vis) { vis->play_sequence_start(); });
+      }
+      virtual void play_color(char id) {
+        Debug::tracef("vis: play_color id=%c", id);
+        foreach_vis([=] (Vis * vis) { vis->play_color(id); });
+      }
+      virtual void await_press() {
+        Debug::tracef("vis: await_press");
+        foreach_vis([=] (Vis * vis) { vis->await_press(); });
+      }
+      virtual void press_color(char id, bool correct) {
+        Debug::tracef("vis: press_color id=%c correct=%c", id, correct ? 't' : 'f');
+        foreach_vis([=] (Vis * vis) { vis->press_color(id, correct); });
+      }
+      virtual void score_change(int32_t score) {
+        Debug::tracef("vis: score_change score=%ld", score);
+        foreach_vis([=] (Vis * vis) { vis->score_change(score); });
+      }
+      virtual void game_over_win() {
+        Debug::tracef("vis: game_over_win");
+        foreach_vis([=] (Vis * vis) { vis->game_over_win(); });
+      }
+      virtual void game_over_lose() {
+        Debug::tracef("vis: game_over_lose");
+        foreach_vis([=] (Vis * vis) { vis->game_over_lose(); });
+      }
+      virtual void game_stop() {
+        Debug::tracef("vis: game_stop");
+        foreach_vis([=] (Vis * vis) { vis->game_stop(); });
+      }
       virtual void best_score_change(int32_t best_score) {
+        Debug::tracef("vis: best_score_change best_score=%ld", best_score);
         foreach_vis([=] (Vis * vis) { vis->best_score_change(best_score); });
       }
 
@@ -470,18 +497,6 @@ namespace aa {
       }
 
       virtual void reset() {
-        Lights::start_animator(
-          Lights::LAYER_STALK_RED_START + Lights::LAYER_STALK_BASE_COLOR,
-          &_red_bg);
-        Lights::start_animator(
-          Lights::LAYER_STALK_GREEN_START + Lights::LAYER_STALK_BASE_COLOR,
-          &_green_bg);
-        Lights::start_animator(
-          Lights::LAYER_STALK_BLUE_START + Lights::LAYER_STALK_BASE_COLOR,
-          &_blue_bg);
-        Lights::start_animator(
-          Lights::LAYER_STALK_PINK_START + Lights::LAYER_STALK_BASE_COLOR,
-          &_pink_bg);
         Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
           &_splash);
       }
@@ -628,7 +643,7 @@ namespace aa {
 
     switch(state) {
     case ST_RESET:
-      Debug::tracef("Reset");
+      //Debug::tracef("Reset");
       pattern_length = 0;
       pattern_pos = 0;
       vis.reset();
@@ -650,6 +665,7 @@ namespace aa {
           vis.game_start();
           vis.press_color(input, true);
           vis.score_change(1);
+          vis.play_sequence_start();
         }
         else if(input == pattern[pattern_pos]) {
           Debug::tracef("Correct input %c", input);
@@ -669,6 +685,7 @@ namespace aa {
               pattern_pos = 0;
               state = ST_PLAYING;
               state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
+              vis.play_sequence_start();
             }
           }
         }

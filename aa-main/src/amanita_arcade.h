@@ -64,6 +64,7 @@ namespace aa {
     SCOREBOARD_WIDTH * SCOREBOARD_HEIGHT;
 
   namespace hw {
+    extern Serial & debug_ser;
     extern Serial input_ser;
     extern PortOut lights_ws2812_port;
     extern DigitalOut debug_amber_led;
@@ -124,6 +125,10 @@ namespace aa {
 
     static void push_context(char const * name);
     static void pop_context();
+
+    static bool in_available();
+    static int in_read_nb(); // non-blocking
+    static char in_read();
 
   private:
     static int32_t _indent_depth;

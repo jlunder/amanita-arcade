@@ -239,5 +239,22 @@ namespace aa {
     }
     //Debug::tracef("Buttons: %04X %c", _buttons, got_new ? 'N' : ' ');
     hw::input_ser.putc('P');
+    if(hw::debug_ser.readable()) {
+      char c = hw::debug_ser.getc();
+      switch(c) {
+      case 'r': case 'R':
+        _buttons |= B_RED;
+        break;
+      case 'g': case 'G':
+        _buttons |= B_GREEN;
+        break;
+      case 'b': case 'B':
+        _buttons |= B_BLUE;
+        break;
+      case 'p': case 'P':
+        _buttons |= B_PINK;
+        break;
+      }
+    }
   }
 }
