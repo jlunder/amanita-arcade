@@ -31,6 +31,12 @@ namespace aa {
 
 
   namespace {
+    static int32_t const REMOTE_READ_TIMEOUT_MICROS = 10000000; // 10 seconds
+
+    static Timer remote_read_timeout(
+      ShortTimeSpan::from_micros(REMOTE_READ_TIMEOUT_MICROS));
+    static uint32_t remote_buttons;
+
     static bool new_sample_available;
     static uint32_t sample_micros;
     static uint32_t sample_buttons;
@@ -167,12 +173,13 @@ namespace aa {
   }
 
 
+  ShortTimeSpan Input::_remote_dt;
   uint32_t Input::_last_buttons;
   uint32_t Input::_buttons;
-  ShortTimeSpan Input::_time_since_last_sample;
 
 
   void Input::init() {
+    _remote_dt = TimeSpan::zero;
     _last_buttons = 0;
     _buttons = 0;
 
@@ -199,7 +206,7 @@ namespace aa {
     }
 
     if(alive) {
-      read_buttons();
+      read_buttons(TimeSpan::zero);
       _last_buttons = _buttons;
       Debug::tracef("Test input alive, first sample: %08X %04X",
         last_sample_micros, _buttons);
@@ -211,50 +218,55 @@ namespace aa {
   }
 
 
-  void Input::read_buttons() {
+  void Input::read_buttons(ShortTimeSpan dt) {
+    remote_read_timeout.update(dt);
+
     bool got_new = new_sample_available;
     if(got_new) {
-      _last_buttons = _buttons;
       __disable_irq();
       __sync_synchronize();
-      _buttons = 0;
+      remote_buttons = 0;
       if((sample_buttons & 0x1000) == 0) {
-        _buttons |= B_GREEN;
+        remote_buttons |= B_GREEN;
       }
       if((sample_buttons & 0x2000) == 0) {
-        _buttons |= B_RED;
+        remote_buttons |= B_RED;
       }
       if((sample_buttons & 0x4000) == 0) {
-        _buttons |= B_BLUE;
+        remote_buttons |= B_BLUE;
       }
       if((sample_buttons & 0x8000) == 0) {
-        _buttons |= B_PINK;
+        remote_buttons |= B_PINK;
       }
-      _time_since_last_sample = ShortTimeSpan::from_micros(
+      _remote_dt = ShortTimeSpan::from_micros(
         static_cast<int32_t>(sample_micros - last_sample_micros));
       last_sample_micros = sample_micros;
       new_sample_available = false;
       __sync_synchronize();
       __enable_irq();
+      remote_read_timeout.restart();
+    }
+    else {
+      _remote_dt = TimeSpan::zero;
+      if(remote_read_timeout.is_done()) {
+        remote_buttons = 0;
+      }
     }
     //Debug::tracef("Buttons: %04X %c", _buttons, got_new ? 'N' : ' ');
+
     hw::input_ser.putc('P');
+    uint32_t debug_buttons = 0;
     if(hw::debug_ser.readable()) {
       char c = hw::debug_ser.getc();
       switch(c) {
-      case 'r': case 'R':
-        _buttons |= B_RED;
-        break;
-      case 'g': case 'G':
-        _buttons |= B_GREEN;
-        break;
-      case 'b': case 'B':
-        _buttons |= B_BLUE;
-        break;
-      case 'p': case 'P':
-        _buttons |= B_PINK;
-        break;
+        case 'r': case 'R': debug_buttons |= B_RED; break;
+        case 'g': case 'G': debug_buttons |= B_GREEN; break;
+        case 'b': case 'B': debug_buttons |= B_BLUE; break;
+        case 'p': case 'P': debug_buttons |= B_PINK; break;
       }
     }
+
+    _last_buttons = _buttons;
+    _buttons = remote_buttons | debug_buttons;
   }
 }

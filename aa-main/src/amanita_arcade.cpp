@@ -390,16 +390,16 @@ namespace aa {
       // before the next Lights::output(). As long as AA_FRAME_MICROS >=
       // Lights::update time + 16000, i.e. ~22000, we should be fine.
       Lights::output();
-      Input::read_buttons();
-      Game::update(ShortTimeSpan(delta));
-      Lights::update(ShortTimeSpan(delta));
+      Input::read_buttons(ShortTimeSpan::from_micros(delta));
+      Game::update(ShortTimeSpan::from_micros(delta));
+      Lights::update(ShortTimeSpan::from_micros(delta));
       hw::debug_frame_sync = 0;
 
       now = System::uptime();
       uint32_t frame_us = (now - frame_start).to_micros();
       if(frame_us > AA_FRAME_MICROS - 2000) {
-        Debug::tracef("Frame time of %luus exceeds budget (%luus) -> %lldus, %lldus", frame_us,
-          AA_FRAME_MICROS - 2000, now.to_micros(), frame_start.to_micros());
+        Debug::tracef("Frame time of %luus exceeds budget (%luus)", frame_us,
+          AA_FRAME_MICROS - 2000);
       }
       now = System::uptime();
       last_frame_time = frame_start;

@@ -43,7 +43,7 @@ namespace aa {
 
 
   void Lights::Animator::stop() {
-    Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING));
+    Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING || _state == AS_TRANSITIONING));
     _state = AS_RESET;
   }
 
@@ -188,7 +188,6 @@ namespace aa {
   void Lights::update_animators(ShortTimeSpan dt) {
     for(size_t i = 0; i < LAYER_COUNT; ++i) {
       if(_layers[i].trans_animator != nullptr) {
-        Debug::tracef("up t");
         _layers[i].trans_time += dt;
         if((_layers[i].trans_time >= _layers[i].trans_length) ||
             !_layers[i].trans_animator->animate(dt)) {

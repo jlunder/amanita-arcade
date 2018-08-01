@@ -320,17 +320,16 @@ namespace aa {
     public:
       virtual ~Vis() { }
 
-      virtual void reset() { }
+      virtual void attract_start() { }
       virtual void update(ShortTimeSpan dt) { }
       virtual void game_start() { }
-      virtual void play_sequence_start() { }
+      virtual void play_pattern() { }
       virtual void play_color(char id) { }
       virtual void await_press() { }
       virtual void press_color(char id, bool correct) { }
       virtual void score_change(int32_t score) { }
       virtual void game_over_win() { }
       virtual void game_over_lose() { }
-      virtual void game_stop() { }
       virtual void best_score_change(int32_t best_score) { }
     };
 
@@ -339,9 +338,9 @@ namespace aa {
     public:
       MultiVis() : _count(0) { }
 
-      virtual void reset() {
-        Debug::tracef("vis: reset");
-        foreach_vis([=] (Vis * vis) { vis->reset(); });
+      virtual void attract_start() {
+        Debug::tracef("vis: attract_start");
+        foreach_vis([=] (Vis * vis) { vis->attract_start(); });
       }
       virtual void update(ShortTimeSpan dt) {
         //Debug::tracef("vis: update dt=%ldus", (int32_t)dt.to_micros());
@@ -351,9 +350,9 @@ namespace aa {
         Debug::tracef("vis: game_start");
         foreach_vis([=] (Vis * vis) { vis->game_start(); });
       }
-      virtual void play_sequence_start() {
-        Debug::tracef("vis: play_sequence_start");
-        foreach_vis([=] (Vis * vis) { vis->play_sequence_start(); });
+      virtual void play_pattern() {
+        Debug::tracef("vis: play_pattern");
+        foreach_vis([=] (Vis * vis) { vis->play_pattern(); });
       }
       virtual void play_color(char id) {
         Debug::tracef("vis: play_color id=%c", id);
@@ -378,10 +377,6 @@ namespace aa {
       virtual void game_over_lose() {
         Debug::tracef("vis: game_over_lose");
         foreach_vis([=] (Vis * vis) { vis->game_over_lose(); });
-      }
-      virtual void game_stop() {
-        Debug::tracef("vis: game_stop");
-        foreach_vis([=] (Vis * vis) { vis->game_stop(); });
       }
       virtual void best_score_change(int32_t best_score) {
         Debug::tracef("vis: best_score_change best_score=%ld", best_score);
@@ -422,7 +417,7 @@ namespace aa {
         _game_over_lose.init(Color::red);
       }
 
-      virtual void reset() {
+      virtual void attract_start() {
         Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
           &_active_color);
         if(_in_game_over) {
@@ -496,9 +491,15 @@ namespace aa {
             &orange_5x5_grad_tex) {
       }
 
-      virtual void reset() {
+      virtual void attract_start() {
+        Lights::start_animator(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
+          &_neutral_bg, ShortTimeSpan::from_millis(100));
         Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
           &_splash);
+        Lights::transition_out(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
+          ShortTimeSpan::from_millis(100));
       }
 
       virtual void game_start() {
@@ -559,12 +560,6 @@ namespace aa {
           &_game_over_lose, ShortTimeSpan::from_millis(100));
       }
 
-      virtual void game_stop() {
-        Lights::transition_out(
-          Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-          ShortTimeSpan::from_millis(100));
-      }
-
       virtual void best_score_change(int32_t best_score) {
         _score.set_best_score(best_score);
         _splash.set_best_score(best_score);
@@ -587,33 +582,6 @@ namespace aa {
     };
 
 
-    enum GameState {
-      ST_RESET,
-      ST_PLAYING,
-      ST_WAITING_RESPONSE,
-      ST_LISTENING,
-      ST_GAME_OVER,
-      ST_ENTER_HIGH_SCORE,
-    };
-
-
-    enum AttractState {
-      AT_DELAY_TOP,
-      AT_SCROLL_DOWN,
-      AT_DELAY_BOTTOM,
-      AT_SCROLL_UP,
-      AT_STATIC_IMAGE_0,
-      AT_STATIC_IMAGE_1,
-    };
-
-
-    size_t const PATTERN_LENGTH_MAX = 999;
-    char pattern[PATTERN_LENGTH_MAX];
-    size_t pattern_length;
-    size_t pattern_pos;
-    GameState state = ST_RESET;
-    aa::Timer state_timer(TimeSpan::infinity, false);
-
     StalkVis red_stalk_vis('R', Lights::LAYER_STALK_RED_START,
       ShortTimeSpan::from_millis(1023), Color::red);
     StalkVis green_stalk_vis('G', Lights::LAYER_STALK_GREEN_START,
@@ -624,6 +592,236 @@ namespace aa {
       ShortTimeSpan::from_millis(1201), Color::pink);
     ScoreboardVis scoreboard_vis;
     MultiVis vis;
+
+
+    char get_random_button() {
+      switch(rand() % 4) {
+      case 0: return 'R';
+      case 1: return 'G';
+      case 2: return 'B';
+      case 3: return 'P';
+      default: return 0;
+      }
+    }
+
+
+    class GameState {
+    public:
+      GameState(char const * name, ShortTimeSpan timeout)
+          : _name(name), _timer(timeout, true) { }
+
+      char const * get_name() const { return _name; }
+      Timer * get_timer() { return &_timer; }
+      GameState * get_next_state() const { return _next_state; }
+
+      void reset() {
+        _next_state = nullptr;
+        _timer.restart();
+      }
+
+      virtual void on_enter() { }
+      virtual bool on_button(char id) { return true; }
+      virtual void on_timeout() { }
+      virtual void on_update(ShortTimeSpan dt) { }
+      virtual void on_exit() { }
+
+    protected:
+      void request_transition(GameState * next_state) {
+        _next_state = next_state;
+      }
+
+    private:
+      char const * _name;
+      Timer _timer;
+      GameState * _next_state;
+    };
+
+
+    extern GameState * initial_state;
+    extern GameState * attract_state;
+    extern GameState * pause_before_play_state;
+    extern GameState * play_pattern_state;
+    extern GameState * await_response_state;
+    extern GameState * pause_before_game_over_state;
+    extern GameState * game_over_state;
+
+
+    size_t const PATTERN_LENGTH_MAX = 999;
+    char pattern[PATTERN_LENGTH_MAX];
+    size_t pattern_length;
+    size_t score;
+    size_t best_score;
+    aa::Timer state_timer(TimeSpan::infinity, false);
+    GameState * current_state;
+
+
+    class InitialGameState : public GameState {
+    public:
+      InitialGameState() : GameState("initial", TimeSpan::infinity) { }
+      virtual void on_enter() {
+        pattern_length = 0;
+        score = 0;
+        best_score = 0;
+        vis.score_change(0);
+        vis.best_score_change(0);
+        vis.attract_start();
+        request_transition(attract_state);
+      }
+    } initial_state_instance;
+
+
+    class AttractGameState : public GameState {
+    public:
+      enum AttractSubstate {
+        AT_DELAY_TOP,
+        AT_SCROLL_DOWN,
+        AT_DELAY_BOTTOM,
+        AT_SCROLL_UP,
+        AT_STATIC_IMAGE_0,
+        AT_STATIC_IMAGE_1,
+      };
+
+
+      AttractGameState()
+        : GameState("attract", ShortTimeSpan::from_millis(30000)) { }
+      virtual void on_enter() {
+        vis.attract_start();
+      }
+      virtual bool on_button(char id) {
+        pattern[0] = id;
+        pattern_length = 1;
+        request_transition(await_response_state);
+        // returning false will cause the button press to be processed again
+        // by the next state, basically we're simulating jumping into the game
+        // right after playing a sequence of 1 button that happens to be the
+        // button the user is about to press
+        return false;
+      }
+      virtual void on_exit() {
+        vis.game_start();
+      }
+    } attract_state_instance;
+
+
+    class PauseBeforePlayGameState : public GameState {
+    public:
+      PauseBeforePlayGameState()
+        : GameState("prepare pattern", ShortTimeSpan::from_millis(1000)) { }
+      virtual void on_enter() {
+        vis.play_pattern();
+      }
+      virtual void on_timeout() {
+        request_transition(play_pattern_state);
+      }
+    } pause_before_play_state_instance;
+
+
+    class PlayPatternGameState : public GameState {
+    public:
+      PlayPatternGameState()
+        : GameState("play pattern", ShortTimeSpan::from_millis(500)) { }
+      virtual void on_enter() {
+        Debug::assertf(AA_AUTO_ASSERT(pattern_length > 0));
+        vis.play_color(pattern[0]);
+        _pattern_pos = 1;
+      }
+      virtual void on_timeout() {
+        if(_pattern_pos < pattern_length) {
+          vis.play_color(pattern[_pattern_pos]);
+          ++_pattern_pos;
+        }
+        else {
+          request_transition(await_response_state);
+        }
+      }
+    private:
+      size_t _pattern_pos;
+    } play_pattern_state_instance;
+
+
+    class AwaitResponseGameState : public GameState {
+    public:
+      AwaitResponseGameState()
+        : GameState("awaiting response",
+          ShortTimeSpan::from_millis(20000)) { }
+      virtual void on_enter() {
+        vis.await_press();
+        Debug::assertf(AA_AUTO_ASSERT(pattern_length > 0));
+        _pattern_pos = 0;
+      }
+      virtual bool on_button(char id) {
+        Debug::assertf(AA_AUTO_ASSERT(_pattern_pos < pattern_length));
+        if(id == pattern[_pattern_pos]) {
+          vis.press_color(id, true);
+          ++_pattern_pos;
+          if(_pattern_pos >= pattern_length) {
+            score = pattern_length;
+            vis.score_change(score);
+            if(pattern_length >= PATTERN_LENGTH_MAX) {
+              request_transition(pause_before_game_over_state);
+            }
+            else {
+              pattern[pattern_length] = get_random_button();
+              ++pattern_length;
+              request_transition(pause_before_play_state);
+            }
+          }
+          // else, do nothing and wait for the next button press
+          get_timer()->restart();
+        }
+        else {
+          vis.press_color(id, false);
+          request_transition(pause_before_game_over_state);
+        }
+        return true;
+      }
+      virtual void on_timeout() {
+        request_transition(game_over_state);
+      }
+    private:
+      size_t _pattern_pos;
+    } await_response_state_instance;
+
+
+    class PauseBeforeGameOverGameState : public GameState {
+    public:
+      PauseBeforeGameOverGameState()
+        : GameState("pause before game over",
+          ShortTimeSpan::from_millis(500)) { }
+      virtual void on_timeout() {
+        request_transition(game_over_state);
+      }
+    } pause_before_game_over_state_instance;
+
+
+    class GameOverGameState : public GameState {
+    public:
+      GameOverGameState()
+        : GameState("game over", ShortTimeSpan::from_millis(4000)) { }
+      virtual void on_enter() {
+        if(score > best_score) {
+          best_score = score;
+          vis.best_score_change(best_score);
+        }
+        if(pattern_length >= PATTERN_LENGTH_MAX) {
+          vis.game_over_win();
+        }
+        else {
+          vis.game_over_lose();
+        }
+      }
+      virtual void on_timeout() { request_transition(attract_state); }
+    } game_over_state_instance;
+
+
+    GameState * initial_state = &initial_state_instance;
+    GameState * attract_state = &attract_state_instance;
+    GameState * pause_before_play_state = &pause_before_play_state_instance;
+    GameState * play_pattern_state = &play_pattern_state_instance;
+    GameState * await_response_state = &await_response_state_instance;
+    GameState * pause_before_game_over_state =
+      &pause_before_game_over_state_instance;
+    GameState * game_over_state = &game_over_state_instance;
   }
 
 
@@ -635,151 +833,69 @@ namespace aa {
     vis.add_vis(&blue_stalk_vis);
     vis.add_vis(&pink_stalk_vis);
     vis.add_vis(&scoreboard_vis);
+    current_state = initial_state;
+    current_state->reset();
+    current_state->on_enter();
   }
 
 
   void Game::update(ShortTimeSpan dt) {
-    state_timer.update(dt);
+    current_state->get_timer()->update(dt);
+    //Debug::tracef("Update: %ldus -> %lldus/%lldus, %d", dt.to_micros(),
+    //  current_state->get_timer()->get_time().to_micros(),
+    //  current_state->get_timer()->get_period().to_micros(),
+    //  current_state->get_timer()->peek_periods());
 
-    switch(state) {
-    case ST_RESET:
-      //Debug::tracef("Reset");
-      pattern_length = 0;
-      pattern_pos = 0;
-      vis.reset();
-      state = ST_LISTENING;
-      state_timer.cancel();
-      update(TimeSpan::zero);
-      break;
-    case ST_LISTENING:
-    {
-      char input = get_pressed_button();
-      if(input != 0) {
-        if(pattern_length == 0) {
-          pattern[0] = input;
-          pattern[1] = get_random_button();
-          pattern_length = 2;
-          pattern_pos = 0;
-          state = ST_PLAYING;
-          state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
-          vis.game_start();
-          vis.press_color(input, true);
-          vis.score_change(1);
-          vis.play_sequence_start();
-        }
-        else if(input == pattern[pattern_pos]) {
-          Debug::tracef("Correct input %c", input);
-          vis.press_color(input, true);
-          ++pattern_pos;
-          if(pattern_pos >= pattern_length) {
-            vis.score_change(pattern_length);
-            if(pattern_length == PATTERN_LENGTH_MAX) {
-              Debug::tracef("Win!!");
-              state = ST_GAME_OVER;
-              state_timer = aa::Timer(TimeSpan::from_millis(3000), false);
-              vis.game_over_win();
-            }
-            else {
-              pattern[pattern_length] = get_random_button();
-              ++pattern_length;
-              pattern_pos = 0;
-              state = ST_PLAYING;
-              state_timer = aa::Timer(TimeSpan::from_millis(1000), false);
-              vis.play_sequence_start();
-            }
-          }
-        }
-        else {
-          Debug::tracef("Wrong input %c, loss", input);
-          vis.press_color(input, false);
-          vis.game_over_lose();
-          state = ST_GAME_OVER;
-          state_timer = aa::Timer(TimeSpan::from_millis(3000), false);
+    uint32_t buttons = Input::all_pressed();
+    int32_t periods = current_state->get_timer()->read_periods();
+    bool done = false;
+    do {
+      if(current_state->get_next_state() != nullptr) {
+        //Debug::tracef("[%s]: -> [%s]",
+        //  current_state->get_name(),
+        //  current_state->get_next_state()->get_name());
+        current_state->on_exit();
+        current_state = current_state->get_next_state();
+        current_state->reset();
+        periods = 0;
+        current_state->on_enter();
+      }
+      else if(dt > TimeSpan::zero) {
+        current_state->on_update(dt);
+        dt = TimeSpan::zero;
+      }
+      else if((buttons & Input::B_RED) != 0) {
+        if(current_state->on_button('R')) {
+          //Debug::tracef("[%s]: button R", current_state->get_name());
+          buttons &= ~Input::B_RED;
         }
       }
-      break;
-    }
-    case ST_PLAYING:
-      if(state_timer.get_time_remaining() <= TimeSpan::zero) {
-        if(pattern_pos < pattern_length) {
-          Debug::tracef("Play pos %d = %c", pattern_pos, pattern[pattern_pos]);
-          vis.play_color(pattern[pattern_pos]);
-          ++pattern_pos;
-          state_timer = aa::Timer(TimeSpan::from_millis(500), false);
-        }
-        else {
-          Debug::tracef("Awaiting response");
-          state = ST_WAITING_RESPONSE;
-          state_timer = aa::Timer(TimeSpan::from_millis(15000), false);
-          vis.await_press();
+      else if((buttons & Input::B_GREEN) != 0) {
+        if(current_state->on_button('G')) {
+          buttons &= ~Input::B_GREEN;
+          //Debug::tracef("[%s]: button G", current_state->get_name());
         }
       }
-      break;
-    case ST_WAITING_RESPONSE:
-      if(is_button_pressed()) {
-        Debug::tracef("Button press, listening");
-        state = ST_LISTENING;
-        pattern_pos = 0;
-        state_timer.cancel();
-        vis.game_over_lose();
-        update(TimeSpan::zero);
+      else if((buttons & Input::B_BLUE) != 0) {
+        if(current_state->on_button('B')) {
+          buttons &= ~Input::B_BLUE;
+          //Debug::tracef("[%s]: button B", current_state->get_name());
+        }
       }
-      else if(state_timer.get_time_remaining() <= TimeSpan::zero) {
-        Debug::tracef("Timeout, game over");
-        state = ST_GAME_OVER;
-        state_timer = aa::Timer(TimeSpan::from_millis(3000), false);
-        vis.game_over_lose();
+      else if((buttons & Input::B_PINK) != 0) {
+        if(current_state->on_button('P')) {
+          buttons &= ~Input::B_PINK;
+          //Debug::tracef("[%s]: button P", current_state->get_name());
+        }
       }
-      break;
-    case ST_GAME_OVER:
-      if(state_timer.get_time_remaining() <= TimeSpan::zero) {
-        vis.game_stop();
-        state = ST_RESET;
+      else if(periods > 0) {
+        //Debug::tracef("[%s]: timeout", current_state->get_name());
+        current_state->on_timeout();
+        --periods;
       }
-      /*
-      else if(state_timer.get_time_remaining() <= ShortTimeSpan::from_millis(2000)) {
-        vis.game_stop();
-        state = ST_RESET;
+      else {
+        done = true;
       }
-      */
-      break;
-    default:
-      state_timer.cancel();
-      vis.game_stop();
-      state = ST_RESET;
-    }
-  }
-
-  bool Game::is_button_pressed() {
-    return Input::button_pressed(Input::B_RED) ||
-        Input::button_pressed(Input::B_GREEN) ||
-        Input::button_pressed(Input::B_BLUE) ||
-        Input::button_pressed(Input::B_PINK);
-  }
-
-  char Game::get_pressed_button() {
-    if(Input::button_pressed(Input::B_RED)) {
-      return 'R';
-    }
-    if(Input::button_pressed(Input::B_GREEN)) {
-      return 'G';
-    }
-    if(Input::button_pressed(Input::B_BLUE)) {
-      return 'B';
-    }
-    if(Input::button_pressed(Input::B_PINK)) {
-      return 'P';
-    }
-    return 0;
-  }
-
-  char Game::get_random_button() {
-    switch(rand() % 4) {
-    case 0: return 'R';
-    case 1: return 'G';
-    case 2: return 'B';
-    case 3: return 'P';
-    default: return 0;
-    }
+    } while(!done);
   }
 }

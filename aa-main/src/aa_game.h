@@ -12,12 +12,6 @@ namespace aa {
   public:
     static void init();
     static void update(ShortTimeSpan dt);
-
-  private:
-    static bool is_button_pressed();
-    static char get_pressed_button();
-    static char get_random_button();
-    static void trigger_bubble(char button);
   };
 }
 
