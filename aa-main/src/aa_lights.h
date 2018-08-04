@@ -67,6 +67,12 @@ namespace aa {
 
     class Animator {
     public:
+      enum EndBehavior : uint8_t {
+        EB_STOP,
+        EB_LOOP,
+        EB_PAUSE,
+      };
+
       Animator()
           : _end_behavior(), _state(AS_RESET), _anim_length(), _total_time() {
       }
@@ -84,12 +90,6 @@ namespace aa {
       void render(Texture2D * dest) const;
 
     protected:
-      enum EndBehavior : uint8_t {
-        EB_STOP,
-        EB_LOOP,
-        EB_PAUSE,
-      };
-
       enum AnimationState : uint8_t {
         AS_RESET,
         AS_PLAYING,

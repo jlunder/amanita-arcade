@@ -158,23 +158,24 @@ namespace aa {
     };
 
 
-    class GlowBackgroundAnimator : public Lights::Animator {
+    template<class F>
+    class FillSolidAnimator : public Lights::Animator {
     public:
-      void init(ShortTimeSpan period, Color const & color) {
-        Animator::init(period, EB_LOOP);
-        _color = color;
+      FillSolidAnimator(F const & color_fun) : _color_fun(color_fun) { }
+
+      void init(ShortTimeSpan period, EndBehavior end_behavior) {
+        Animator::init(period, end_behavior);
       }
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
           const {
-        float aa = 0.10f * cosf((float)M_PI * 2.0f * a) + 0.90f;
-        Color c = _color.cie_scale(aa);
+        Color c = _color_fun(a);
         dest->fill_solid(c);
       }
 
     private:
-      Color _color;
+      F _color_fun;
     };
 
 
@@ -289,10 +290,13 @@ namespace aa {
 
     class ScoreboardGameOverLoseAnimator : public Lights::Animator {
     public:
-      void init() { Animator::init(); }
+      void init() {
+        Animator::init();
+      }
 
-      void set_new_best_score(int32_t new_best_score)
-        { _new_best_score = new_best_score; }
+      void set_new_best_score(int32_t new_best_score) {
+        _new_best_score = new_best_score;
+      }
 
     protected:
       int32_t _new_best_score;
@@ -407,9 +411,12 @@ namespace aa {
     public:
       StalkVis(char id, size_t layer_start, ShortTimeSpan period,
           Color const & bg_color)
-          : _id(id), _layer_start(layer_start), _in_game_over(false) {
-        _active_color.init(period, bg_color);
-        _muted_color.init(period, bg_color.lerp(Color::black, 0.5f));
+          : _id(id), _layer_start(layer_start), _in_game_over(false),
+          _active_color(GlowBackgroundFadeFunction(bg_color)),
+          _muted_color(GlowBackgroundFadeFunction(
+            bg_color.lerp(Color::black, 0.5f))) {
+        _active_color.init(period, Lights::Animator::EB_LOOP);
+        _muted_color.init(period, Lights::Animator::EB_LOOP);
         _bubble_pool.init([=] (StalkBubbleAnimator * anim) {
           anim->init(ShortTimeSpan::from_millis(500), Color::white);
         });
@@ -466,12 +473,23 @@ namespace aa {
       }
 
     private:
+      struct GlowBackgroundFadeFunction {
+        Color _color;
+
+        GlowBackgroundFadeFunction(Color color) : _color(color) { }
+
+        Color operator ()(float a) const {
+          float aa = 0.10f * cosf((float)M_PI * 2.0f * (a + 0.5f)) + 0.90f;
+          return _color.cie_scale(aa);
+        }
+      };
+
       char _id;
       size_t _layer_start;
       bool _in_game_over;
 
-      GlowBackgroundAnimator _active_color;
-      GlowBackgroundAnimator _muted_color;
+      FillSolidAnimator<GlowBackgroundFadeFunction> _active_color;
+      FillSolidAnimator<GlowBackgroundFadeFunction> _muted_color;
       Lights::StaticAnimatorPool<StalkBubbleAnimator, 3> _bubble_pool;
       SolidBackgroundAnimator _game_over_win;
       SolidBackgroundAnimator _game_over_lose;
@@ -488,7 +506,27 @@ namespace aa {
             &bright_orange_5x5_grad_tex),
           _instructions_scroll(instructions_text,
             sizeof instructions_text / sizeof *instructions_text,
-            &orange_5x5_grad_tex) {
+            &orange_5x5_grad_tex),
+          _red_pulse(PulseFunction(Color::red)),
+          _green_pulse(PulseFunction(Color::green)),
+          _blue_pulse(PulseFunction(Color::blue)),
+          _pink_pulse(PulseFunction(Color::pink)) {
+        _splash.init();
+        _splash_scroll.init();
+        _instructions_title_scroll.init();
+        _instructions_scroll.init();
+        _neutral_bg.init(Color::black);
+        _red_pulse.init(ShortTimeSpan::from_millis(500),
+          Lights::Animator::EB_STOP);
+        _green_pulse.init(ShortTimeSpan::from_millis(500),
+          Lights::Animator::EB_STOP);
+        _blue_pulse.init(ShortTimeSpan::from_millis(500),
+          Lights::Animator::EB_STOP);
+        _pink_pulse.init(ShortTimeSpan::from_millis(500),
+          Lights::Animator::EB_STOP);
+        _score.init();
+        _game_over_win.init();
+        _game_over_lose.init();
       }
 
       virtual void attract_start() {
@@ -505,33 +543,46 @@ namespace aa {
       virtual void game_start() {
         _game_over_lose.set_new_best_score(0);
         _score.set_score(0);
-        Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+        Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
           &_score, ShortTimeSpan::from_millis(250));
+      }
+
+      virtual void play_pattern() {
+        Lights::start_animator(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
+          &_neutral_bg, ShortTimeSpan::from_millis(100));
+        Lights::transition_out(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+          ShortTimeSpan::from_millis(100));
       }
 
       virtual void play_color(char id) {
         switch(id) {
         case 'R':
           Lights::start_animator(
-            Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-            &_red_bg, ShortTimeSpan::from_millis(100));
+            Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+            &_red_pulse, ShortTimeSpan::from_millis(100));
           break;
         case 'G':
           Lights::start_animator(
-            Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-            &_green_bg, ShortTimeSpan::from_millis(100));
+            Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+            &_green_pulse, ShortTimeSpan::from_millis(100));
           break;
         case 'B':
           Lights::start_animator(
-            Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-            &_blue_bg, ShortTimeSpan::from_millis(100));
+            Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+            &_blue_pulse, ShortTimeSpan::from_millis(100));
           break;
         case 'P':
           Lights::start_animator(
-            Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-            &_pink_bg, ShortTimeSpan::from_millis(100));
+            Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+            &_pink_pulse, ShortTimeSpan::from_millis(100));
           break;
         }
+      }
+
+      virtual void await_press() {
+        play_pattern();
       }
 
       virtual void press_color(char id, bool correct) {
@@ -549,6 +600,9 @@ namespace aa {
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
           &_game_over_win, ShortTimeSpan::from_millis(100));
+        Lights::transition_out(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
+          ShortTimeSpan::from_millis(100));
       }
 
       virtual void game_over_lose() {
@@ -558,6 +612,9 @@ namespace aa {
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
           &_game_over_lose, ShortTimeSpan::from_millis(100));
+        Lights::transition_out(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
+          ShortTimeSpan::from_millis(100));
       }
 
       virtual void best_score_change(int32_t best_score) {
@@ -567,15 +624,38 @@ namespace aa {
       }
 
     private:
+      struct PulseFunction {
+        Color _color;
+
+        PulseFunction(Color color) : _color(color) { }
+
+        Color operator ()(float a) const {
+          float aa;
+          if(a < 0.10f) {
+            aa = (a - 0.00f) * (1.0f / 0.10f) * 0.4f + 0.6f;
+          }
+          else if(a < 0.30f) {
+            aa = (0.30f - a) * (1.0f / 0.20f) * 0.4f + 0.6f;
+          }
+          else if(a < 0.80f) {
+            aa = 0.6f;
+          }
+          else {
+            aa = (1.00f - a) * (1.0f / 0.20f) * 0.6f + 0.0f;
+          }
+          return _color.cie_scale(aa);
+        }
+      };
+
       ScoreboardSplashAnimator _splash;
       ScoreboardScrollingTextAnimator _splash_scroll;
       ScoreboardScrollingTextAnimator _instructions_title_scroll;
       ScoreboardScrollingTextAnimator _instructions_scroll;
       SolidBackgroundAnimator _neutral_bg;
-      GlowBackgroundAnimator _red_bg;
-      GlowBackgroundAnimator _green_bg;
-      GlowBackgroundAnimator _blue_bg;
-      GlowBackgroundAnimator _pink_bg;
+      FillSolidAnimator<PulseFunction> _red_pulse;
+      FillSolidAnimator<PulseFunction> _green_pulse;
+      FillSolidAnimator<PulseFunction> _blue_pulse;
+      FillSolidAnimator<PulseFunction> _pink_pulse;
       ScoreboardScoreAnimator _score;
       ScoreboardGameOverWinAnimator _game_over_win;
       ScoreboardGameOverLoseAnimator _game_over_lose;
@@ -681,7 +761,6 @@ namespace aa {
         AT_STATIC_IMAGE_1,
       };
 
-
       AttractGameState()
         : GameState("attract", ShortTimeSpan::from_millis(30000)) { }
       virtual void on_enter() {
@@ -707,9 +786,6 @@ namespace aa {
     public:
       PauseBeforePlayGameState()
         : GameState("prepare pattern", ShortTimeSpan::from_millis(1000)) { }
-      virtual void on_enter() {
-        vis.play_pattern();
-      }
       virtual void on_timeout() {
         request_transition(play_pattern_state);
       }
@@ -721,6 +797,7 @@ namespace aa {
       PlayPatternGameState()
         : GameState("play pattern", ShortTimeSpan::from_millis(500)) { }
       virtual void on_enter() {
+        vis.play_pattern();
         Debug::assertf(AA_AUTO_ASSERT(pattern_length > 0));
         vis.play_color(pattern[0]);
         _pattern_pos = 1;
