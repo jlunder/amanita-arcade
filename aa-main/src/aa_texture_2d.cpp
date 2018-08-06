@@ -5,7 +5,7 @@
 
 
 namespace aa {
-  void AA_OPTIMIZE Texture2D::fill_solid(Color const & c) {
+  void AA_OPTIMIZE Texture2D::fill_set(Color const & c) {
     size_t count = _width * _height;
     for(size_t i = 0; i < count; ++i) {
       _data[i] = c;
@@ -13,14 +13,14 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::lerp_solid(Color const & c, float a) {
+  void AA_OPTIMIZE Texture2D::fill_lerp(Color const & c, float a) {
     size_t count = _width * _height;
     for(size_t i = 0; i < count; ++i) {
       _data[i].lerp_this(c, a);
     }
   }
 
-  void AA_OPTIMIZE Texture2D::box_solid(int32_t x, int32_t y,
+  void AA_OPTIMIZE Texture2D::box_set(int32_t x, int32_t y,
       int32_t w, int32_t h, aa::Color const & c) {
     if((w < 0) || (h < 0)) {
       Debug::error("Texture2D::box_grad() with negative size not implemented");
@@ -41,18 +41,17 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::box_grad_c(int32_t x, int32_t y, int32_t w,
-      int32_t h, Color const & cx0y0, Color const & cx1y0, Color const & cx0y1,
-      Color const & cx1y1) {
+  void AA_OPTIMIZE Texture2D::box_set(int32_t x, int32_t y, int32_t w,
+      int32_t h, ClosedGradient const & grad) {
     if((w < 0) || (h < 0)) {
       Debug::error(
-        "Texture2D::box_grad_o() with negative size not implemented");
+        "Texture2D::box_set() with negative size not implemented");
       // swap colors, correct x/y,
       return;
     }
     if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
         (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
-      Debug::error("Texture2D::box_grad() with clipping not implemented");
+      Debug::error("Texture2D::box_set() with clipping not implemented");
       return;
     }
 
@@ -61,8 +60,8 @@ namespace aa {
     float dx = 1.0f / (w - 1);
     float ay = 0.0f;
     for(size_t yi = 0; yi < (size_t)h; ++yi) {
-      Color cx0 = cx0y0.lerp(cx0y1, ay);
-      Color cx1 = cx1y0.lerp(cx1y1, ay);
+      Color cx0 = grad.cx0y0.lerp(grad.cx0y1, ay);
+      Color cx1 = grad.cx1y0.lerp(grad.cx1y1, ay);
       float ax = 0.0f;
       for(size_t xi = 0; xi < (size_t)w; ++xi) {
         set((size_t)x + xi, (size_t)y + yi, cx0.lerp(cx1, ax));
@@ -73,18 +72,17 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::box_grad_o(int32_t x, int32_t y, int32_t w,
-      int32_t h, Color const & cx0y0, Color const & cx1y0, Color const & cx0y1,
-      Color const & cx1y1) {
+  void AA_OPTIMIZE Texture2D::box_set(int32_t x, int32_t y, int32_t w,
+      int32_t h, OpenGradient const & grad) {
     if((w < 0) || (h < 0)) {
       Debug::error(
-        "Texture2D::box_grad_c() with negative size not implemented");
+        "Texture2D::box_set() with negative size not implemented");
       // swap colors, correct x/y,
       return;
     }
     if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
         (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
-      Debug::error("Texture2D::box_grad() with clipping not implemented");
+      Debug::error("Texture2D::box_set() with clipping not implemented");
       return;
     }
 
@@ -93,8 +91,8 @@ namespace aa {
     float dx = 1.0f / w;
     float ay = 0.0f;
     for(size_t yi = 0; yi < (size_t)h; ++yi) {
-      Color cx0 = cx0y0.lerp(cx0y1, ay);
-      Color cx1 = cx1y0.lerp(cx1y1, ay);
+      Color cx0 = grad.cx0y0.lerp(grad.cx0y1, ay);
+      Color cx1 = grad.cx1y0.lerp(grad.cx1y1, ay);
       float ax = 0.0f;
       for(size_t xi = 0; xi < (size_t)w; ++xi) {
         set((size_t)x + xi, (size_t)y + yi, cx0.lerp(cx1, ax));
@@ -105,20 +103,20 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::box_mask(int32_t x, int32_t y,
+  void AA_OPTIMIZE Texture2D::box_set(int32_t x, int32_t y,
       int32_t w, int32_t h, Texture2D const * tex) {
     if((w < 0) || (h < 0)) {
-      Debug::error("Texture2D::box_mask() with negative size not implemented");
+      Debug::error("Texture2D::box_set() with negative size not implemented");
       // swap colors, correct x/y,
       return;
     }
     if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
         (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
-      Debug::error("Texture2D::box_grad() with clipping not implemented");
+      Debug::error("Texture2D::box_set() with clipping not implemented");
       return;
     }
     if(((size_t)w > tex->get_width()) || ((size_t)h > tex->get_height())) {
-      Debug::error("Texture2D::box_grad() with clamping not implemented");
+      Debug::error("Texture2D::box_set() with clamping not implemented");
       return;
     }
 
@@ -129,11 +127,33 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::copy(Texture2D const * src, size_t x_ofs,
+  void AA_OPTIMIZE Texture2D::box_lerp(int32_t x, int32_t y,
+      int32_t w, int32_t h, Color const & c, float a) {
+    if((w < 0) || (h < 0)) {
+      Debug::error("Texture2D::box_set() with negative size not implemented");
+      // swap colors, correct x/y,
+      return;
+    }
+    if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
+        (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
+      Debug::error("Texture2D::box_set() with clipping not implemented");
+      return;
+    }
+
+    for(size_t yi = 0; yi < (size_t)h; ++yi) {
+      Color * p = _data + _width * (y + yi) + x;
+      for(size_t xi = 0; xi < (size_t)w; ++xi) {
+        p[xi].lerp_this(c, a);
+      }
+    }
+  }
+
+
+  void AA_OPTIMIZE Texture2D::fill_set(Texture2D const * src, size_t x_ofs,
       size_t y_ofs) {
     if((_width + x_ofs > src->_width) || (_height + y_ofs > src->_height)) {
       // with clipping
-      Debug::error("Texture2D::copy() with clipping not implemented");
+      Debug::error("Texture2D::fill_set() with clipping not implemented");
       return;
     }
 
@@ -153,11 +173,11 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::mix(Texture2D const * src, size_t x_ofs,
+  void AA_OPTIMIZE Texture2D::fill_mix(Texture2D const * src, size_t x_ofs,
       size_t y_ofs) {
     if((_width + x_ofs > src->_width) || (_height + y_ofs > src->_height)) {
       // with clipping
-      Debug::error("Texture2D::mix() with clipping not implemented");
+      Debug::error("Texture2D::fill_mix() with clipping not implemented");
       return;
     }
 
@@ -179,8 +199,8 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::lerp(Texture2D const * src, float a,
-      size_t x_ofs, size_t y_ofs) {
+  void AA_OPTIMIZE Texture2D::fill_lerp(Texture2D const * src,
+      size_t x_ofs, size_t y_ofs, float a) {
     if((_width + x_ofs > src->_width) || (_height + y_ofs > src->_height)) {
       // with clipping
       Debug::error("Texture2D::lerp() with clipping not implemented");
@@ -205,7 +225,7 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::bubble_x(float px, float radius,
+  void AA_OPTIMIZE Texture2D::fill_bubble_x(float px, float radius,
       Color const & c) {
     float scale = 1.0f / radius;
     size_t i = 0;
@@ -221,7 +241,7 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::char_5x5_solid(int32_t px, int32_t py, char ch,
+  void AA_OPTIMIZE Texture2D::char_5x5_set(int32_t px, int32_t py, char ch,
       bool invert, Color const & c) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
@@ -232,7 +252,7 @@ namespace aa {
     }
     if((ch < 32) || (ch >= 128)) {
       if(invert) {
-        box_solid(px, py, 5, 5, c);
+        box_set(px, py, 5, 5, c);
       }
       return;
     }
@@ -249,16 +269,16 @@ namespace aa {
     }
   }
 
-  void AA_OPTIMIZE Texture2D::char_5x5_solid(int32_t px, int32_t py,
+  void AA_OPTIMIZE Texture2D::char_5x5_set(int32_t px, int32_t py,
       char const * str, Color const & c) {
     int32_t x = px;
     for(char const * p = str; *p; ++p) {
-      char_5x5_solid(x, py, *p, false, c);
+      box_set(x, py, *p, false, c);
       x += 5;
     }
   }
 
-  void AA_OPTIMIZE Texture2D::char_5x5_mask(int32_t px, int32_t py, char ch,
+  void AA_OPTIMIZE Texture2D::char_5x5_set(int32_t px, int32_t py, char ch,
       bool invert, Texture2D const * tex) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
@@ -273,7 +293,7 @@ namespace aa {
     }
     if((ch < 32) || (ch >= 128)) {
       if(invert) {
-        box_mask(px, py, 5, 5, tex);
+        box_set(px, py, 5, 5, tex);
       }
       return;
     }
@@ -292,17 +312,17 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::char_5x5_mask(int32_t px, int32_t py,
+  void AA_OPTIMIZE Texture2D::char_5x5_set(int32_t px, int32_t py,
       char const * str, Texture2D const * tex) {
     int32_t x = px;
     for(char const * p = str; *p; ++p) {
-      char_5x5_mask(x, py, *p, false, tex);
+      char_5x5_set(x, py, *p, false, tex);
       x += 5;
     }
   }
 
 
-  void AA_OPTIMIZE Texture2D::char_10x15_solid(int32_t px, int32_t py, char ch,
+  void AA_OPTIMIZE Texture2D::char_10x15_set(int32_t px, int32_t py, char ch,
       bool invert, Color const & c) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
@@ -313,7 +333,7 @@ namespace aa {
     }
     if(ch < '0' || ch > '9') {
       if(invert) {
-        box_solid(px, py, 10, 15, c);
+        box_set(px, py, 10, 15, c);
       }
       return;
     }
@@ -331,17 +351,17 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::char_10x15_solid(int32_t px, int32_t py,
+  void AA_OPTIMIZE Texture2D::char_10x15_set(int32_t px, int32_t py,
       char const * str, Color const & c) {
     int32_t x = px;
     for(char const * p = str; *p; ++p) {
-      char_10x15_solid(x, py, *p, false, c);
+      char_10x15_set(x, py, *p, false, c);
       x += 10;
     }
   }
 
 
-  void AA_OPTIMIZE Texture2D::char_10x15_mask(int32_t px, int32_t py, char ch,
+  void AA_OPTIMIZE Texture2D::char_10x15_set(int32_t px, int32_t py, char ch,
       bool invert, Texture2D const * tex) {
     if((px < 0) || ((size_t)px + 5 > _width) ||
         (py < 0) || ((size_t)py + 5 > _height)) {
@@ -357,7 +377,7 @@ namespace aa {
     }
     if(ch < '0' || ch > '9') {
       if(invert) {
-        box_mask(px, py, 10, 15, tex);
+        box_set(px, py, 10, 15, tex);
       }
       return;
     }
@@ -376,11 +396,11 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::char_10x15_mask(int32_t px, int32_t py,
+  void AA_OPTIMIZE Texture2D::char_10x15_set(int32_t px, int32_t py,
       char const * str, Texture2D const * tex) {
     int32_t x = px;
     for(char const * p = str; *p; ++p) {
-      char_10x15_mask(x, py, *p, false, tex);
+      char_10x15_set(x, py, *p, false, tex);
       x += 10;
     }
   }

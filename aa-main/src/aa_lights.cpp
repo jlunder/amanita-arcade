@@ -36,6 +36,16 @@ namespace aa {
   }
 
 
+  void Lights::Animator::restart() {
+    Debug::assertf(AA_AUTO_ASSERT((_state == AS_PLAYING) ||
+      (_state == AS_TRANSITIONING)));
+    if(_end_behavior != EB_LOOP) {
+      _total_time = ShortTimeSpan::from_micros(0);
+    }
+    _state = AS_PLAYING;
+  }
+
+
   void Lights::Animator::transition() {
     Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING));
     _state = AS_TRANSITIONING;
@@ -43,7 +53,8 @@ namespace aa {
 
 
   void Lights::Animator::stop() {
-    Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING || _state == AS_TRANSITIONING));
+    Debug::assertf(AA_AUTO_ASSERT((_state == AS_PLAYING) ||
+      (_state == AS_TRANSITIONING)));
     _state = AS_RESET;
   }
 
@@ -82,7 +93,7 @@ namespace aa {
 
 
   void Lights::init() {
-    uint32_t c = Color(0.0f, 0.0f, 0.0f).to_grb_color32();
+    uint32_t c = Color::black.to_grb_color32();
     for(size_t i = 0; i < 8; ++i) {
       for(size_t j = 0; j < 8; ++j) {
         // 0x00GGRRBB
@@ -94,18 +105,82 @@ namespace aa {
 
   void Lights::start_animator(size_t layer, Animator * animator,
       ShortTimeSpan transition) {
-    if(_layers[layer].animator == animator) {
+    Layer * layer_struct = &_layers[layer];
+
+    Debug::assertf(AA_AUTO_ASSERT(animator != nullptr));
+
+    if(layer_struct->trans_animator == animator) {
+      // Swapping back from previous transition: run the transition backwards
+      // from wherever it got to
+      ShortTimeSpan inferred_trans_time = ShortTimeSpan::from_micros(
+        ((int64_t)layer_struct->trans_time.to_micros() *
+          transition.to_micros())
+        / layer_struct->trans_length.to_micros());
+      if(inferred_trans_time < transition) {
+        layer_struct->trans_time = transition - inferred_trans_time;
+      }
+      else {
+        layer_struct->trans_time = TimeSpan::zero;
+      }
+      layer_struct->trans_length = transition;
+
+      // Swap animator with trans_animator
+      layer_struct->trans_animator = layer_struct->animator;
+      if(layer_struct->trans_animator != nullptr) {
+        layer_struct->trans_animator->transition();
+      }
+      // restart() instead of play()!
+      layer_struct->animator = animator;
+      layer_struct->animator->restart();
       return;
     }
-    if(_layers[layer].trans_animator == animator) {
-      // transition_out would do this anyway, but only if transition is nonzero
-      animator->stop();
-      _layers[layer].trans_animator = nullptr;
+    if(layer_struct->animator == nullptr) {
+      // No current animator: just start the one given immediately
+      layer_struct->animator = animator;
+      layer_struct->animator->play();
+      return;
+    }
+    if(layer_struct->animator == animator) {
+      // Restarting same animator: don't disturb any in-progress transition
+      layer_struct->animator->restart();
+      return;
+    }
+    if(transition <= TimeSpan::zero) {
+      // No transition: just kill things and replace
+      if(layer_struct->animator != nullptr) {
+        layer_struct->animator->stop();
+      }
+      layer_struct->animator = animator;
+      layer_struct->animator->play();
+      return;
     }
 
-    transition_out(layer, transition);
+    // And finally, the regular case: there is an animator already running,
+    // and we must transition from it to the new animator
 
-    Debug::assertf(AA_AUTO_ASSERT(_layers[layer].animator == nullptr));
+    // Is there a transition request?
+    if(transition > TimeSpan::zero) {
+      // Yes: if anything was still transitioning, get rid of it
+      if(layer_struct->trans_animator != nullptr) {
+        layer_struct->trans_animator->stop();
+      }
+
+      // Next, move the current animator into transitioning
+      layer_struct->trans_animator = layer_struct->animator;
+      layer_struct->animator = nullptr;
+      Debug::assertf(AA_AUTO_ASSERT(layer_struct->trans_animator != nullptr));
+      layer_struct->trans_animator->transition();
+      layer_struct->trans_time = TimeSpan::zero;
+      layer_struct->trans_length = transition;
+    }
+    else {
+      // No: just stop the current animator abruptly; don't disturb any
+      // in-progress transition
+      Debug::assertf(AA_AUTO_ASSERT(layer_struct->animator != nullptr));
+      _layers[layer].animator->stop();
+      _layers[layer].animator = nullptr;
+    }
+
     // Start the new animator
     _layers[layer].animator = animator;
     _layers[layer].animator->play();
@@ -126,26 +201,32 @@ namespace aa {
     // first place if you know what you're getting into and the timing is
     // controlled well enough to get consistent results.
 
-    // Is there an animator playing?
-    if(_layers[layer].animator == nullptr) {
+    Layer * layer_struct = &_layers[layer];
+
+    if(layer_struct->animator == nullptr) {
+      // No animator playing in the first place, nothing to do
       return;
     }
 
-    // Is there a transition?
+    // Is there a transition request?
     if(transition > TimeSpan::zero) {
       // Yes: if anything was still transitioning, get rid of it
-      if(_layers[layer].trans_animator != nullptr) {
-        _layers[layer].trans_animator->stop();
-        _layers[layer].trans_animator = nullptr;
+      if(layer_struct->trans_animator != nullptr) {
+        layer_struct->trans_animator->stop();
       }
 
       // Next, move the current animator into transitioning
-      _layers[layer].trans_animator = _layers[layer].animator;
-      _layers[layer].animator = nullptr;
-      _layers[layer].trans_animator->transition();
+      layer_struct->trans_animator = layer_struct->animator;
+      layer_struct->animator = nullptr;
+      Debug::assertf(AA_AUTO_ASSERT(layer_struct->trans_animator != nullptr));
+      layer_struct->trans_animator->transition();
+      layer_struct->trans_time = TimeSpan::zero;
+      layer_struct->trans_length = transition;
     }
     else {
-      // No: stop the current animator
+      // No: just stop the current animator abruptly; don't disturb any
+      // in-progress transition
+      Debug::assertf(AA_AUTO_ASSERT(layer_struct->animator != nullptr));
       _layers[layer].animator->stop();
       _layers[layer].animator = nullptr;
     }
@@ -179,7 +260,7 @@ namespace aa {
 
     update_composite_layers_to_composite_tex(LAYER_SB_START, LAYER_SB_COUNT);
     // LEDs can't handle more than 25% brightness, oy
-    _composite_tex.lerp_solid(Color::black, 0.875f);
+    _composite_tex.fill_lerp(Color::black, 0.875f);
     update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, 4,
       &_composite_tex);
   }
@@ -213,14 +294,14 @@ namespace aa {
       layer_start);
     _composite_tex.init(_layers[layer_start].width,
       _layers[layer_start].height, _composite_tex_data);
-    _composite_tex.fill_solid(Color::white);
+    _composite_tex.fill_set(Color::white);
 
     for(size_t i = layer_start; i < layer_start + layer_count; ++i) {
       bool do_transition = (_layers[i].trans_time < _layers[i].trans_length);
       if(do_transition) {
         _transition_tex.init(_composite_tex.get_width(),
           _composite_tex.get_height(), _transition_tex_data);
-        _transition_tex.copy(&_composite_tex);
+        _transition_tex.fill_set(&_composite_tex);
       }
       if(_layers[i].animator != nullptr) {
         _layers[i].animator->render(&_composite_tex);
@@ -230,7 +311,7 @@ namespace aa {
           _layers[i].trans_animator->render(&_transition_tex);
         }
         // Otherwise, _transition_tex just gets whatever was in _composite_tex
-        _composite_tex.lerp(&_transition_tex,
+        _composite_tex.fill_lerp(&_transition_tex,
           1.0f - static_cast<float>(_layers[i].trans_time.to_micros()) /
             static_cast<float>(_layers[i].trans_length.to_micros()));
       }

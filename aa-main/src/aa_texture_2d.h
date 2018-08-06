@@ -10,6 +10,19 @@
 namespace aa {
   class Texture2D {
   public:
+    struct OpenGradient {
+      Color cx0y0;
+      Color cx1y0;
+      Color cx0y1;
+      Color cx1y1;
+    };
+    struct ClosedGradient {
+      Color cx0y0;
+      Color cx1y0;
+      Color cx0y1;
+      Color cx1y1;
+    };
+    
     Texture2D() : _width(), _height(), _data() { }
 
     void init(size_t width, size_t height, Color * data) {
@@ -38,41 +51,46 @@ namespace aa {
     //Color samplef_wn(float x, float y) const;
     //Color samplef_wl(size_t x, size_t y) const;
 
-    void fill_solid(Color const & c);
-    void lerp_solid(Color const & c, float a);
-    //void hline_solid(int32_t x, int32_t y, int32_t w, Color const & c);
-    //void vline_solid(int32_t x, int32_t y, int32_t h, Color const & c);
+    //void hline_set(int32_t x, int32_t y, int32_t w, Color const & c);
+    //void vline_set(int32_t x, int32_t y, int32_t h, Color const & c);
     //void hline_grad(int32_t x, int32_t y, int32_t w, Color const & ca,
     //  Color const & cb);
     //void vline_grad(int32_t x, int32_t y, int32_t h, Color const & ca,
     //  Color const & cb);
-    void box_solid(int32_t x, int32_t y, int32_t w, int32_t h, Color const & c);
+    void box_set(int32_t x, int32_t y, int32_t w, int32_t h,
+      Color const & c);
     // closed gradient -- bottom right pixel is colored with exactly cx1y1
-    void box_grad_c(int32_t x, int32_t y, int32_t w, int32_t h, Color const & cx0y0,
-      Color const & cx1y0, Color const & cx0y1, Color const & cx1y1);
+    void box_set(int32_t x, int32_t y, int32_t w, int32_t h,
+      ClosedGradient const & grad);
     // open gradient -- bottom right pixel is colored second to cx1y1
-    void box_grad_o(int32_t x, int32_t y, int32_t w, int32_t h, Color const & cx0y0,
-      Color const & cx1y0, Color const & cx0y1, Color const & cx1y1);
-    void box_mask(int32_t x, int32_t y, int32_t w, int32_t h,
+    void box_set(int32_t x, int32_t y, int32_t w, int32_t h,
+      OpenGradient const & grad);
+    void box_set(int32_t x, int32_t y, int32_t w, int32_t h,
       Texture2D const * tex);
-    void copy(Texture2D const * src) { copy(src, 0, 0); }
-    void copy(Texture2D const * src, size_t x_ofs, size_t y_ofs);
-    void mix(Texture2D const * src) { mix(src, 0, 0); }
-    void mix(Texture2D const * src, size_t x_ofs, size_t y_ofs);
-    void lerp(Texture2D const * src, float a) { lerp(src, a, 0, 0); }
-    void lerp(Texture2D const * src, float a, size_t x_ofs, size_t y_ofs);
-    void bubble_x(float x, float r, Color const & c);
-    void char_5x5_solid(int32_t x, int32_t y, char ch, bool invert, Color const & c);
-    void char_5x5_solid(int32_t x, int32_t y, char const * str, Color const & c);
-    void char_5x5_mask(int32_t x, int32_t y, char ch, bool invert,
+    void box_lerp(int32_t x, int32_t y, int32_t w, int32_t h,
+      Color const & c, float a);
+    void fill_set(Color const & c);
+    void fill_set(Texture2D const * src) { fill_set(src, 0, 0); }
+    void fill_set(Texture2D const * src, size_t x_ofs, size_t y_ofs);
+    void fill_mix(Texture2D const * src) { fill_mix(src, 0, 0); }
+    void fill_mix(Texture2D const * src, size_t x_ofs, size_t y_ofs);
+    void fill_lerp(Color const & c, float a);
+    void fill_lerp(Texture2D const * src, float a) {
+      fill_lerp(src, 0, 0, a);
+    }
+    void fill_lerp(Texture2D const * src, size_t x_ofs, size_t y_ofs, float a);
+    void fill_bubble_x(float x, float r, Color const & c);
+    void char_5x5_set(int32_t x, int32_t y, char ch, bool invert, Color const & c);
+    void char_5x5_set(int32_t x, int32_t y, char const * str, Color const & c);
+    void char_5x5_set(int32_t x, int32_t y, char ch, bool invert,
       Texture2D const * tex);
-    void char_5x5_mask(int32_t x, int32_t y, char const * str,
+    void char_5x5_set(int32_t x, int32_t y, char const * str,
       Texture2D const * tex);
-    void char_10x15_solid(int32_t x, int32_t y, char ch, bool invert, Color const & c);
-    void char_10x15_solid(int32_t x, int32_t y, char const * str, Color const & c);
-    void char_10x15_mask(int32_t x, int32_t y, char ch, bool invert,
+    void char_10x15_set(int32_t x, int32_t y, char ch, bool invert, Color const & c);
+    void char_10x15_set(int32_t x, int32_t y, char const * str, Color const & c);
+    void char_10x15_set(int32_t x, int32_t y, char ch, bool invert,
       Texture2D const * tex);
-    void char_10x15_mask(int32_t x, int32_t y, char const * str,
+    void char_10x15_set(int32_t x, int32_t y, char const * str,
       Texture2D const * tex);
 
     void write_grb_color32(uint32_t * dest, size_t dest_w, size_t dest_h,

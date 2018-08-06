@@ -83,6 +83,7 @@ namespace aa {
       bool is_transitioning() const { return _state == AS_TRANSITIONING; }
 
       void play();
+      void restart();
       void transition();
       void stop();
 

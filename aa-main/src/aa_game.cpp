@@ -67,33 +67,40 @@ namespace aa {
         return;
       }
 
-      Color orange_tl(1.0f, 0.5f, 0.0f);
-      Color orange_br(0.5f, 0.0f, 0.0f);
-      Color bright_orange_tl(1.0f, 0.75f, 0.25f);
-      Color bright_orange_br(0.5f, 0.25f, 0.12f);
-      Color aqua_tl(0.0f, 0.5f, 1.0f);
-      Color aqua_br(0.0f, 0.0f, 0.5f);
+      static const Texture2D::ClosedGradient orange_grad = {
+        .cx0y0 = { 1.00f, 0.50f, 0.00f, 1.0f },
+        .cx1y0 = { 0.75f, 0.25f, 0.00f, 1.0f },
+        .cx0y1 = { 0.75f, 0.25f, 0.00f, 1.0f },
+        .cx1y1 = { 0.50f, 0.00f, 0.00f, 1.0f },
+      };
+      static const Texture2D::ClosedGradient bright_orange_grad = {
+        .cx0y0 = { 1.00f, 0.75f, 0.25f, 1.0f },
+        .cx1y0 = { 0.75f, 0.50f, 0.18f, 1.0f },
+        .cx0y1 = { 0.75f, 0.50f, 0.18f, 1.0f },
+        .cx1y1 = { 0.50f, 0.25f, 0.12f, 1.0f },
+      };
+      static const Texture2D::ClosedGradient aqua_grad = {
+        .cx0y0 = { 0.00f, 0.50f, 1.00f, 1.0f },
+        .cx1y0 = { 0.00f, 0.25f, 0.75f, 1.0f },
+        .cx0y1 = { 0.00f, 0.25f, 0.75f, 1.0f },
+        .cx1y1 = { 0.00f, 0.00f, 0.50f, 1.0f },
+      };
 
-      orange_5x5_grad_tex.box_grad_c(0, 0, 5, 5, orange_tl,
-        orange_tl.lerp(orange_br, 0.5f), orange_tl.lerp(orange_br, 0.5f),
-        orange_br);
-      bright_orange_5x5_grad_tex.box_grad_c(0, 0, 5, 5, bright_orange_tl,
-        bright_orange_tl.lerp(bright_orange_br, 0.5f),
-        bright_orange_tl.lerp(bright_orange_br, 0.5f), bright_orange_br);
-      aqua_5x5_grad_tex.box_grad_c(0, 0, 5, 5, aqua_tl,
-        aqua_tl.lerp(aqua_br, 0.5f), aqua_tl.lerp(aqua_br, 0.5f), aqua_br);
+      orange_5x5_grad_tex.box_set(0, 0, 5, 5, orange_grad);
+      bright_orange_5x5_grad_tex.box_set(0, 0, 5, 5, bright_orange_grad);
+      aqua_5x5_grad_tex.box_set(0, 0, 5, 5, aqua_grad);
 
       for(size_t y = 0; y < SCOREBOARD_WIDTH; ++y) {
         for(size_t x = 0; x < SCOREBOARD_WIDTH; ++x) {
           switch(logo_image[y * SCOREBOARD_WIDTH + x]) {
-            case 'W': logo_tex.set(x, y, Color(1.0f, 1.0f, 1.0f)); break;
-            case 'w': logo_tex.set(x, y, Color(0.5f, 0.5f, 0.5f)); break;
-            case ',': logo_tex.set(x, y, Color(0.2f, 0.2f, 0.2f)); break;
-            case '.': logo_tex.set(x, y, Color(0.1f, 0.1f, 0.1f)); break;
-            case 'R': logo_tex.set(x, y, Color(1.0f, 0.0f, 0.0f)); break;
-            case 'r': logo_tex.set(x, y, Color(0.5f, 0.0f, 0.0f)); break;
-            case ' ': logo_tex.set(x, y, Color(0.0f, 0.0f, 0.0f, 0.0f)); break;
-            default:  logo_tex.set(x, y, Color(1.0f, 0.0f, 1.0f)); break;
+            case 'W': logo_tex.set(x, y, Color::make(1.0f, 1.0f, 1.0f)); break;
+            case 'w': logo_tex.set(x, y, Color::make(0.5f, 0.5f, 0.5f)); break;
+            case ',': logo_tex.set(x, y, Color::make(0.2f, 0.2f, 0.2f)); break;
+            case '.': logo_tex.set(x, y, Color::make(0.1f, 0.1f, 0.1f)); break;
+            case 'R': logo_tex.set(x, y, Color::make(1.0f, 0.0f, 0.0f)); break;
+            case 'r': logo_tex.set(x, y, Color::make(0.5f, 0.0f, 0.0f)); break;
+            case ' ': logo_tex.set(x, y, Color::make(0.0f, 0.0f, 0.0f, 0.0f)); break;
+            default:  logo_tex.set(x, y, Color::make(1.0f, 0.0f, 1.0f)); break;
           }
         }
       }
@@ -131,12 +138,12 @@ namespace aa {
         end_line = line_count;
       }
 
-      temp.fill_solid(Color::transparent);
+      temp.fill_set(Color::transparent);
       for(size_t line = begin_line; line < end_line; ++line) {
-        temp.char_5x5_mask(scoreboard_center(text[line], 5),
+        temp.char_5x5_set(scoreboard_center(text[line], 5),
           (line - begin_line) * 5, text[line], tex);
       }
-      dest->mix(&temp, 0, y_ofs);
+      dest->fill_mix(&temp, 0, y_ofs);
     }
 
 
@@ -150,7 +157,7 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
           const {
-        dest->fill_solid(_color);
+        dest->fill_set(_color);
       }
 
     private:
@@ -171,7 +178,7 @@ namespace aa {
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
           const {
         Color c = _color_fun(a);
-        dest->fill_solid(c);
+        dest->fill_set(c);
       }
 
     private:
@@ -189,7 +196,7 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
           const {
-        dest->bubble_x(a * 45.0f, 10.0f, _color);
+        dest->fill_bubble_x(a * 45.0f, 10.0f, _color);
       }
 
     private:
@@ -207,12 +214,11 @@ namespace aa {
       int32_t _best_score;
 
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        dest->copy(&logo_tex);
-        dest->char_5x5_mask(5, 0, "BEST", &orange_5x5_grad_tex);
+        dest->fill_set(&logo_tex);
+        dest->box_lerp(0, 22, 30, 7, Color::black, 0.5f);
         char buf[7];
-        snprintf(buf, sizeof buf, "%d", (int)_best_score);
-        dest->char_5x5_mask((SCOREBOARD_WIDTH - strlen(buf) * 5) / 2, 23,
-          buf, &orange_5x5_grad_tex);
+        snprintf(buf, sizeof buf, "HI %3d", (int)_best_score);
+        dest->char_5x5_set(0, 23, buf, &orange_5x5_grad_tex);
       }
     };
 
@@ -236,7 +242,7 @@ namespace aa {
       Texture2D const * _tex;
 
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        dest->fill_solid(Color(0.25f, 0.0f, 0.0f));
+        dest->fill_set(Color::make(0.25f, 0.0f, 0.0f));
         scroll_scoreboard_text(dest, SCOREBOARD_HEIGHT - a * _pixel_height,
           _text, _line_count, _tex);
       }
@@ -261,11 +267,11 @@ namespace aa {
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         char buf[7];
         snprintf(buf, sizeof buf, "%d", (int)_score);
-        dest->char_10x15_solid(scoreboard_center(buf, 10), 2, buf,
+        dest->char_10x15_set(scoreboard_center(buf, 10), 2, buf,
           Color::white);
+        dest->box_lerp(0, 22, 30, 7, Color::black, 0.5f);
         snprintf(buf, sizeof buf, "%d", (int)_best_score);
-        dest->char_5x5_mask(5, 18, "BEST", &orange_5x5_grad_tex);
-        dest->char_5x5_mask(scoreboard_center(buf, 5), 23, buf,
+        dest->char_5x5_set(scoreboard_center(buf, 5), 23, buf,
           &orange_5x5_grad_tex);
       }
     };
@@ -279,11 +285,11 @@ namespace aa {
 
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        dest->fill_solid(Color(0.2f, 0.2f, 0.0f));
-        dest->char_5x5_mask( 7, 5, "YOU", &orange_5x5_grad_tex);
-        dest->char_5x5_mask( 7, 10, "ARE", &orange_5x5_grad_tex);
-        dest->char_5x5_mask( 5, 15, "AMA-", &bright_orange_5x5_grad_tex);
-        dest->char_5x5_mask( 2, 20, "ZING!", &bright_orange_5x5_grad_tex);
+        dest->fill_set(Color::make(0.2f, 0.2f, 0.0f));
+        dest->char_5x5_set( 7, 5, "YOU", &orange_5x5_grad_tex);
+        dest->char_5x5_set( 7, 10, "ARE", &orange_5x5_grad_tex);
+        dest->char_5x5_set( 5, 15, "AMA-", &bright_orange_5x5_grad_tex);
+        dest->char_5x5_set( 2, 20, "ZING!", &bright_orange_5x5_grad_tex);
       }
     };
 
@@ -302,19 +308,19 @@ namespace aa {
       int32_t _new_best_score;
 
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        dest->fill_solid(Color::black);
+        dest->fill_set(Color::black);
         if(_new_best_score > 0) {
-          dest->char_5x5_mask( 2, 5, "WRONG", &orange_5x5_grad_tex);
-          dest->char_5x5_mask( 7, 10, "NEW", &orange_5x5_grad_tex);
-          dest->char_5x5_mask( 2, 15, "BEST!", &orange_5x5_grad_tex);
+          dest->char_5x5_set( 2, 5, "WRONG", &orange_5x5_grad_tex);
+          dest->char_5x5_set( 7, 10, "NEW", &orange_5x5_grad_tex);
+          dest->char_5x5_set( 2, 15, "BEST!", &orange_5x5_grad_tex);
 
           char buf[7];
           snprintf(buf, sizeof buf, "%d", (int)_new_best_score);
-          dest->char_5x5_mask((SCOREBOARD_WIDTH - strlen(buf) * 5) / 2, 20,
+          dest->char_5x5_set((SCOREBOARD_WIDTH - strlen(buf) * 5) / 2, 20,
             buf, &orange_5x5_grad_tex);
         }
         else {
-          dest->char_5x5_mask( 2, 10, "WRONG", &orange_5x5_grad_tex);
+          dest->char_5x5_set( 2, 10, "WRONG", &orange_5x5_grad_tex);
         }
       }
     };
@@ -534,7 +540,7 @@ namespace aa {
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
           &_neutral_bg, ShortTimeSpan::from_millis(100));
         Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-          &_splash);
+          &_splash, ShortTimeSpan::from_millis(100));
         Lights::transition_out(
           Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
           ShortTimeSpan::from_millis(100));
