@@ -24,12 +24,12 @@ namespace aa {
       "NITA",
       "ARCADE",
     };
-    char const instructions_title_text[3][SCOREBOARD_WIDTH / 5 + 1] = {
+    char const instructions_short_text[3][SCOREBOARD_WIDTH / 5 + 1] = {
       "REPEAT",
       "AFTER",
       "ME!",
     };
-    char const instructions_text[29][SCOREBOARD_WIDTH / 5 + 1] = {
+    char const instructions_long_text[29][SCOREBOARD_WIDTH / 5 + 1] = {
       "I WILL",
       "SHOW",
       "YOU A",
@@ -108,7 +108,9 @@ namespace aa {
 
 
     int32_t scoreboard_center(char const * str, int32_t char_w) {
-      return (SCOREBOARD_WIDTH - strlen(str) * char_w) / 2;
+      // Round up so the text tends to round rightward, because the font is
+      // weighted leftward
+      return (SCOREBOARD_WIDTH - strlen(str) * char_w + 1) / 2;
     }
 
 
@@ -280,6 +282,31 @@ namespace aa {
     };
 
 
+    class ScoreboardStaticTextAnimator : public Lights::Animator {
+    public:
+      ScoreboardStaticTextAnimator(char const (* text)[7],
+          size_t line_count, Texture2D const * tex)
+          : _text(text), _line_count(line_count), _tex(tex) { }
+
+      void init() {
+        _pixel_height = _line_count * 7 + SCOREBOARD_HEIGHT * 2;
+        Animator::init(TimeSpan::zero, EB_PAUSE);
+      }
+
+    protected:
+      char const (* _text)[7];
+      size_t _pixel_height;
+      size_t _line_count;
+      Texture2D const * _tex;
+
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
+        scroll_scoreboard_text(dest,
+          (SCOREBOARD_HEIGHT - _pixel_height + 1) / 2,
+          _text, _line_count, _tex);
+      }
+    };
+
+
     class ScoreboardScoreAnimator : public Lights::Animator {
     public:
       void init() {
@@ -359,6 +386,8 @@ namespace aa {
 
     class Vis {
     public:
+      static ShortTimeSpan const SHORT_TRANSITION;
+
       virtual ~Vis() { }
 
       virtual void attract_start() { }
@@ -374,6 +403,8 @@ namespace aa {
       virtual void best_score_change(int32_t best_score) { }
     };
 
+    ShortTimeSpan const Vis::SHORT_TRANSITION =
+      ShortTimeSpan::from_millis(100);
 
     class MultiVis : public Vis {
     public:
@@ -464,14 +495,14 @@ namespace aa {
         Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
           &_active_color, ShortTimeSpan::from_millis(500));
         Lights::transition_out(_layer_start + Lights::LAYER_STALK_BUBBLE,
-          ShortTimeSpan::from_millis(100));
+          SHORT_TRANSITION);
         Lights::transition_out(_layer_start + Lights::LAYER_STALK_OVERLAY,
           ShortTimeSpan::from_millis(2000));
       }
 
       virtual void play_pattern() {
         Lights::start_animator(_layer_start + Lights::LAYER_STALK_BUBBLE,
-            &_mute, ShortTimeSpan::from_millis(100));
+            &_mute, SHORT_TRANSITION);
       }
 
       virtual void play_color(char id) {
@@ -481,13 +512,13 @@ namespace aa {
         }
         else {
           Lights::start_animator(_layer_start + Lights::LAYER_STALK_BUBBLE,
-            &_mute, ShortTimeSpan::from_millis(100));
+            &_mute, SHORT_TRANSITION);
         }
       }
 
       virtual void await_press() {
         Lights::transition_out(_layer_start + Lights::LAYER_STALK_BUBBLE,
-          ShortTimeSpan::from_millis(100));
+          SHORT_TRANSITION);
       }
 
       virtual void press_color(char id, bool correct) {
@@ -550,20 +581,20 @@ namespace aa {
           : _state(AS_NONE), _pattern_count(0),
           _splash_title(splash_text,
             sizeof splash_text / sizeof *splash_text, &aqua_5x5_grad_tex),
-          _instructions_title_scroll(instructions_title_text,
-            sizeof instructions_title_text / sizeof *instructions_title_text,
-            &bright_orange_5x5_grad_tex),
-          _instructions_scroll(instructions_text,
-            sizeof instructions_text / sizeof *instructions_text,
+          _instructions_long_scroll(instructions_long_text,
+            sizeof instructions_long_text / sizeof *instructions_long_text,
             &orange_5x5_grad_tex),
+          _instructions_short(instructions_short_text,
+            sizeof instructions_short_text / sizeof *instructions_short_text,
+            &bright_orange_5x5_grad_tex),
           _red_pulse(PulseFunction(Color::red)),
           _green_pulse(PulseFunction(Color::green)),
           _blue_pulse(PulseFunction(Color::blue)),
           _pink_pulse(PulseFunction(Color::pink)) {
         _splash.init(ShortTimeSpan::from_millis(10000));
         _splash_title.init(ShortTimeSpan::from_millis(3000));
-        _instructions_title_scroll.init(ShortTimeSpan::from_millis(3000));
-        _instructions_scroll.init(ShortTimeSpan::from_millis(3000));
+        _instructions_long_scroll.init(ShortTimeSpan::from_millis(3000));
+        _instructions_short.init();
         _neutral_bg.init(Color::black);
         _red_pulse.init(ShortTimeSpan::from_millis(500),
           Lights::Animator::EB_STOP);
@@ -583,12 +614,12 @@ namespace aa {
 
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-          &_neutral_bg, ShortTimeSpan::from_millis(100));
+          &_neutral_bg, SHORT_TRANSITION);
         Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-          &_splash, ShortTimeSpan::from_millis(100));
+          &_splash, SHORT_TRANSITION);
         Lights::transition_out(
           Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-          ShortTimeSpan::from_millis(100));
+          SHORT_TRANSITION);
       }
 
       virtual void update(ShortTimeSpan dt) {
@@ -602,35 +633,27 @@ namespace aa {
             Lights::start_animator(
               Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
               &_splash_title,
-              ShortTimeSpan::from_millis(100));
+              SHORT_TRANSITION);
           }
           break;
         case AS_SPLASH_TITLE:
           if(_splash_title.is_at_end()) {
-            _state = AS_INSTRUCTIONS_TITLE;
-            Lights::start_animator(
-              Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-              &_instructions_title_scroll,
-              ShortTimeSpan::from_millis(100));
-            Lights::transition_out(
-              Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-              ShortTimeSpan::from_millis(100));
-          }
-          break;
-        case AS_INSTRUCTIONS_TITLE:
-          if(_instructions_title_scroll.is_at_end()) {
             _state = AS_INSTRUCTIONS;
             Lights::start_animator(
               Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-              &_instructions_scroll);
+              &_instructions_long_scroll,
+              SHORT_TRANSITION);
+            Lights::transition_out(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
+              SHORT_TRANSITION);
           }
           break;
         case AS_INSTRUCTIONS:
-          if(_instructions_scroll.is_at_end()) {
+          if(_instructions_long_scroll.is_at_end()) {
             _state = AS_SPLASH;
             Lights::start_animator(
               Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-              &_splash, ShortTimeSpan::from_millis(100));
+              &_splash, SHORT_TRANSITION);
           }
           break;
         default:
@@ -643,11 +666,14 @@ namespace aa {
 
         _game_over_lose.set_new_best_score(0);
         _score.set_score(0);
-        Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-          &_score, ShortTimeSpan::from_millis(100));
+        Lights::start_animator(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &_neutral_bg,
+          SHORT_TRANSITION);
+        Lights::start_animator(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN, &_instructions_short,
+          SHORT_TRANSITION);
         Lights::transition_out(
-          Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-          ShortTimeSpan::from_millis(100));
+          Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY, SHORT_TRANSITION);
       }
 
       virtual void play_pattern() {
@@ -655,11 +681,14 @@ namespace aa {
         _score.set_score(_pattern_count);
 
         Lights::start_animator(
-          Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-          &_neutral_bg, ShortTimeSpan::from_millis(100));
+          Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &_neutral_bg,
+          SHORT_TRANSITION);
         Lights::transition_out(
           Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-          ShortTimeSpan::from_millis(100));
+          SHORT_TRANSITION);
+        Lights::start_animator(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY, &_score,
+          SHORT_TRANSITION);
       }
 
       virtual void play_color(char id) {
@@ -670,22 +699,22 @@ namespace aa {
         case 'R':
           Lights::start_animator(
             Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-            &_red_pulse, ShortTimeSpan::from_millis(100));
+            &_red_pulse, SHORT_TRANSITION);
           break;
         case 'G':
           Lights::start_animator(
             Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-            &_green_pulse, ShortTimeSpan::from_millis(100));
+            &_green_pulse, SHORT_TRANSITION);
           break;
         case 'B':
           Lights::start_animator(
             Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-            &_blue_pulse, ShortTimeSpan::from_millis(100));
+            &_blue_pulse, SHORT_TRANSITION);
           break;
         case 'P':
           Lights::start_animator(
             Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-            &_pink_pulse, ShortTimeSpan::from_millis(100));
+            &_pink_pulse, SHORT_TRANSITION);
           break;
         }
       }
@@ -707,25 +736,25 @@ namespace aa {
       virtual void game_over_win() {
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-          &_neutral_bg, ShortTimeSpan::from_millis(100));
+          &_neutral_bg, SHORT_TRANSITION);
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-          &_game_over_win, ShortTimeSpan::from_millis(100));
+          &_game_over_win, SHORT_TRANSITION);
         Lights::transition_out(
           Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-          ShortTimeSpan::from_millis(100));
+          SHORT_TRANSITION);
       }
 
       virtual void game_over_lose() {
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
-          &_neutral_bg, ShortTimeSpan::from_millis(100));
+          &_neutral_bg, SHORT_TRANSITION);
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
-          &_game_over_lose, ShortTimeSpan::from_millis(100));
+          &_game_over_lose, SHORT_TRANSITION);
         Lights::transition_out(
           Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-          ShortTimeSpan::from_millis(100));
+          SHORT_TRANSITION);
       }
 
       virtual void best_score_change(int32_t best_score) {
@@ -762,7 +791,6 @@ namespace aa {
         AS_NONE,
         AS_SPLASH,
         AS_SPLASH_TITLE,
-        AS_INSTRUCTIONS_TITLE,
         AS_INSTRUCTIONS,
       };
 
@@ -771,8 +799,8 @@ namespace aa {
 
       ScoreboardSplashAnimator _splash;
       ScoreboardScrollingTextAnimator _splash_title;
-      ScoreboardScrollingTextAnimator _instructions_title_scroll;
-      ScoreboardScrollingTextAnimator _instructions_scroll;
+      ScoreboardScrollingTextAnimator _instructions_long_scroll;
+      ScoreboardStaticTextAnimator _instructions_short;
       SolidBackgroundAnimator _neutral_bg;
       FillSetAnimator<PulseFunction> _red_pulse;
       FillSetAnimator<PulseFunction> _green_pulse;
@@ -841,6 +869,7 @@ namespace aa {
 
     extern GameState * initial_state;
     extern GameState * attract_state;
+    extern GameState * game_start_state;
     extern GameState * pause_before_play_state;
     extern GameState * play_pattern_state;
     extern GameState * await_response_state;
@@ -889,19 +918,29 @@ namespace aa {
         vis.attract_start();
       }
       virtual bool on_button(char id) {
-        pattern[0] = id;
-        pattern_length = 1;
-        request_transition(await_response_state);
-        // returning false will cause the button press to be processed again
-        // by the next state, basically we're simulating jumping into the game
-        // right after playing a sequence of 1 button that happens to be the
-        // button the user is about to press
-        return false;
-      }
-      virtual void on_exit() {
-        vis.game_start();
+        request_transition(game_start_state);
+        return true;
       }
     } attract_state_instance;
+
+
+    class GameStartGameState : public GameState {
+    public:
+      GameStartGameState()
+        : GameState("game start", ShortTimeSpan::from_millis(5000)) { }
+      virtual void on_enter() {
+        pattern[0] = get_random_button();
+        pattern_length = 1;
+        vis.game_start();
+      }
+      virtual bool on_button(char id) {
+        on_timeout();
+        return true;
+      }
+      virtual void on_timeout() {
+        request_transition(play_pattern_state);
+      }
+    } game_start_state_instance;
 
 
     class PauseBeforePlayGameState : public GameState {
@@ -941,7 +980,7 @@ namespace aa {
     class AwaitResponseGameState : public GameState {
     public:
       AwaitResponseGameState()
-        : GameState("awaiting response",
+        : GameState("await response",
           ShortTimeSpan::from_millis(20000)) { }
       virtual void on_enter() {
         vis.await_press();
@@ -1015,6 +1054,7 @@ namespace aa {
 
     GameState * initial_state = &initial_state_instance;
     GameState * attract_state = &attract_state_instance;
+    GameState * game_start_state = &game_start_state_instance;
     GameState * pause_before_play_state = &pause_before_play_state_instance;
     GameState * play_pattern_state = &play_pattern_state_instance;
     GameState * await_response_state = &await_response_state_instance;
