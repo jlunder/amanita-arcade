@@ -1002,7 +1002,7 @@ namespace aa {
           best_score = score;
           vis.best_score_change(best_score);
         }
-        if(pattern_length >= PATTERN_LENGTH_MAX) {
+        if(score >= PATTERN_LENGTH_MAX) {
           vis.game_over_win();
         }
         else {
