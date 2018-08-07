@@ -5,21 +5,6 @@
 
 
 namespace aa {
-  void AA_OPTIMIZE Texture2D::fill_set(Color const & c) {
-    size_t count = _width * _height;
-    for(size_t i = 0; i < count; ++i) {
-      _data[i] = c;
-    }
-  }
-
-
-  void AA_OPTIMIZE Texture2D::fill_lerp(Color const & c, float a) {
-    size_t count = _width * _height;
-    for(size_t i = 0; i < count; ++i) {
-      _data[i].lerp_this(c, a);
-    }
-  }
-
   void AA_OPTIMIZE Texture2D::box_set(int32_t x, int32_t y,
       int32_t w, int32_t h, aa::Color const & c) {
     if((w < 0) || (h < 0)) {
@@ -149,6 +134,14 @@ namespace aa {
   }
 
 
+  void AA_OPTIMIZE Texture2D::fill_set(Color const & c) {
+    size_t count = _width * _height;
+    for(size_t i = 0; i < count; ++i) {
+      _data[i] = c;
+    }
+  }
+
+
   void AA_OPTIMIZE Texture2D::fill_set(Texture2D const * src, size_t x_ofs,
       size_t y_ofs) {
     if((_width + x_ofs > src->_width) || (_height + y_ofs > src->_height)) {
@@ -172,6 +165,13 @@ namespace aa {
     }
   }
 
+
+  void AA_OPTIMIZE Texture2D::fill_mix(Color const & c) {
+    size_t count = _width * _height;
+    for(size_t i = 0; i < count; ++i) {
+      _data[i].mix_this(c);
+    }
+  }
 
   void AA_OPTIMIZE Texture2D::fill_mix(Texture2D const * src, size_t x_ofs,
       size_t y_ofs) {
@@ -198,6 +198,13 @@ namespace aa {
     }
   }
 
+
+  void AA_OPTIMIZE Texture2D::fill_lerp(Color const & c, float a) {
+    size_t count = _width * _height;
+    for(size_t i = 0; i < count; ++i) {
+      _data[i].lerp_this(c, a);
+    }
+  }
 
   void AA_OPTIMIZE Texture2D::fill_lerp(Texture2D const * src,
       size_t x_ofs, size_t y_ofs, float a) {

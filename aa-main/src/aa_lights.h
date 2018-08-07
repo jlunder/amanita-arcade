@@ -79,7 +79,15 @@ namespace aa {
       virtual ~Animator() { }
 
       bool is_in_use() const { return _state != AS_RESET; }
-      bool is_playing() const { return _state == AS_PLAYING; }
+      bool is_at_end() const {
+        if(!is_in_use()) {
+          return true;
+        }
+        if(_end_behavior == EB_LOOP) {
+          return false;
+        }
+        return _total_time >= _anim_length;
+      }
       bool is_transitioning() const { return _state == AS_TRANSITIONING; }
 
       void play();

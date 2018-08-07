@@ -49,7 +49,7 @@ namespace aa {
   static const size_t SCOREBOARD_WIDTH = 30;
   static const size_t SCOREBOARD_HEIGHT = 30;
   static const float STALK_BRIGHTNESS = 1.0f;
-  static const float SCOREBOARD_BRIGHTNESS = 0.25f;
+  static const float SCOREBOARD_BRIGHTNESS = 0.50f;
   #endif
 
   static const size_t STALK_LIGHTS_COUNT_RED =

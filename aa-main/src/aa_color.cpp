@@ -9,7 +9,7 @@ namespace aa {
   Color const Color::red = { 1.0f, 0.0f, 0.0f, 1.0f };
   Color const Color::green = { 0.0f, 1.0f, 0.0f, 1.0f };
   Color const Color::blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-  Color const Color::pink = { 1.0f, 0.2f, 0.2f, 1.0f };
+  Color const Color::pink = { 1.0f, 0.4f, 0.4f, 1.0f };
   Color const Color::transparent = { 0.0f, 0.0f, 0.0f, 0.0f };
 
   float const cie_table[CIE_TABLE_SIZE] = {

@@ -173,7 +173,11 @@ namespace aa {
   }
 
   inline int64_t operator /(ShortTimeSpan x, ShortTimeSpan y) {
-    return x.to_micros() / y.to_micros();
+    return (int64_t)x.to_micros() * 1000000 / y.to_micros();
+  }
+
+  inline ShortTimeSpan operator /(ShortTimeSpan x, int32_t y) {
+    return ShortTimeSpan::from_micros(x.to_micros() / y);
   }
 
   inline ShortTimeSpan operator %(ShortTimeSpan x, ShortTimeSpan y) {
@@ -225,7 +229,11 @@ namespace aa {
   }
 
   inline int64_t operator /(TimeSpan x, TimeSpan y) {
-    return x.to_micros() / y.to_micros();
+    return x.to_micros() * 1000000 / y.to_micros();
+  }
+
+  inline TimeSpan operator /(TimeSpan x, int64_t y) {
+    return TimeSpan::from_micros(x.to_micros() / y);
   }
 
   inline TimeSpan operator %(TimeSpan x, TimeSpan y) {

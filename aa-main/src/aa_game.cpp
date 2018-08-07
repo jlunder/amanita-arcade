@@ -115,25 +115,34 @@ namespace aa {
     void scroll_scoreboard_text(Texture2D * dest, int32_t y,
         char const (* text)[SCOREBOARD_WIDTH / 5 + 1], size_t line_count,
         Texture2D const * tex) {
-      static AutoTexture2D<SCOREBOARD_WIDTH, SCOREBOARD_HEIGHT + 5> temp;
-      int32_t h = line_count * 5;
+      static const size_t line_height = 7;
+      static const size_t line_offset = (line_height - 5) / 2;
+      static const size_t temp_height =
+        ((SCOREBOARD_HEIGHT + line_height - 1) / line_height + 1) *
+        line_height;
+      static AutoTexture2D<SCOREBOARD_WIDTH, temp_height> temp;
+      int32_t h = line_count * line_height;
 
       if((y + h <= 0) || (y >= (int32_t)SCOREBOARD_HEIGHT)) {
         return;
       }
 
-      size_t begin_line;
       size_t y_ofs;
-      if(y > -5) {
-        y_ofs = y + 5;
+      size_t begin_line;
+      size_t begin_y;
+      if(y > 0) {
+        y_ofs = (line_height - 1) - ((y - 1) % line_height);
         begin_line = 0;
+        begin_y = y + y_ofs;
       }
       else {
-        y_ofs = (-y) % 5;
-        begin_line = -y / 5;
+        y_ofs = (-y) % line_height;
+        begin_line = -y / line_height;
+        begin_y = 0;
       }
 
-      size_t end_line = (SCOREBOARD_HEIGHT + 4 - y) / 5;
+      size_t end_line =
+        (SCOREBOARD_HEIGHT + (line_height - 1) - y) / line_height;
       if(end_line > line_count) {
         end_line = line_count;
       }
@@ -141,7 +150,8 @@ namespace aa {
       temp.fill_set(Color::transparent);
       for(size_t line = begin_line; line < end_line; ++line) {
         temp.char_5x5_set(scoreboard_center(text[line], 5),
-          (line - begin_line) * 5, text[line], tex);
+          begin_y + (line - begin_line) * line_height + line_offset,
+          text[line], tex);
       }
       dest->fill_mix(&temp, 0, y_ofs);
     }
@@ -166,9 +176,9 @@ namespace aa {
 
 
     template<class F>
-    class FillSolidAnimator : public Lights::Animator {
+    class FillSetAnimator : public Lights::Animator {
     public:
-      FillSolidAnimator(F const & color_fun) : _color_fun(color_fun) { }
+      FillSetAnimator(F const & color_fun) : _color_fun(color_fun) { }
 
       void init(ShortTimeSpan period, EndBehavior end_behavior) {
         Animator::init(period, end_behavior);
@@ -177,8 +187,27 @@ namespace aa {
     protected:
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
           const {
-        Color c = _color_fun(a);
-        dest->fill_set(c);
+        dest->fill_set(_color_fun(a));
+      }
+
+    private:
+      F _color_fun;
+    };
+
+
+    template<class F>
+    class FillMixAnimator : public Lights::Animator {
+    public:
+      FillMixAnimator(F const & color_fun) : _color_fun(color_fun) { }
+
+      void init(ShortTimeSpan period, EndBehavior end_behavior) {
+        Animator::init(period, end_behavior);
+      }
+
+    protected:
+      virtual void render(ShortTimeSpan t, float a, Texture2D * dest)
+          const {
+        dest->fill_mix(_color_fun(a));
       }
 
     private:
@@ -206,7 +235,9 @@ namespace aa {
 
     class ScoreboardSplashAnimator : public Lights::Animator {
     public:
-      void init() { Animator::init(); }
+      void init(ShortTimeSpan duration) {
+        Animator::init(duration, EB_PAUSE);
+      }
 
       void set_best_score(uint32_t best_score) { _best_score = best_score; }
 
@@ -215,10 +246,11 @@ namespace aa {
 
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         dest->fill_set(&logo_tex);
-        dest->box_lerp(0, 22, 30, 7, Color::black, 0.5f);
+        dest->box_lerp(0, 22, 30, 7, Color::make(0.0f, 0.0f, 0.25f), 0.5f);
         char buf[7];
-        snprintf(buf, sizeof buf, "HI %3d", (int)_best_score);
-        dest->char_5x5_set(0, 23, buf, &orange_5x5_grad_tex);
+        snprintf(buf, sizeof buf, "HI:%d", (int)_best_score);
+        dest->char_5x5_set(scoreboard_center(buf, 5), 23, buf,
+          &orange_5x5_grad_tex);
       }
     };
 
@@ -229,10 +261,10 @@ namespace aa {
           size_t line_count, Texture2D const * tex)
           : _text(text), _line_count(line_count), _tex(tex) { }
 
-      void init() {
-        _pixel_height = _line_count * 5 + SCOREBOARD_HEIGHT * 2;
-        Animator::init(ShortTimeSpan::from_millis(
-          (_pixel_height * 1000) / SCOREBOARD_HEIGHT), EB_PAUSE);
+      void init(ShortTimeSpan duration_per_screen) {
+        _pixel_height = _line_count * 7 + SCOREBOARD_HEIGHT * 2;
+        Animator::init((_pixel_height * duration_per_screen)
+            / SCOREBOARD_HEIGHT, EB_PAUSE);
       }
 
     protected:
@@ -242,7 +274,6 @@ namespace aa {
       Texture2D const * _tex;
 
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
-        dest->fill_set(Color::make(0.25f, 0.0f, 0.0f));
         scroll_scoreboard_text(dest, SCOREBOARD_HEIGHT - a * _pixel_height,
           _text, _line_count, _tex);
       }
@@ -310,17 +341,17 @@ namespace aa {
       virtual void render(ShortTimeSpan t, float a, Texture2D * dest) const {
         dest->fill_set(Color::black);
         if(_new_best_score > 0) {
-          dest->char_5x5_set( 2, 5, "WRONG", &orange_5x5_grad_tex);
-          dest->char_5x5_set( 7, 10, "NEW", &orange_5x5_grad_tex);
-          dest->char_5x5_set( 2, 15, "BEST!", &orange_5x5_grad_tex);
+          dest->char_5x5_set(2, 2, "WRONG", &bright_orange_5x5_grad_tex);
+          dest->char_5x5_set(0, 9, "NEW HI", &orange_5x5_grad_tex);
+          dest->char_5x5_set(0, 16, "SCORE:", &orange_5x5_grad_tex);
 
           char buf[7];
           snprintf(buf, sizeof buf, "%d", (int)_new_best_score);
-          dest->char_5x5_set((SCOREBOARD_WIDTH - strlen(buf) * 5) / 2, 20,
-            buf, &orange_5x5_grad_tex);
+          dest->char_5x5_set(scoreboard_center(buf, 5), 23, buf,
+            &bright_orange_5x5_grad_tex);
         }
         else {
-          dest->char_5x5_set( 2, 10, "WRONG", &orange_5x5_grad_tex);
+          dest->char_5x5_set( 2, 12, "WRONG", &bright_orange_5x5_grad_tex);
         }
       }
     };
@@ -419,10 +450,9 @@ namespace aa {
           Color const & bg_color)
           : _id(id), _layer_start(layer_start), _in_game_over(false),
           _active_color(GlowBackgroundFadeFunction(bg_color)),
-          _muted_color(GlowBackgroundFadeFunction(
-            bg_color.lerp(Color::black, 0.5f))) {
+          _mute(MuteFunction()) {
         _active_color.init(period, Lights::Animator::EB_LOOP);
-        _muted_color.init(period, Lights::Animator::EB_LOOP);
+        _mute.init(TimeSpan::zero, Lights::Animator::EB_PAUSE);
         _bubble_pool.init([=] (StalkBubbleAnimator * anim) {
           anim->init(ShortTimeSpan::from_millis(500), Color::white);
         });
@@ -432,34 +462,32 @@ namespace aa {
 
       virtual void attract_start() {
         Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
-          &_active_color);
-        if(_in_game_over) {
-          _in_game_over = false;
-          Lights::transition_out(_layer_start + Lights::LAYER_STALK_OVERLAY,
-            ShortTimeSpan::from_millis(2000));
-        }
-        else {
-          Lights::transition_out(_layer_start + Lights::LAYER_STALK_OVERLAY,
-            TimeSpan::zero);
-        }
+          &_active_color, ShortTimeSpan::from_millis(500));
+        Lights::transition_out(_layer_start + Lights::LAYER_STALK_BUBBLE,
+          ShortTimeSpan::from_millis(100));
+        Lights::transition_out(_layer_start + Lights::LAYER_STALK_OVERLAY,
+          ShortTimeSpan::from_millis(2000));
+      }
+
+      virtual void play_pattern() {
+        Lights::start_animator(_layer_start + Lights::LAYER_STALK_BUBBLE,
+            &_mute, ShortTimeSpan::from_millis(100));
       }
 
       virtual void play_color(char id) {
         if(id == _id) {
           Lights::start_animator(_layer_start + Lights::LAYER_STALK_BUBBLE,
             _bubble_pool.acquire());
-          Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
-            &_active_color, ShortTimeSpan::from_micros(100));
         }
         else {
-          Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
-            &_muted_color, ShortTimeSpan::from_micros(100));
+          Lights::start_animator(_layer_start + Lights::LAYER_STALK_BUBBLE,
+            &_mute, ShortTimeSpan::from_millis(100));
         }
       }
 
       virtual void await_press() {
-        Lights::start_animator(_layer_start + Lights::LAYER_STALK_BASE_COLOR,
-          &_active_color, ShortTimeSpan::from_micros(100));
+        Lights::transition_out(_layer_start + Lights::LAYER_STALK_BUBBLE,
+          ShortTimeSpan::from_millis(100));
       }
 
       virtual void press_color(char id, bool correct) {
@@ -490,12 +518,26 @@ namespace aa {
         }
       };
 
+      struct MuteFunction {
+        Color operator ()(float a) const {
+          float aa;
+
+          if(a < 0.0f) aa = 0.0f;
+          else if(a < 0.2f) aa = a / 0.2f;
+          else if(a < 0.8f) aa = 1.0f;
+          else if(a < 1.0f) aa = (1.0f - a) / 0.2f;
+          else aa = 0.0f;
+
+          return Color::make(0.0f, 0.0f, 0.0f, 0.5f * aa);
+        }
+      };
+
       char _id;
       size_t _layer_start;
       bool _in_game_over;
 
-      FillSolidAnimator<GlowBackgroundFadeFunction> _active_color;
-      FillSolidAnimator<GlowBackgroundFadeFunction> _muted_color;
+      FillSetAnimator<GlowBackgroundFadeFunction> _active_color;
+      FillMixAnimator<MuteFunction> _mute;
       Lights::StaticAnimatorPool<StalkBubbleAnimator, 3> _bubble_pool;
       SolidBackgroundAnimator _game_over_win;
       SolidBackgroundAnimator _game_over_lose;
@@ -505,7 +547,8 @@ namespace aa {
     class ScoreboardVis : public Vis {
     public:
       ScoreboardVis()
-          : _splash_scroll(splash_text,
+          : _state(AS_NONE), _pattern_count(0),
+          _splash_title(splash_text,
             sizeof splash_text / sizeof *splash_text, &aqua_5x5_grad_tex),
           _instructions_title_scroll(instructions_title_text,
             sizeof instructions_title_text / sizeof *instructions_title_text,
@@ -517,10 +560,10 @@ namespace aa {
           _green_pulse(PulseFunction(Color::green)),
           _blue_pulse(PulseFunction(Color::blue)),
           _pink_pulse(PulseFunction(Color::pink)) {
-        _splash.init();
-        _splash_scroll.init();
-        _instructions_title_scroll.init();
-        _instructions_scroll.init();
+        _splash.init(ShortTimeSpan::from_millis(10000));
+        _splash_title.init(ShortTimeSpan::from_millis(3000));
+        _instructions_title_scroll.init(ShortTimeSpan::from_millis(3000));
+        _instructions_scroll.init(ShortTimeSpan::from_millis(3000));
         _neutral_bg.init(Color::black);
         _red_pulse.init(ShortTimeSpan::from_millis(500),
           Lights::Animator::EB_STOP);
@@ -536,6 +579,8 @@ namespace aa {
       }
 
       virtual void attract_start() {
+        _state = AS_SPLASH;
+
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
           &_neutral_bg, ShortTimeSpan::from_millis(100));
@@ -546,14 +591,69 @@ namespace aa {
           ShortTimeSpan::from_millis(100));
       }
 
+      virtual void update(ShortTimeSpan dt) {
+        switch(_state) {
+        case AS_SPLASH:
+          if(_splash.is_at_end()) {
+            _state = AS_SPLASH_TITLE;
+            Lights::transition_out(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+              ShortTimeSpan::from_millis(3000));
+            Lights::start_animator(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
+              &_splash_title,
+              ShortTimeSpan::from_millis(100));
+          }
+          break;
+        case AS_SPLASH_TITLE:
+          if(_splash_title.is_at_end()) {
+            _state = AS_INSTRUCTIONS_TITLE;
+            Lights::start_animator(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+              &_instructions_title_scroll,
+              ShortTimeSpan::from_millis(100));
+            Lights::transition_out(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
+              ShortTimeSpan::from_millis(100));
+          }
+          break;
+        case AS_INSTRUCTIONS_TITLE:
+          if(_instructions_title_scroll.is_at_end()) {
+            _state = AS_INSTRUCTIONS;
+            Lights::start_animator(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+              &_instructions_scroll);
+          }
+          break;
+        case AS_INSTRUCTIONS:
+          if(_instructions_scroll.is_at_end()) {
+            _state = AS_SPLASH;
+            Lights::start_animator(
+              Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+              &_splash, ShortTimeSpan::from_millis(100));
+          }
+          break;
+        default:
+          break;
+        }
+      }
+
       virtual void game_start() {
+        _state = AS_NONE;
+
         _game_over_lose.set_new_best_score(0);
         _score.set_score(0);
         Lights::start_animator(Lights::LAYER_SB_START + Lights::LAYER_SB_OVERLAY,
-          &_score, ShortTimeSpan::from_millis(250));
+          &_score, ShortTimeSpan::from_millis(100));
+        Lights::transition_out(
+          Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN,
+          ShortTimeSpan::from_millis(100));
       }
 
       virtual void play_pattern() {
+        _pattern_count = 0;
+        _score.set_score(_pattern_count);
+
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
           &_neutral_bg, ShortTimeSpan::from_millis(100));
@@ -563,6 +663,9 @@ namespace aa {
       }
 
       virtual void play_color(char id) {
+        ++_pattern_count;
+        _score.set_score(_pattern_count);
+
         switch(id) {
         case 'R':
           Lights::start_animator(
@@ -588,7 +691,9 @@ namespace aa {
       }
 
       virtual void await_press() {
+        int32_t last_pattern_count = _pattern_count;
         play_pattern();
+        _score.set_score(last_pattern_count);
       }
 
       virtual void press_color(char id, bool correct) {
@@ -596,7 +701,7 @@ namespace aa {
       }
 
       virtual void score_change(int32_t score) {
-        _score.set_score(score);
+        _score.set_best_score(score);
       }
 
       virtual void game_over_win() {
@@ -653,15 +758,26 @@ namespace aa {
         }
       };
 
+      enum AttractState {
+        AS_NONE,
+        AS_SPLASH,
+        AS_SPLASH_TITLE,
+        AS_INSTRUCTIONS_TITLE,
+        AS_INSTRUCTIONS,
+      };
+
+      AttractState _state;
+      int32_t _pattern_count;
+
       ScoreboardSplashAnimator _splash;
-      ScoreboardScrollingTextAnimator _splash_scroll;
+      ScoreboardScrollingTextAnimator _splash_title;
       ScoreboardScrollingTextAnimator _instructions_title_scroll;
       ScoreboardScrollingTextAnimator _instructions_scroll;
       SolidBackgroundAnimator _neutral_bg;
-      FillSolidAnimator<PulseFunction> _red_pulse;
-      FillSolidAnimator<PulseFunction> _green_pulse;
-      FillSolidAnimator<PulseFunction> _blue_pulse;
-      FillSolidAnimator<PulseFunction> _pink_pulse;
+      FillSetAnimator<PulseFunction> _red_pulse;
+      FillSetAnimator<PulseFunction> _green_pulse;
+      FillSetAnimator<PulseFunction> _blue_pulse;
+      FillSetAnimator<PulseFunction> _pink_pulse;
       ScoreboardScoreAnimator _score;
       ScoreboardGameOverWinAnimator _game_over_win;
       ScoreboardGameOverLoseAnimator _game_over_lose;
@@ -980,5 +1096,7 @@ namespace aa {
         done = true;
       }
     } while(!done);
+
+    vis.update(dt);
   }
 }

@@ -238,7 +238,7 @@ namespace aa {
 
     for(size_t j = 0; j < PAGE_COUNT; ++j) {
       for(size_t i = 0; i < PAGE_SIZE; ++i) {
-        _output_buf[j][i] = 0x00FFFF;
+        _output_buf[j][i] = 0x101010;
       }
     }
 

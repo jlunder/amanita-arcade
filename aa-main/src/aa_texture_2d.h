@@ -72,6 +72,7 @@ namespace aa {
     void fill_set(Color const & c);
     void fill_set(Texture2D const * src) { fill_set(src, 0, 0); }
     void fill_set(Texture2D const * src, size_t x_ofs, size_t y_ofs);
+    void fill_mix(Color const & c);
     void fill_mix(Texture2D const * src) { fill_mix(src, 0, 0); }
     void fill_mix(Texture2D const * src, size_t x_ofs, size_t y_ofs);
     void fill_lerp(Color const & c, float a);
