@@ -73,6 +73,7 @@ namespace aa {
     extern DigitalOut debug_blue_led;
     extern DigitalOut debug_frame_sync;
     extern DigitalOut debug_lights_sync;
+    //extern I2C eeprom_i2c;
   }
 
   class Debug {
@@ -143,10 +144,18 @@ namespace aa {
   class System {
   public:
     static TimeSpan uptime();
+    static void init_nv();
     static void write_nv(uint32_t id, void const * data, size_t size);
     static void const * read_nv(uint32_t id, size_t * size);
-    static void start_watchdog(ShortTimeSpan timeout);
+    static void init_watchdog(ShortTimeSpan timeout);
     static void service_watchdog();
+
+  private:
+    static void eeprom_i2c_reset();
+    static void eeprom_i2c_start();
+    static void eeprom_i2c_stop();
+    static int eeprom_i2c_write(uint8_t val);
+    static uint8_t eeprom_i2c_read(bool ack);
   };
 
 }
