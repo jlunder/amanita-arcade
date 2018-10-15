@@ -9,5 +9,9 @@
         "ostream": "cpp",
         "system_error": "cpp",
         "type_traits": "cpp"
+    },
+    "terminal.integrated.env.linux": {
+        "PATH": "/home/joseph/.platformio/penv/bin:/home/joseph/.platformio/penv:/home/joseph/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:~/.platformio/penv/bin",
+        "PLATFORMIO_CALLER": "vscode"
     }
 }
