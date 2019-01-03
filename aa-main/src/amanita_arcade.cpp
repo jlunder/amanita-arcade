@@ -4,6 +4,7 @@
 #include "aa_input.h"
 #include "aa_lights.h"
 #include "aa_time_span.h"
+#include "aa_timer.h"
 
 
 #define AA_MAX_INDENT 16
@@ -28,6 +29,10 @@ namespace aa {
 
     static char trace_buf[256];
 
+    static aa::Timer disconnected_min_pulse_timeout(TimeSpan::from_millis(0), false);
+    static aa::Timer heartbeat_cycle(TimeSpan::from_millis(1000));
+    static bool was_input_connected;
+ 
     /*
     static __attribute__((section(".text"),aligned(4096)))
       uint8_t nv_data[4096] = { 0xFF, 0xFF, 0xFF, 0xFF, };
@@ -714,6 +719,8 @@ namespace aa {
 
 
   void Program::main() {
+    hw::debug_blue_led.write(1);
+
     System::init_watchdog(ShortTimeSpan::from_millis(15000));
 
     // This line is important -- it implicitly inits debug_ser
@@ -721,17 +728,27 @@ namespace aa {
     // implicitly init uptime()
     System::uptime();
 
+    hw::debug_red_led.write(1);
+
     System::init_nv();
 
     // Give external hardware time to wake up... some of it is sloooow
     wait_ms(500);
     System::service_watchdog();
 
+    hw::debug_amber_led.write(1);
+    hw::debug_red_led.write(0);
+
     Input::init();
+
+    hw::debug_green_led.write(1);
+    hw::debug_amber_led.write(0);
+
     Lights::init();
     Game::init();
 
     Debug::trace("Beginning main loop");
+    hw::debug_green_led.write(0);
 
     TimeSpan next_frame_time = System::uptime();
     TimeSpan last_frame_time = next_frame_time -
@@ -749,7 +766,9 @@ namespace aa {
       TimeSpan frame_start = now;
 
       LogContext c("frame");
-      hw::debug_frame_sync = 1;
+      hw::debug_frame_sync.write(1);
+
+      ShortTimeSpan dt = ShortTimeSpan::from_micros(delta);
 
       // Frame timing is somewhat subtle: Lights::output() disables
       // interrupts for a long period (~5ms as of this writing), while it is
@@ -774,10 +793,29 @@ namespace aa {
       // before the next Lights::output(). As long as AA_FRAME_MICROS >=
       // Lights::update time + 16000, i.e. ~22000, we should be fine.
       Lights::output();
-      Input::read_buttons(ShortTimeSpan::from_micros(delta));
-      Game::update(ShortTimeSpan::from_micros(delta));
-      Lights::update(ShortTimeSpan::from_micros(delta));
-      hw::debug_frame_sync = 0;
+      Input::read_buttons(dt);
+      Game::update(dt);
+      Lights::update(dt);
+      hw::debug_frame_sync.write(0);
+
+      disconnected_min_pulse_timeout.update(dt);
+      if(!Input::connected()) {
+        hw::debug_amber_led.write(1);
+        if(was_input_connected) {
+          disconnected_min_pulse_timeout = Timer(TimeSpan::from_millis(200), false);
+        }
+        was_input_connected = false;
+      }
+      else {
+        if(disconnected_min_pulse_timeout.is_done()) {
+          hw::debug_amber_led.write(0);
+        }
+        was_input_connected = true;
+      }
+
+      heartbeat_cycle.update(dt);
+      hw::debug_blue_led.write(
+        heartbeat_cycle.get_time() > heartbeat_cycle.get_time_remaining());
 
       now = System::uptime();
       uint32_t frame_us = (now - frame_start).to_micros();

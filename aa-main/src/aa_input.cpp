@@ -31,12 +31,16 @@ namespace aa {
 
 
   namespace {
-    static int32_t const REMOTE_READ_TIMEOUT_MICROS = 10000000; // 10 seconds
+    static int32_t const REMOTE_READ_TIMEOUT_MICROS = 10000000; // 10s
+    static int32_t const REMOTE_QUERY_THROTTLE_TIMEOUT_MICROS = 10000; // 10ms
 
     static Timer remote_read_timeout(
       ShortTimeSpan::from_micros(REMOTE_READ_TIMEOUT_MICROS));
+    static Timer remote_query_throttle_timeout(
+      ShortTimeSpan::from_micros(REMOTE_QUERY_THROTTLE_TIMEOUT_MICROS));
     static uint32_t remote_buttons;
 
+    static bool got_new_sample;
     static bool new_sample_available;
     static uint32_t sample_micros;
     static uint32_t sample_buttons;
@@ -48,27 +52,28 @@ namespace aa {
     static uint32_t parser_status;
     static uint32_t parser_buttons;
 
-    static void input_test_io_isr();
-    static void input_test_io_isr_parse(char in_c);
-    static void input_test_io_isr_parse_reset();
-    static void input_test_io_isr_parse_begin();
-    static void input_test_io_isr_parse_literal(char in_c, char c);
-    static void input_test_io_isr_parse_digit(char in_c, uint32_t * v,
+    static void remote_io_isr();
+    static void remote_io_isr_parse(char in_c);
+    static void remote_io_isr_parse_reset();
+    static void remote_io_isr_parse_begin();
+    static void remote_io_isr_parse_literal(char in_c, char c);
+    static void remote_io_isr_parse_digit(char in_c, uint32_t * v,
         int pos);
 
 
-    static void input_test_io_isr() {
+    static void remote_io_isr() {
       for(int i = 0; i < 10; ++i) {
         while(hw::input_ser.readable()) {
           int c = hw::input_ser.getc();
           if(c >= 0) {
-            input_test_io_isr_parse(c);
+            remote_io_isr_parse(c);
             //hw::input_ser.putc('A' + (char)parser_state);
           }
           else {
             parser_state = IPS_IDLE;
           }
-          //Debug::tracef("%2d %08X %08X %08X %c", parser_state, parser_micros, parser_status, parser_buttons, new_sample_available ? 'T' : 'f');
+          //Debug::tracef("%2d %08X %08X %08X %c", parser_state, parser_micros,
+          //  parser_status, parser_buttons, new_sample_available ? 'T' : 'f');
         }
       }
 
@@ -86,41 +91,37 @@ namespace aa {
     }
 
 
-    static void input_test_io_isr_parse(char in_c) {
+    static void remote_io_isr_parse(char in_c) {
       switch(in_c) {
       case '!': parser_state = IPS_TYPE; return;
-      case '\r': case '\n': input_test_io_isr_parse_reset(); return;
+      case '\r': case '\n': remote_io_isr_parse_reset(); return;
       }
 
       switch(parser_state) {
       case IPS_IDLE:
-        if(in_c == 'P') {
-          input_test_io_isr_parse_begin();
-        }
-        break;
       case IPS_TYPE:
         if(in_c == 'P') {
-          input_test_io_isr_parse_begin();
+          remote_io_isr_parse_begin();
           return;
         }
         break;
-      case IPS_SEPARATOR_A: input_test_io_isr_parse_literal(in_c, ' '); break;
-      case IPS_MICROS_0: input_test_io_isr_parse_digit(in_c, &parser_micros, 28); break;
-      case IPS_MICROS_1: input_test_io_isr_parse_digit(in_c, &parser_micros, 24); break;
-      case IPS_MICROS_2: input_test_io_isr_parse_digit(in_c, &parser_micros, 20); break;
-      case IPS_MICROS_3: input_test_io_isr_parse_digit(in_c, &parser_micros, 16); break;
-      case IPS_MICROS_4: input_test_io_isr_parse_digit(in_c, &parser_micros, 12); break;
-      case IPS_MICROS_5: input_test_io_isr_parse_digit(in_c, &parser_micros,  8); break;
-      case IPS_MICROS_6: input_test_io_isr_parse_digit(in_c, &parser_micros,  4); break;
-      case IPS_MICROS_7: input_test_io_isr_parse_digit(in_c, &parser_micros,  0); break;
-      case IPS_SEPARATOR_B: input_test_io_isr_parse_literal(in_c, ':'); break;
-      case IPS_STATUS_0: input_test_io_isr_parse_digit(in_c, &parser_status, 4); break;
-      case IPS_STATUS_1: input_test_io_isr_parse_digit(in_c, &parser_status, 0); break;
-      case IPS_SEPARATOR_C: input_test_io_isr_parse_literal(in_c, ':'); break;
-      case IPS_BUTTONS_0: input_test_io_isr_parse_digit(in_c, &parser_buttons, 12); break;
-      case IPS_BUTTONS_1: input_test_io_isr_parse_digit(in_c, &parser_buttons,  8); break;
-      case IPS_BUTTONS_2: input_test_io_isr_parse_digit(in_c, &parser_buttons,  4); break;
-      case IPS_BUTTONS_3: input_test_io_isr_parse_digit(in_c, &parser_buttons,  0); break;
+      case IPS_SEPARATOR_A: remote_io_isr_parse_literal(in_c, ' '); break;
+      case IPS_MICROS_0: remote_io_isr_parse_digit(in_c, &parser_micros, 28); break;
+      case IPS_MICROS_1: remote_io_isr_parse_digit(in_c, &parser_micros, 24); break;
+      case IPS_MICROS_2: remote_io_isr_parse_digit(in_c, &parser_micros, 20); break;
+      case IPS_MICROS_3: remote_io_isr_parse_digit(in_c, &parser_micros, 16); break;
+      case IPS_MICROS_4: remote_io_isr_parse_digit(in_c, &parser_micros, 12); break;
+      case IPS_MICROS_5: remote_io_isr_parse_digit(in_c, &parser_micros,  8); break;
+      case IPS_MICROS_6: remote_io_isr_parse_digit(in_c, &parser_micros,  4); break;
+      case IPS_MICROS_7: remote_io_isr_parse_digit(in_c, &parser_micros,  0); break;
+      case IPS_SEPARATOR_B: remote_io_isr_parse_literal(in_c, ':'); break;
+      case IPS_STATUS_0: remote_io_isr_parse_digit(in_c, &parser_status, 4); break;
+      case IPS_STATUS_1: remote_io_isr_parse_digit(in_c, &parser_status, 0); break;
+      case IPS_SEPARATOR_C: remote_io_isr_parse_literal(in_c, ':'); break;
+      case IPS_BUTTONS_0: remote_io_isr_parse_digit(in_c, &parser_buttons, 12); break;
+      case IPS_BUTTONS_1: remote_io_isr_parse_digit(in_c, &parser_buttons,  8); break;
+      case IPS_BUTTONS_2: remote_io_isr_parse_digit(in_c, &parser_buttons,  4); break;
+      case IPS_BUTTONS_3: remote_io_isr_parse_digit(in_c, &parser_buttons,  0); break;
       case IPS_EOL:
       default:
         break;
@@ -128,12 +129,12 @@ namespace aa {
     }
 
 
-    static void input_test_io_isr_parse_reset() {
+    static void remote_io_isr_parse_reset() {
       parser_state = IPS_IDLE;
     }
 
 
-    static void input_test_io_isr_parse_begin() {
+    static void remote_io_isr_parse_begin() {
       parser_state = IPS_SEPARATOR_A;
       parser_micros = 0;
       parser_status = 0;
@@ -141,17 +142,17 @@ namespace aa {
     }
 
 
-    static void input_test_io_isr_parse_literal(char in_c, char c) {
+    static void remote_io_isr_parse_literal(char in_c, char c) {
       if(in_c == c) {
         parser_state = static_cast<InputParserState>(parser_state + 1);
       }
       else {
-        input_test_io_isr_parse_reset();
+        remote_io_isr_parse_reset();
       }
     }
 
 
-    static void input_test_io_isr_parse_digit(char in_c, uint32_t * v,
+    static void remote_io_isr_parse_digit(char in_c, uint32_t * v,
         int pos) {
       if(in_c >= '0' && in_c <= '9') {
         *v |= (in_c - '0') << pos;
@@ -166,7 +167,7 @@ namespace aa {
         parser_state = static_cast<InputParserState>(parser_state + 1);
       }
       else {
-        input_test_io_isr_parse_reset();
+        remote_io_isr_parse_reset();
         return;
       }
     }
@@ -186,7 +187,7 @@ namespace aa {
     Debug::trace("Initializing input");
 
     hw::input_ser.baud(115200);
-    hw::input_ser.attach(&input_test_io_isr, Serial::RxIrq);
+    hw::input_ser.attach(&remote_io_isr, Serial::RxIrq);
 
     bool alive = false;
 
@@ -208,23 +209,52 @@ namespace aa {
     if(alive) {
       read_buttons(TimeSpan::zero);
       _last_buttons = _buttons;
-      Debug::tracef("Test input alive, first sample: %08X %04X",
+      Debug::tracef("Input module alive, first sample: %08X %04X",
         last_sample_micros, _buttons);
     }
     else {
-      Debug::trace("Test input not responding");
-      Debug::pause();
+      Debug::trace("Input module not responding");
     }
+  }
+
+
+  bool Input::connected() {
+    return got_new_sample;
   }
 
 
   void Input::read_buttons(ShortTimeSpan dt) {
     remote_read_timeout.update(dt);
+    remote_query_throttle_timeout.update(dt);
 
-    bool got_new = new_sample_available;
-    if(got_new) {
+    _remote_dt = TimeSpan::zero;
+
+    if(remote_query_throttle_timeout.is_done()) {
+      read_remote_buttons();
+    }
+
+    _last_buttons = _buttons;
+
+    uint32_t debug_buttons = 0;
+    while(hw::debug_ser.readable()) {
+      char c = hw::debug_ser.getc();
+      switch(c) {
+        case 'r': case 'R': debug_buttons |= B_RED; break;
+        case 'g': case 'G': debug_buttons |= B_GREEN; break;
+        case 'b': case 'B': debug_buttons |= B_BLUE; break;
+        case 'p': case 'P': debug_buttons |= B_PINK; break;
+      }
+    }
+
+    _buttons = remote_buttons | debug_buttons;
+  }
+
+  void Input::read_remote_buttons()
+  {
+    __sync_synchronize();
+    got_new_sample = new_sample_available;
+    if(got_new_sample) {
       __disable_irq();
-      __sync_synchronize();
       remote_buttons = 0;
       if((sample_buttons & 0x1000) == 0) {
         remote_buttons |= B_GREEN;
@@ -242,31 +272,30 @@ namespace aa {
         static_cast<int32_t>(sample_micros - last_sample_micros));
       last_sample_micros = sample_micros;
       new_sample_available = false;
-      __sync_synchronize();
       __enable_irq();
+
+      hw::input_ser.putc('P');
       remote_read_timeout.restart();
+      remote_query_throttle_timeout = Timer(TimeSpan::from_micros(
+        REMOTE_QUERY_THROTTLE_TIMEOUT_MICROS), false);
     }
     else {
-      _remote_dt = TimeSpan::zero;
+      // Hmmm, input not responding?
+      __disable_irq();
+      remote_io_isr_parse_reset();
+      __enable_irq();
+
+      hw::input_ser.puts("A0M0V00");
+      hw::input_ser.putc('P');
+      remote_query_throttle_timeout =
+        Timer(TimeSpan::from_millis(100), false);
+
+      // If input persists in not responding for a LONG time, unstick any
+      // buttons automatically which were pressed at the time we lost contact
       if(remote_read_timeout.is_done()) {
         remote_buttons = 0;
       }
     }
     //Debug::tracef("Buttons: %04X %c", _buttons, got_new ? 'N' : ' ');
-
-    hw::input_ser.putc('P');
-    uint32_t debug_buttons = 0;
-    if(hw::debug_ser.readable()) {
-      char c = hw::debug_ser.getc();
-      switch(c) {
-        case 'r': case 'R': debug_buttons |= B_RED; break;
-        case 'g': case 'G': debug_buttons |= B_GREEN; break;
-        case 'b': case 'B': debug_buttons |= B_BLUE; break;
-        case 'p': case 'P': debug_buttons |= B_PINK; break;
-      }
-    }
-
-    _last_buttons = _buttons;
-    _buttons = remote_buttons | debug_buttons;
   }
 }

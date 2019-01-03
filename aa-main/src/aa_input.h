@@ -17,6 +17,8 @@ namespace aa {
 
     static void init();
 
+    static bool connected();
+
     static uint32_t all_state() { return _buttons; }
     static uint32_t all_pressed() {
       return _buttons & (_last_buttons ^ _buttons);
@@ -43,6 +45,8 @@ namespace aa {
     static ShortTimeSpan _remote_dt;
     static uint32_t _last_buttons;
     static uint32_t _buttons;
+
+    static void read_remote_buttons();
   };
 }
 
