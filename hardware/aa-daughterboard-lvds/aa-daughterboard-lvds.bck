@@ -6,15 +6,8 @@ K efuse protection switch
 F http://www.ti.com/lit/ds/symlink/tps25925.pdf
 $ENDCMP
 #
-$CMP STM32F407_Discovery_P1
-D Generic connector, double row, 02x25, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)
-K connector
-F ~
-$ENDCMP
-#
-$CMP STM32F407_Discovery_P2
-D Generic connector, double row, 02x25, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)
-K connector
+$CMP STM32F407_Discovery_P1_P2
+K stack daughterboard stm32 stm32f407 discovery
 F ~
 $ENDCMP
 #
