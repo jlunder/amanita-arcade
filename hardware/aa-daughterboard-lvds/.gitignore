@@ -1,4 +1,4 @@
 *.bak
 *.bck
-*_bak
+*-bak
 _autosave-*
