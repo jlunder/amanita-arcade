@@ -1,4 +1,0 @@
-(sym_lib_table
-  (lib (name aa-daughterboard)(type Legacy)(uri /home/joseph/Documents/repos/amanita-arcade/hardware/aa-daughterboard/aa-daughterboard.lib)(options "")(descr ""))
-  (lib (name aa-daughterboard-rescue)(type Legacy)(uri ${KIPRJMOD}/aa-daughterboard-rescue.lib)(options "")(descr ""))
-)

@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name aa-panel-receiver-lvds)(type Legacy)(uri ${KIPRJMOD}/aa-panel-receiver-lvds.lib)(options "")(descr ""))
+)

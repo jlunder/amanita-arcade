@@ -1,9 +1,0 @@
-EESchema-DOCLIB  Version 2.0
-#
-$CMP NIS5132xx
-D 5V/12V eFuse Protection Switch (VSON-10)
-K efuse protection switch
-F http://www.ti.com/lit/ds/symlink/tps25925.pdf
-$ENDCMP
-#
-#End Doc Library
