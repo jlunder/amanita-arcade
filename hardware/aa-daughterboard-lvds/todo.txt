@@ -1,0 +1,8 @@
+- Add revision to silkscreen
+- Widen 8P8C connector ground pin to slot
+- Widen CN1 tip pin slot
+- Test points -> 1mm drill
+- Add BOM to silkscreen
+- Add OV protect relay drive?
+- Move JP4, JP6, R10 silkscreen to avoid vias
+- Add full connector pinouts to silkscreen
