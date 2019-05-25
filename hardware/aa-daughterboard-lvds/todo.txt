@@ -1,5 +1,2 @@
-- Add revision to silkscreen
-- Widen 8P8C connector ground pin to slot
-- Widen CN1 tip pin slot
 - Add BOM to silkscreen
 
