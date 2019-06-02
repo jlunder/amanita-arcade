@@ -1,3 +1,4 @@
 - Add 12V TVS diode VDD-GND
 - Add 12V, 5V power indicators to board
+- Match rewiring of daughterboard connector
 
