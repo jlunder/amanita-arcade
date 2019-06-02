@@ -1,5 +1,15 @@
 EESchema-DOCLIB  Version 2.0
 #
+$CMP GND_S
+D Power flag, ground
+K power-flag
+$ENDCMP
+#
+$CMP GND_XY
+D Power flag, ground
+K power-flag
+$ENDCMP
+#
 $CMP NIS5132xx
 D 5V/12V eFuse Protection Switch (VSON-10)
 K efuse protection switch

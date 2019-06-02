@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name aa-panel-receiver-lvds)(type KiCad)(uri ${KIPRJMOD}/aa-panel-receiver-lvds.pretty)(options "")(descr ""))
+)

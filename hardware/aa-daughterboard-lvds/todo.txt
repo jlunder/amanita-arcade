@@ -1,2 +1,4 @@
 - Add BOM to silkscreen
+- Rename Vdd to +12V?
+- Characterize OV transient and fix
 
