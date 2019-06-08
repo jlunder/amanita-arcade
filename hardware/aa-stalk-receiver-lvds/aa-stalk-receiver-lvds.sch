@@ -119,7 +119,7 @@ Wire Wire Line
 Wire Wire Line
 	8900 1850 8950 1850
 $Comp
-L aa-stalk-receiver-lvds:D5V0P4UR6SO D1
+L aa-shared:D5V0P4UR6SO D1
 U 1 1 5FA1B995
 P 7700 8250
 F 0 "D1" H 7725 8715 50  0000 C CNN
@@ -185,7 +185,7 @@ U 1 1 5E4A4D06
 P 5050 8250
 F 0 "CN3" H 4720 8254 50  0000 R CNN
 F 1 "6P6C" H 4720 8345 50  0000 R CNN
-F 2 "aa-stalk-receiver-lvds:6P6C_Assmann_A-2014-1-4" V 5050 8275 50  0001 C CNN
+F 2 "aa-shared:6P6C_Assmann_A-2014-1-4" V 5050 8275 50  0001 C CNN
 F 3 "~" V 5050 8275 50  0001 C CNN
 	1    5050 8250
 	1    0    0    1   
@@ -647,7 +647,7 @@ $EndComp
 Wire Wire Line
 	9000 8100 9000 8300
 $Comp
-L aa-stalk-receiver-lvds:FIN1028 U4
+L aa-shared:FIN1028 U4
 U 1 1 5D2785D3
 P 11200 7750
 F 0 "U4" H 10950 8000 50  0000 C CNN
@@ -1964,7 +1964,7 @@ U 1 1 64B1D06D
 P 9300 1950
 F 0 "D2" V 9300 2029 50  0000 L CNN
 F 1 "D_Zener" V 9345 2029 50  0001 L CNN
-F 2 "aa-stalk-receiver-lvds:D_SOD-923" H 9300 1950 50  0001 C CNN
+F 2 "aa-shared:D_SOD-923" H 9300 1950 50  0001 C CNN
 F 3 "~" H 9300 1950 50  0001 C CNN
 	1    9300 1950
 	0    1    1    0   

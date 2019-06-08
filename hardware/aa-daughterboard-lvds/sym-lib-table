@@ -1,3 +1,3 @@
 (sym_lib_table
-  (lib (name aa-daughterboard-lvds)(type Legacy)(uri ${KIPRJMOD}/aa-daughterboard-lvds.lib)(options "")(descr ""))
+  (lib (name aa-shared)(type Legacy)(uri ${KIPRJMOD}/../aa-shared.lib)(options "")(descr ""))
 )

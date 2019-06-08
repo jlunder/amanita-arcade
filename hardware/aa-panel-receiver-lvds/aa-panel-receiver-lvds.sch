@@ -26,7 +26,7 @@ F 3 "" H 15950 10250 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:D5V0P4UR6SO D1
+L aa-shared:D5V0P4UR6SO D1
 U 1 1 5FA1B995
 P 7850 5700
 F 0 "D1" H 7875 6165 50  0000 C CNN
@@ -826,7 +826,7 @@ Connection ~ 14200 5950
 Wire Wire Line
 	14200 5950 14200 5500
 $Comp
-L aa-panel-receiver-lvds:+5V_X #PWR033
+L aa-shared:+5V_X #PWR033
 U 1 1 5D2F4E2D
 P 15350 10200
 F 0 "#PWR033" H 15350 10050 50  0001 C CNN
@@ -849,7 +849,7 @@ Connection ~ 8900 2300
 Wire Wire Line
 	8900 2300 9150 2300
 $Comp
-L aa-panel-receiver-lvds:+5V_X #PWR019
+L aa-shared:+5V_X #PWR019
 U 1 1 5D3F39C5
 P 14200 5450
 F 0 "#PWR019" H 14200 5300 50  0001 C CNN
@@ -962,7 +962,7 @@ Wire Wire Line
 Wire Wire Line
 	14400 5850 14400 5900
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR011
+L aa-shared:+5V_S #PWR011
 U 1 1 5EA9F454
 P 11300 7600
 F 0 "#PWR011" H 11300 7450 50  0001 C CNN
@@ -973,7 +973,7 @@ F 3 "" H 11300 7600 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR015
+L aa-shared:+5V_S #PWR015
 U 1 1 5EA9F5A2
 P 11600 7150
 F 0 "#PWR015" H 11600 7000 50  0001 C CNN
@@ -984,7 +984,7 @@ F 3 "" H 11600 7150 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR014
+L aa-shared:+5V_S #PWR014
 U 1 1 5EAA0590
 P 11600 4950
 F 0 "#PWR014" H 11600 4800 50  0001 C CNN
@@ -995,7 +995,7 @@ F 3 "" H 11600 4950 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR05
+L aa-shared:+5V_S #PWR05
 U 1 1 5EAA0637
 P 11300 3700
 F 0 "#PWR05" H 11300 3550 50  0001 C CNN
@@ -1006,7 +1006,7 @@ F 3 "" H 11300 3700 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR017
+L aa-shared:+5V_S #PWR017
 U 1 1 5EAA06DE
 P 13200 5500
 F 0 "#PWR017" H 13200 5350 50  0001 C CNN
@@ -1017,7 +1017,7 @@ F 3 "" H 13200 5500 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR025
+L aa-shared:+5V_S #PWR025
 U 1 1 5EAA57F8
 P 8900 9850
 F 0 "#PWR025" H 8900 9700 50  0001 C CNN
@@ -1028,7 +1028,7 @@ F 3 "" H 8900 9850 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR027
+L aa-shared:+5V_S #PWR027
 U 1 1 5EAA651D
 P 9850 9600
 F 0 "#PWR027" H 9850 9450 50  0001 C CNN
@@ -1039,7 +1039,7 @@ F 3 "" H 9850 9600 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR029
+L aa-shared:+5V_S #PWR029
 U 1 1 5EAA6FD2
 P 11350 10150
 F 0 "#PWR029" H 11350 10000 50  0001 C CNN
@@ -1050,7 +1050,7 @@ F 3 "" H 11350 10150 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR012
+L aa-shared:GND_S #PWR012
 U 1 1 5EAB4727
 P 11300 8250
 F 0 "#PWR012" H 11300 8000 50  0001 C CNN
@@ -1061,7 +1061,7 @@ F 3 "" H 11300 8250 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR04
+L aa-shared:GND_S #PWR04
 U 1 1 5EAB47CE
 P 8250 7450
 F 0 "#PWR04" H 8250 7200 50  0001 C CNN
@@ -1072,7 +1072,7 @@ F 3 "" H 8250 7450 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR010
+L aa-shared:GND_S #PWR010
 U 1 1 5EAB4875
 P 11300 7150
 F 0 "#PWR010" H 11300 6900 50  0001 C CNN
@@ -1083,7 +1083,7 @@ F 3 "" H 11300 7150 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR06
+L aa-shared:GND_S #PWR06
 U 1 1 5EAB5562
 P 11300 4950
 F 0 "#PWR06" H 11300 4700 50  0001 C CNN
@@ -1094,7 +1094,7 @@ F 3 "" H 11300 4950 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR013
+L aa-shared:GND_S #PWR013
 U 1 1 5EAB5609
 P 11550 4150
 F 0 "#PWR013" H 11550 3900 50  0001 C CNN
@@ -1105,7 +1105,7 @@ F 3 "" H 11550 4150 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR018
+L aa-shared:GND_S #PWR018
 U 1 1 5EAB668A
 P 13200 6850
 F 0 "#PWR018" H 13200 6600 50  0001 C CNN
@@ -1116,7 +1116,7 @@ F 3 "" H 13200 6850 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR016
+L aa-shared:GND_S #PWR016
 U 1 1 5EAB6731
 P 13000 6000
 F 0 "#PWR016" H 13000 5750 50  0001 C CNN
@@ -1132,13 +1132,13 @@ U 1 1 5E4A4D06
 P 4700 6200
 F 0 "CN2" H 4370 6204 50  0000 R CNN
 F 1 "8P8C" H 4370 6295 50  0000 R CNN
-F 2 "aa-panel-receiver-lvds:8P8C_Assmann_A-2014-2S-4" V 4700 6225 50  0001 C CNN
+F 2 "aa-shared:8P8C_Assmann_A-2014-2S-4" V 4700 6225 50  0001 C CNN
 F 3 "~" V 4700 6225 50  0001 C CNN
 	1    4700 6200
 	1    0    0    1   
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR02
+L aa-shared:GND_S #PWR02
 U 1 1 5EAB83F8
 P 5150 3100
 F 0 "#PWR02" H 5150 2850 50  0001 C CNN
@@ -1149,7 +1149,7 @@ F 3 "" H 5150 3100 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR01
+L aa-shared:GND_S #PWR01
 U 1 1 5EAB849F
 P 4950 5550
 F 0 "#PWR01" H 4950 5300 50  0001 C CNN
@@ -1160,7 +1160,7 @@ F 3 "" H 4950 5550 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR022
+L aa-shared:GND_S #PWR022
 U 1 1 5EAB8546
 P 7350 11200
 F 0 "#PWR022" H 7350 10950 50  0001 C CNN
@@ -1171,7 +1171,7 @@ F 3 "" H 7350 11200 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR023
+L aa-shared:GND_S #PWR023
 U 1 1 5EABA649
 P 8100 10600
 F 0 "#PWR023" H 8100 10350 50  0001 C CNN
@@ -1182,7 +1182,7 @@ F 3 "" H 8100 10600 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR024
+L aa-shared:GND_S #PWR024
 U 1 1 5EABA6F0
 P 8100 11800
 F 0 "#PWR024" H 8100 11550 50  0001 C CNN
@@ -1193,7 +1193,7 @@ F 3 "" H 8100 11800 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR026
+L aa-shared:GND_S #PWR026
 U 1 1 5EABAAC8
 P 8900 10550
 F 0 "#PWR026" H 8900 10300 50  0001 C CNN
@@ -1204,7 +1204,7 @@ F 3 "" H 8900 10550 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR028
+L aa-shared:GND_S #PWR028
 U 1 1 5EABAB6F
 P 9850 10600
 F 0 "#PWR028" H 9850 10350 50  0001 C CNN
@@ -1215,7 +1215,7 @@ F 3 "" H 9850 10600 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR030
+L aa-shared:GND_S #PWR030
 U 1 1 5EABC7F8
 P 12250 10750
 F 0 "#PWR030" H 12250 10500 50  0001 C CNN
@@ -1226,7 +1226,7 @@ F 3 "" H 12250 10750 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR031
+L aa-shared:GND_S #PWR031
 U 1 1 5EB9A533
 P 8900 2400
 F 0 "#PWR031" H 8900 2150 50  0001 C CNN
@@ -1285,7 +1285,7 @@ Wire Wire Line
 Wire Wire Line
 	13000 10250 13250 10250
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR0101
+L aa-shared:+5V_S #PWR0101
 U 1 1 5F3CF015
 P 8250 5050
 F 0 "#PWR0101" H 8250 4900 50  0001 C CNN
@@ -1300,7 +1300,7 @@ Wire Wire Line
 Wire Wire Line
 	11300 6500 11300 6550
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR09
+L aa-shared:+5V_S #PWR09
 U 1 1 5EA9F4FB
 P 11300 6500
 F 0 "#PWR09" H 11300 6350 50  0001 C CNN
@@ -1311,7 +1311,7 @@ F 3 "" H 11300 6500 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR08
+L aa-shared:GND_S #PWR08
 U 1 1 5EAB54BB
 P 11300 6050
 F 0 "#PWR08" H 11300 5800 50  0001 C CNN
@@ -1322,7 +1322,7 @@ F 3 "" H 11300 6050 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR07
+L aa-shared:+5V_S #PWR07
 U 1 1 5EAA04E9
 P 11300 5400
 F 0 "#PWR07" H 11300 5250 50  0001 C CNN
@@ -1339,7 +1339,7 @@ Wire Wire Line
 Wire Wire Line
 	11600 6100 11600 6050
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR0103
+L aa-shared:+5V_S #PWR0103
 U 1 1 5F431B34
 P 11600 6050
 F 0 "#PWR0103" H 11600 5900 50  0001 C CNN
@@ -1356,7 +1356,7 @@ Wire Wire Line
 Wire Wire Line
 	11600 8300 11600 8250
 $Comp
-L aa-panel-receiver-lvds:+5V_S #PWR0104
+L aa-shared:+5V_S #PWR0104
 U 1 1 5F431BD7
 P 11600 8250
 F 0 "#PWR0104" H 11600 8100 50  0001 C CNN
@@ -1562,7 +1562,7 @@ Wire Wire Line
 Wire Wire Line
 	7250 7000 7550 7000
 $Comp
-L aa-panel-receiver-lvds:D5V0P4UR6SO D2
+L aa-shared:D5V0P4UR6SO D2
 U 1 1 5D094592
 P 7900 7150
 F 0 "D2" H 7925 7615 50  0000 C CNN
@@ -1696,7 +1696,7 @@ F 3 "~" H 15000 10800 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L aa-panel-receiver-lvds:GND_S #PWR03
+L aa-shared:GND_S #PWR03
 U 1 1 64DBE017
 P 11900 11000
 F 0 "#PWR03" H 11900 10750 50  0001 C CNN

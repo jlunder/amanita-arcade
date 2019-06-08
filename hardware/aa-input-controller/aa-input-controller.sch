@@ -71,7 +71,7 @@ U 1 1 5C861CA7
 P 4500 2700
 F 0 "F1" V 4303 2700 50  0000 C CNN
 F 1 "500mA" V 4394 2700 50  0000 C CNN
-F 2 "aa-input-controller:Fuseholder_Clip_5x20_Bel_FC-211-22" V 4430 2700 50  0001 C CNN
+F 2 "aa-shared:Fuseholder_Clip_5x20_Bel_FC-211-22" V 4430 2700 50  0001 C CNN
 F 3 "~" H 4500 2700 50  0001 C CNN
 	1    4500 2700
 	0    1    1    0   
@@ -82,7 +82,7 @@ U 1 1 5C86203E
 P 5000 2950
 F 0 "D3" V 4954 3029 50  0000 L CNN
 F 1 "DF2S16FS" V 5045 3029 50  0000 L CNN
-F 2 "aa-input-controller:D_SOD-923" H 5000 2950 50  0001 C CNN
+F 2 "aa-shared:D_SOD-923" H 5000 2950 50  0001 C CNN
 F 3 "~" H 5000 2950 50  0001 C CNN
 	1    5000 2950
 	0    1    1    0   
@@ -375,7 +375,7 @@ Wire Wire Line
 Wire Wire Line
 	5600 7200 5600 7600
 $Comp
-L aa-input-controller:+3V #PWR010
+L aa-shared:+3V #PWR010
 U 1 1 62386747
 P 4550 7100
 F 0 "#PWR010" H 4550 6950 50  0001 C CNN
@@ -462,7 +462,7 @@ Connection ~ 4100 2900
 Wire Wire Line
 	4100 2900 4100 2700
 $Comp
-L aa-input-controller:NIS5132xx U2
+L aa-shared:NIS5132xx U2
 U 1 1 5CEA4699
 P 5300 4450
 F 0 "U2" H 5300 5167 50  0000 C CNN
@@ -473,7 +473,7 @@ F 3 "http://www.ti.com/lit/ds/symlink/tps25925.pdf" H 4900 4850 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L aa-input-controller:D5V0P4UR6SO D6
+L aa-shared:D5V0P4UR6SO D6
 U 1 1 5EADDF25
 P 5100 7200
 F 0 "D6" H 5125 7665 50  0000 C CNN
@@ -494,7 +494,7 @@ U 1 1 5D467BEC
 P 6450 7150
 F 0 "CN5" H 6120 7154 50  0000 R CNN
 F 1 "6P6C" H 6120 7245 50  0000 R CNN
-F 2 "aa-input-controller:6P6C_Assmann_A-2014-1-4" V 6450 7175 50  0001 C CNN
+F 2 "aa-shared:6P6C_Assmann_A-2014-1-4" V 6450 7175 50  0001 C CNN
 F 3 "~" V 6450 7175 50  0001 C CNN
 	1    6450 7150
 	-1   0    0    1   
