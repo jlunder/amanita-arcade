@@ -53,10 +53,8 @@ namespace aa {
     DigitalOut debug_lights_sync(PD_1);
     /*
     I2C eeprom_i2c(PC_9, PA_8);
-    DigitalOut eeprom_i2c_vcc(PA_9);
-    DigitalIn eeprom_i2c_pullup_sda(PC_8, PullUp);
-    DigitalIn eeprom_i2c_pullup_scl(PC_7, PullUp);
-    DigitalOut eeprom_i2c_wp(PC_6);
+    DigitalOut eeprom_i2c_vcc(PC_9);
+    DigitalOut eeprom_i2c_wp(PC_7);
     */
     DigitalOut eeprom_vcc(PC_6, 0);
     DigitalOut eeprom_wp(PC_7, 0);
@@ -544,7 +542,7 @@ namespace aa {
   {
     Debug::push_context("EEPROM Init");
 
-    Debug::trace("Hadware reset");
+    Debug::trace("Hardware reset");
     hw::eeprom_i2c_reset();
     if(!hw::eeprom_i2c_clear_bus()) {
       Debug::trace("Bus locked, aborting");
