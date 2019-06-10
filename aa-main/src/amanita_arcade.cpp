@@ -41,6 +41,10 @@ namespace aa {
 
 
   namespace hw {
+    static const uint32_t eeprom_i2c_settle_us = 5;
+    static const uint32_t eeprom_i2c_reset_power_off_us = 1200; // 1ms min
+    static const uint32_t eeprom_i2c_reset_power_on_us = 200; // 100us min
+
     __attribute__((aligned(4))) uint8_t debug_ser_alloc[sizeof (Serial)];
     Serial & debug_ser = *(Serial *)debug_ser_alloc; // PA_2, PA_3: USART2
     Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
@@ -51,21 +55,15 @@ namespace aa {
     DigitalOut debug_blue_led(LED6);
     DigitalOut debug_frame_sync(PD_0);
     DigitalOut debug_lights_sync(PD_1);
-    /*
-    I2C eeprom_i2c(PC_9, PA_8);
-    DigitalOut eeprom_i2c_vcc(PC_9);
-    DigitalOut eeprom_i2c_wp(PC_7);
-    */
-    DigitalOut eeprom_vcc(PC_6, 0);
-    DigitalOut eeprom_wp(PC_7, 0);
-    DigitalInOut eeprom_scl(PC_8, PIN_INPUT, OpenDrainPullUp, 0);
-    DigitalInOut eeprom_sda(PC_9, PIN_INPUT, OpenDrainPullUp, 0);
-
-    static const uint32_t eeprom_i2c_settle_us = 5;
-    static const uint32_t eeprom_i2c_reset_power_off_us = 1200; // 1ms min
-    static const uint32_t eeprom_i2c_reset_power_on_us = 200; // 100us min
-
-    static bool eeprom_in_transaction = false;
+    DigitalOut debug_misc(PD_2);
+    static const PinName eeprom_i2c_sda_pin = PC_9;
+    static const PinName eeprom_i2c_scl_pin = PA_8;
+    __attribute__((aligned(4))) uint8_t eeprom_i2c_alloc[sizeof (I2C)];
+    I2C & eeprom_i2c(*(I2C *)eeprom_i2c_alloc);
+    bool eeprom_i2c_is_live = false;
+    DigitalIn eeprom_i2c_sda(eeprom_i2c_sda_pin, PullUp);
+    DigitalOut eeprom_i2c_vcc(PC_6, 0);
+    DigitalOut eeprom_i2c_wp(PC_7, 0);
 
     static void debug_ser_init() {
       static bool initialized = false;
@@ -76,282 +74,114 @@ namespace aa {
       }
     }
 
-    static void eeprom_i2c_reset()
+    static bool eeprom_i2c_clear_bus();
+    static void eeprom_i2c_shutdown();
+    
+    static void eeprom_i2c_create()
     {
-      eeprom_sda.write(0);
-      eeprom_sda.input();
-      eeprom_sda.mode(PullNone);
-      eeprom_scl.write(0);
-      eeprom_scl.input();
-      eeprom_scl.mode(PullNone);
-      eeprom_wp.write(0);
-      eeprom_vcc.write(0);
-      wait_us(eeprom_i2c_reset_power_off_us);
+      eeprom_i2c_is_live = true;
+      new(&eeprom_i2c) I2C(eeprom_i2c_sda_pin, eeprom_i2c_scl_pin);
+    }
 
-      eeprom_vcc.write(1);
-      eeprom_wp.write(0);
-      eeprom_sda.input();
-      eeprom_sda.mode(PullUp);
-      eeprom_scl.input();
-      eeprom_scl.mode(PullUp);
+    static void eeprom_i2c_destroy()
+    {
+      eeprom_i2c.~I2C();
+      eeprom_i2c_is_live = false;
+    }
+
+    static bool eeprom_i2c_init()
+    {
+      if(eeprom_i2c_is_live) {
+        eeprom_i2c_shutdown();
+      }
+      eeprom_i2c_vcc.write(1);
+      eeprom_i2c_wp.write(0);
       wait_us(eeprom_i2c_reset_power_on_us);
+      if(eeprom_i2c_clear_bus()) {
+        eeprom_i2c_create();
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+
+    static void eeprom_i2c_shutdown()
+    {
+      if(eeprom_i2c_is_live) {
+        eeprom_i2c_destroy();
+      }
+      eeprom_i2c_wp.write(0);
+      eeprom_i2c_vcc.write(0);
+      wait_us(eeprom_i2c_reset_power_off_us);
     }
 
     static bool eeprom_i2c_clear_bus()
     {
-      eeprom_sda.input();
-      eeprom_scl.input();
-      if(eeprom_scl.read() == 0) {
-        Debug::trace("EEPROM SCL stuck low, hardware fault!");
-        return false;
-      }
-
-      for(int i = 0; i < 20; ++i) {
-        if(eeprom_sda.read() != 0) {
-          // Bus released!
-          return true;
-        }
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        eeprom_scl.input();
-        wait_us(eeprom_i2c_settle_us);
-      }
-
-      Debug::trace("EEPROM SDA stuck low, bus stuck!");
-      return false;
-    }
-
-    static bool eeprom_i2c_bus_error() {
-      eeprom_scl.input();
-      eeprom_sda.input();
-      eeprom_in_transaction = false;
-      return false;
-    }
-
-    static bool eeprom_i2c_start() {
-      if(!eeprom_in_transaction) {
-        if((eeprom_scl.read() == 0) || (eeprom_sda.read() == 0)) {
-          return eeprom_i2c_bus_error();
-        }
-        eeprom_sda.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_sda.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-
-        eeprom_in_transaction = true;
-      }
-      else {
-        if((eeprom_scl.read() != 0) || (eeprom_sda.read() != 0)) {
-          return eeprom_i2c_bus_error();
-        }
-
-        eeprom_sda.input();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_sda.read() == 0) {
-          return eeprom_i2c_bus_error();
-        }
-        eeprom_scl.input();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() == 0) {
-          return eeprom_i2c_bus_error();
-        }
-        eeprom_sda.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_sda.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-      }
-
-      return true;
-    }
-
-    static bool eeprom_i2c_stop() {
-      if(!eeprom_in_transaction) {
+      if(eeprom_i2c_sda.read() != 0) {
+        // Bus released!
         return true;
       }
 
-      eeprom_in_transaction = false;
-
-      if((eeprom_scl.read() != 0) || (eeprom_sda.read() != 0)) {
-        return eeprom_i2c_bus_error();
+      bool was_live = eeprom_i2c_is_live;
+      // Bus locked, we gotta try to unstick it
+      if(was_live) {
+        eeprom_i2c_destroy();
       }
 
-      eeprom_scl.input();
-      wait_us(eeprom_i2c_settle_us);
-      if(eeprom_scl.read() == 0) {
-        return eeprom_i2c_bus_error();
-      }
-      eeprom_sda.input();
-      wait_us(eeprom_i2c_settle_us);
-      if(eeprom_sda.read() == 0) {
-        return eeprom_i2c_bus_error();
+      bool result = false;
+      { // Scope to trigger destruction of scl
+        DigitalInOut scl(eeprom_i2c_scl_pin);
+        scl.mode(PullUp);
+
+        wait_us(eeprom_i2c_settle_us);
+        if(scl.read() == 0) {
+          Debug::trace("EEPROM SCL stuck low, hardware fault!");
+        }
+        else {
+          scl.write(0);
+          for(int i = 0; i < 20; ++i) {
+            if(eeprom_i2c_sda.read() != 0) {
+              // Bus released!
+              result = true;
+              break;
+            }
+            scl.output();
+            wait_us(eeprom_i2c_settle_us);
+            scl.input();
+            wait_us(eeprom_i2c_settle_us);
+          }
+
+          if(!result) {
+            Debug::trace("EEPROM SDA stuck low, bus clear failed!");
+          }
+        }
       }
 
-      return true;
+      // fall through
+      if(was_live) {
+        eeprom_i2c_create();
+      }
+      return result;
     }
 
-    static bool eeprom_i2c_read(uint8_t * val, bool ack) {
-      *val = 0;
+    static void eeprom_i2c_start() {
+      eeprom_i2c.start();
+    }
 
-      if(!eeprom_in_transaction) {
-        // In a transaction SCL would already be low, and slave data stable,
-        // but if we are not in a transaction clock will be high -- bring it
-        // low and wait for the lines to settle
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-      }
+    static void eeprom_i2c_stop() {
+      eeprom_i2c.stop();
+    }
 
-      // Prepare to receive input -- slave should be controlling SDA already
-      eeprom_sda.input();
-      wait_us(eeprom_i2c_settle_us);
-
-      // Clock high, transfer data (first bit)
-      eeprom_scl.input();
-      uint32_t val_temp = eeprom_sda.read() != 0 ? 1 : 0;
-      wait_us(eeprom_i2c_settle_us);
-      if(eeprom_scl.read() == 0) {
-        return eeprom_i2c_bus_error();
-      }
-
-      for(int i = 1; i < 8; ++i) {
-        val_temp = val_temp << 1;
-
-        // Clock low, slave sets up data
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-        wait_us(eeprom_i2c_settle_us);
-
-        // Clock high, transfer data
-        eeprom_scl.input();
-        if(eeprom_sda.read() != 0) {
-          val_temp |= 1;
-        }
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() == 0) {
-          return eeprom_i2c_bus_error();
-        }
-        wait_us(eeprom_i2c_settle_us);
-      }
-
-
-      // Clock low, set up ack
-      eeprom_scl.output();
-      wait_us(eeprom_i2c_settle_us);
-      if(eeprom_scl.read() != 0) {
-        return eeprom_i2c_bus_error();
-      }
-      if(ack) {
-        eeprom_sda.output();
-      }
-      wait_us(eeprom_i2c_settle_us);
-      bool read_ack = (eeprom_sda.read() == 0);
-      if(read_ack != ack) {
-        return eeprom_i2c_bus_error();
-      }
-
-      // Clock high, transfer data
-      eeprom_scl.input();
-      wait_us(eeprom_i2c_settle_us);
-      if(eeprom_scl.read() == 0) {
-        return eeprom_i2c_bus_error();
-      }
-      wait_us(eeprom_i2c_settle_us);
-
-      if(eeprom_in_transaction) {
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        eeprom_sda.output();
-        wait_us(eeprom_i2c_settle_us);
-      }
-
-      *val = val_temp & 0xFF;
+    static bool eeprom_i2c_read(uint8_t * val) {
+      *val = eeprom_i2c.read(I2C::ACK);
       return true;
     }
 
     static bool eeprom_i2c_write(uint8_t val, bool * ack) {
-      if(!eeprom_in_transaction) {
-        // In a transaction SCL would already be low, and slave data stable,
-        // but if we are not in a transaction clock will be high -- bring it
-        // low and wait for the lines to settle
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-      }
-
-      uint32_t val_temp = val;
-
-      for(int i = 0; i < 8; ++i) {
-        // Clock low, set up data
-        if((val_temp & 0x80) != 0) {
-          eeprom_sda.input();
-        }
-        else {
-          eeprom_sda.output();
-        }
-        wait_us(eeprom_i2c_settle_us);
-        if((eeprom_sda.read() != 0) != ((val_temp & 0x80) != 0)) {
-          return eeprom_i2c_bus_error();
-        }
-
-        val_temp = val_temp << 1;
-
-        // Clock high, transfer data
-        eeprom_scl.input();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() == 0) {
-          return eeprom_i2c_bus_error();
-        }
-        wait_us(eeprom_i2c_settle_us);
-
-        // Set clock low
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-      }
-
-      // Clock high, transfer ack
-      eeprom_scl.input();
-      bool ack_temp = (eeprom_sda.read() == 0);
-      wait_us(eeprom_i2c_settle_us);
-      if(eeprom_scl.read() == 0) {
-        return eeprom_i2c_bus_error();
-      }
-      wait_us(eeprom_i2c_settle_us);
-
-      if(eeprom_in_transaction) {
-        // Leave SCL low to hold bus for ourselves
-        eeprom_scl.output();
-        wait_us(eeprom_i2c_settle_us);
-        if(eeprom_scl.read() != 0) {
-          return eeprom_i2c_bus_error();
-        }
-        eeprom_sda.output();
-        wait_us(eeprom_i2c_settle_us);
-      }
-
-      *ack = ack_temp;
-      return true;
+      int res = eeprom_i2c.write(val);
+      *ack = (res == I2C::ACK);
+      return (res == I2C::ACK) || (res == I2C::NoACK);
     }
   }
 
@@ -543,7 +373,7 @@ namespace aa {
     Debug::push_context("EEPROM Init");
 
     Debug::trace("Hardware reset");
-    hw::eeprom_i2c_reset();
+    hw::eeprom_i2c_init();
     if(!hw::eeprom_i2c_clear_bus()) {
       Debug::trace("Bus locked, aborting");
       return;
@@ -556,9 +386,7 @@ namespace aa {
     uint8_t addr1 = (mem_addr >> 0) & 0xFF;
     bool ack;
 
-    if(!hw::eeprom_i2c_start()) {
-      Debug::trace("EEPROM I2C start bus fault");
-    }
+    hw::eeprom_i2c_start();
 
     if(!hw::eeprom_i2c_write(addr0, &ack)) {
       Debug::trace("EEPROM I2C write device address write bus fault");
@@ -587,15 +415,11 @@ namespace aa {
       return;
     }
 
-    if(!hw::eeprom_i2c_stop()) {
-      Debug::trace("EEPROM I2C write stop bus fault");
-    }
+    hw::eeprom_i2c_stop();
 
     wait_ms(5);
 
-    if(!hw::eeprom_i2c_start()) {
-      Debug::trace("EEPROM I2C read start bus fault");
-    }
+    hw::eeprom_i2c_start();
 
     if(!hw::eeprom_i2c_write(addr0, &ack)) {
       Debug::trace("EEPROM I2C read device address write bus fault");
@@ -615,9 +439,7 @@ namespace aa {
       return;
     }
 
-    if(!hw::eeprom_i2c_start()) {
-      Debug::trace("EEPROM I2C read restart bus fault");
-    }
+    hw::eeprom_i2c_start();
 
     if(!hw::eeprom_i2c_write(0b10100001, &ack)) {
       Debug::trace("EEPROM I2C read device address read bus fault");
@@ -629,15 +451,13 @@ namespace aa {
     }
 
     uint8_t val = 0;
-    if(!hw::eeprom_i2c_read(&val, false)) {
+    if(!hw::eeprom_i2c_read(&val)) {
       Debug::tracef("EEPROM I2C read data bus fault");
       return;
     }
     Debug::tracef("EEPROM read 0: 0x%02X", val);
 
-    if(!hw::eeprom_i2c_stop()) {
-      Debug::trace("EEPROM I2C read stop bus fault");
-    }
+    hw::eeprom_i2c_stop();
   }
 
 
