@@ -1,4 +1,10 @@
 - Add BOM to silkscreen
 - Rename Vdd to +12V?
-- Characterize OV transient and fix
+- Characterize OV transient and fix -> big cap on power entry! And snubber cap -> 1uF
+- Reorder pinout on 6P6C connectors to pair side-by-side for flat cable
+- Remove OV protection to separate board
+- Re-layout for size...?
+- 5V reg -> flat?
+- Make eeprom/jumpers more accessible?
+- Match stalk bobards to size of boxes
 
