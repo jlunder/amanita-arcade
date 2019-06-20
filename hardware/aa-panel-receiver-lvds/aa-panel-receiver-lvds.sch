@@ -204,10 +204,10 @@ Wire Wire Line
 Wire Wire Line
 	10350 4750 10250 4750
 $Comp
-L Connector:TestPoint TP103
+L Connector:TestPoint TP104
 U 1 1 5DDFDC67
 P 12150 1950
-F 0 "TP103" H 12150 2300 50  0000 C CNN
+F 0 "TP104" H 12150 2300 50  0000 C CNN
 F 1 "+5V_Y" H 12150 2200 50  0000 C CNN
 F 2 "aa-shared:TestPoint_Loop_D1.80mm_Drill1.0mm_Beaded" H 12350 1950 50  0001 C CNN
 F 3 "" H 12350 1950 50  0001 C CNN
@@ -1433,7 +1433,7 @@ Wire Wire Line
 Wire Wire Line
 	10450 1150 10450 1200
 Wire Wire Line
-	10450 1150 9950 1150
+	10450 1150 10200 1150
 $Comp
 L power:GND #PWR020
 U 1 1 64E398C3
@@ -1534,10 +1534,10 @@ F 3 "" H 12400 1000 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:TestPoint TP102
+L Connector:TestPoint TP103
 U 1 1 5E3A63F4
 P 12150 1000
-F 0 "TP102" H 12150 1350 50  0000 C CNN
+F 0 "TP103" H 12150 1350 50  0000 C CNN
 F 1 "+5V_X" H 12150 1250 50  0000 C CNN
 F 2 "aa-shared:TestPoint_Loop_D1.80mm_Drill1.0mm_Beaded" H 12350 1000 50  0001 C CNN
 F 3 "" H 12350 1000 50  0001 C CNN
@@ -3245,4 +3245,18 @@ Connection ~ 10750 14200
 Wire Wire Line
 	10350 7650 10350 8200
 Connection ~ 10350 7650
+$Comp
+L Connector:TestPoint TP102
+U 1 1 5D0CCED8
+P 10200 1150
+F 0 "TP102" H 10200 1500 50  0000 C CNN
+F 1 "+5V" H 10200 1400 50  0000 C CNN
+F 2 "aa-shared:TestPoint_Loop_D1.80mm_Drill1.0mm_Beaded" H 10400 1150 50  0001 C CNN
+F 3 "" H 10400 1150 50  0001 C CNN
+	1    10200 1150
+	-1   0    0    -1  
+$EndComp
+Connection ~ 10200 1150
+Wire Wire Line
+	10200 1150 9950 1150
 $EndSCHEMATC

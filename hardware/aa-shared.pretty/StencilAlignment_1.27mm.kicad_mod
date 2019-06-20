@@ -1,0 +1,10 @@
+(module StencilAlignment_1.27mm (layer F.Cu) (tedit 5D091D4E)
+  (fp_text reference REF** (at 0 -2.032) (layer F.SilkS) hide
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (fp_text value StencilAlignment_1.27mm (at 0 2.667) (layer F.Fab)
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (pad "" np_thru_hole circle (at 0 0) (size 1.27 1.27) (drill 1.27) (layers *.Cu *.Paste *.Mask)
+    (solder_paste_margin 0.00254))
+)
