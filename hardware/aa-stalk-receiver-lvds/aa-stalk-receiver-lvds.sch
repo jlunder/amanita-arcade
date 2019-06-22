@@ -352,7 +352,7 @@ Wire Wire Line
 Wire Wire Line
 	8350 10650 8350 10600
 Wire Wire Line
-	8600 10800 8600 10900
+	8600 10800 8600 10850
 $Comp
 L power:GND #PWR026
 U 1 1 5CE433B0
@@ -1837,4 +1837,56 @@ Wire Wire Line
 Connection ~ 6000 6700
 Wire Wire Line
 	6000 6700 6450 6700
+Wire Wire Line
+	8850 10650 8850 10850
+Wire Wire Line
+	8850 10850 8600 10850
+Connection ~ 8850 10650
+Connection ~ 8600 10850
+Wire Wire Line
+	8600 10850 8600 10900
+$Comp
+L aa-shared:Fiducial FD1
+U 1 1 5D0F3C4F
+P 4000 2550
+F 0 "FD1" H 4128 2550 50  0000 L CNN
+F 1 "Fiducial" H 4000 2700 50  0001 C CNN
+F 2 "Fiducial:Fiducial_1mm_Dia_2.54mm_Outer_CopperTop" H 4000 2550 50  0001 C CNN
+F 3 "" H 4000 2550 50  0001 C CNN
+	1    4000 2550
+	1    0    0    -1  
+$EndComp
+$Comp
+L aa-shared:Fiducial FD2
+U 1 1 5D0F3D0F
+P 5300 1900
+F 0 "FD2" H 5428 1900 50  0000 L CNN
+F 1 "Fiducial" H 5300 2050 50  0001 C CNN
+F 2 "Fiducial:Fiducial_1mm_Dia_2.54mm_Outer_CopperTop" H 5300 1900 50  0001 C CNN
+F 3 "" H 5300 1900 50  0001 C CNN
+	1    5300 1900
+	1    0    0    -1  
+$EndComp
+$Comp
+L aa-shared:Fiducial FD5
+U 1 1 5D0F3DE5
+P 4000 2800
+F 0 "FD5" H 4128 2800 50  0000 L CNN
+F 1 "Fiducial" H 4000 2950 50  0001 C CNN
+F 2 "aa-shared:StencilAlignment_1.27mm" H 4000 2800 50  0001 C CNN
+F 3 "" H 4000 2800 50  0001 C CNN
+	1    4000 2800
+	1    0    0    -1  
+$EndComp
+$Comp
+L aa-shared:Fiducial FD6
+U 1 1 5D0F3EB3
+P 5300 2150
+F 0 "FD6" H 5428 2150 50  0000 L CNN
+F 1 "Fiducial" H 5300 2300 50  0001 C CNN
+F 2 "aa-shared:StencilAlignment_1.27mm" H 5300 2150 50  0001 C CNN
+F 3 "" H 5300 2150 50  0001 C CNN
+	1    5300 2150
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

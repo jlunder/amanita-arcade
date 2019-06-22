@@ -3259,4 +3259,48 @@ $EndComp
 Connection ~ 10200 1150
 Wire Wire Line
 	10200 1150 9950 1150
+$Comp
+L aa-shared:Fiducial FD1
+U 1 1 5D147B17
+P 4650 1600
+F 0 "FD1" H 4778 1600 50  0000 L CNN
+F 1 "Fiducial" H 4650 1750 50  0001 C CNN
+F 2 "Fiducial:Fiducial_1mm_Dia_2.54mm_Outer_CopperTop" H 4650 1600 50  0001 C CNN
+F 3 "" H 4650 1600 50  0001 C CNN
+	1    4650 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L aa-shared:Fiducial FD2
+U 1 1 5D147E31
+P 5900 850
+F 0 "FD2" H 6028 850 50  0000 L CNN
+F 1 "Fiducial" H 5900 1000 50  0001 C CNN
+F 2 "Fiducial:Fiducial_1mm_Dia_2.54mm_Outer_CopperTop" H 5900 850 50  0001 C CNN
+F 3 "" H 5900 850 50  0001 C CNN
+	1    5900 850 
+	1    0    0    -1  
+$EndComp
+$Comp
+L aa-shared:Fiducial FD5
+U 1 1 5D147FBF
+P 4650 1850
+F 0 "FD5" H 4778 1850 50  0000 L CNN
+F 1 "Fiducial" H 4650 2000 50  0001 C CNN
+F 2 "aa-shared:StencilAlignment_1.27mm" H 4650 1850 50  0001 C CNN
+F 3 "" H 4650 1850 50  0001 C CNN
+	1    4650 1850
+	1    0    0    -1  
+$EndComp
+$Comp
+L aa-shared:Fiducial FD6
+U 1 1 5D148209
+P 5900 1100
+F 0 "FD6" H 6028 1100 50  0000 L CNN
+F 1 "Fiducial" H 5900 1250 50  0001 C CNN
+F 2 "aa-shared:StencilAlignment_1.27mm" H 5900 1100 50  0001 C CNN
+F 3 "" H 5900 1100 50  0001 C CNN
+	1    5900 1100
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

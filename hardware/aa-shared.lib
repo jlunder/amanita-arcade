@@ -295,6 +295,19 @@ X VCC 8 0 300 100 D 50 50 1 1 W
 ENDDRAW
 ENDDEF
 #
+# Fiducial
+#
+DEF ~Fiducial FD 0 0 N N 1 F N
+F0 "FD" 0 -150 50 H V C CNN
+F1 "Fiducial" 0 150 50 H I C CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+DRAW
+C 0 0 50 0 1 0 F
+C 0 0 100 0 1 0 N
+ENDDRAW
+ENDDEF
+#
 # GND_S
 #
 DEF GND_S #PWR 0 0 Y Y 1 F P
