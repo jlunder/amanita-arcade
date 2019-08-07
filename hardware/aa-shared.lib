@@ -435,8 +435,8 @@ DRAW
 T 0 -550 -1000 50 0 0 0 GND Normal 0 L C
 T 0 550 200 50 0 1 0 !PB5 Normal 0 R C
 T 0 -550 -800 50 0 1 0 +3V3 Normal 0 L C
-T 0 550 700 50 0 1 0 +3V3 Normal 0 R C
-T 0 550 900 50 0 1 0 +5V Normal 0 R C
+T 0 550 900 50 0 1 0 +3V3 Normal 0 R C
+T 0 550 700 50 0 1 0 +5V Normal 0 R C
 T 0 -550 -900 50 0 1 0 GND Normal 0 L C
 T 0 550 800 50 0 1 0 GND Normal 0 R C
 T 0 550 -100 50 0 1 0 JTDI/PA15 Normal 0 R C
