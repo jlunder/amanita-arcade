@@ -394,7 +394,7 @@ uint8_t parseHexDigit(uint8_t digit) {
 void printGamepadValues() {
   print(serial_comms, "P ");
   print_x(serial_comms, (uint32_t)last_loop_start_us, 8);
-#if 1
+#if 0
   print(serial_comms, "/");
   print_x(serial_comms, (uint32_t)last_read_work_us, 4);
   print(serial_comms, ",");
