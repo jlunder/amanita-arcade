@@ -1,10 +1,8 @@
 #include "PSGamepad.h"
-#include <Arduino.h>
-#include <SPI.h>
-#include <stdint.h>
 
+#include <stdlib.h>
 
-//#define PSG_DEBUG
+//#define LOG_COMMANDS
 
 #define PSG_CTRL_BYTE_DELAY 20
 #define PSG_READ_DELAY 5000
@@ -17,25 +15,47 @@
 #define PSC_SET_CONTROL_MAP 0x4F
 
 
-void PSGamepad::begin(uint8_t attentionPin, bool useAnalog, bool usePressure,
-    bool useRumble) {
+static char const hex_digits[16] = {
+  '0', '1', '2', '3', '4', '5', '6', '7',
+  '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+};
+
+
+static inline uint8_t rev8(uint8_t x) {
+  return __RBIT(x) >> 24;
+}
+
+
+static inline void log(char const * message) { fputs(message, stderr); }
+static inline void log_u8x2(uint8_t val) {
+  fputc(hex_digits[(val >> 4) & 0xF], stderr);
+  fputc(hex_digits[(val >> 0) & 0xF], stderr);
+}
+
+
+PSGamepad::PSGamepad(PinName commandPin, PinName dataPin, PinName clockPin,
+    PinName attentionPin)
+    : _spi(commandPin, dataPin, clockPin)
+    , _attention(attentionPin) {
+}
+
+void PSGamepad::begin(bool useAnalog, bool usePressure, bool useRumble) {
   _buttons = 0xFFFF;
   _lastButtons = 0xFFFF;
   for(size_t i = 0; i < NUM_ANALOG; ++i) {
     _analogData[i] = 0x80;
   }
 
-  _attentionPin = attentionPin;
   _rumbleEnabled = useRumble;
   _analogEnabled = useAnalog;
   _pressureEnabled = usePressure;
 
-  _lastReadMillis = millis();
+  _lastRead.start();
 
-  pinMode(_attentionPin, OUTPUT);
-  digitalWrite(_attentionPin, 1);
+  _spi.frequency(250000);
+  _spi.format(8, 3);
 
-  SPI.begin();
+  _attention.write(1);
 
   // Cause the next poll() to configure the gamepad
   _status = PSCS_DISCONNECTED;
@@ -43,7 +63,7 @@ void PSGamepad::begin(uint8_t attentionPin, bool useAnalog, bool usePressure,
 
 
 void PSGamepad::end() {
-  SPI.end();
+  _spi.abort_all_transfers();
 }
 
 
@@ -53,7 +73,7 @@ void PSGamepad::poll() {
 
 
 void PSGamepad::poll(bool rumbleMotor0, uint8_t rumbleMotor1) {
-  uint32_t deltaMillis = millis() - _lastReadMillis;
+  uint32_t deltaMillis = _lastRead.read_ms();
 
   if(deltaMillis < 7) {
     return;
@@ -67,25 +87,20 @@ void PSGamepad::poll(bool rumbleMotor0, uint8_t rumbleMotor1) {
   }
 
   if(_status == PSCS_CONFIGURING) {
-    uint32_t configMillis = millis() - _configureStartMillis;
-    if(configMillis > 500) {
+    if(_configureStart.read_ms() > 500) {
       // Something is wrong, trigger a reconfig next poll
-#ifdef PSG_DEBUG
-      Serial.println("timeout on config");
-#endif
+      log("timeout on config\r\n");
       _status = PSCS_DISCONNECTED;
     }
   } else if((_pressureEnabled && _status != PSCS_PRESSURE) ||
       (!_pressureEnabled && _analogEnabled && _status != PSCS_ANALOG) ||
       (!_pressureEnabled && !_analogEnabled && _status != PSCS_DIGITAL)) {
     // Controller is not in the right mode, force it there
-#ifdef PSG_DEBUG
-    Serial.println("controller in weird state");
-#endif
+    log("controller in weird state\r\n");
     _status = PSCS_DISCONNECTED;
   }
 
-  _lastReadMillis = millis();
+  _lastRead.reset();
 }
 
 
@@ -101,11 +116,10 @@ void PSGamepad::configureGamepad() {
   connected = connected && setConfigMode(false);
   if(connected) {
     _status = PSCS_CONFIGURING;
-    _configureStartMillis = millis();
+    _configureStart.reset();
+    _configureStart.start();
   } else {
-#ifdef PSG_DEBUG
-    Serial.println("configure didn't all succeed");
-#endif
+    log("configure didn't all succeed\r\n");
     _status = PSCS_DISCONNECTED;
   }
 }
@@ -136,9 +150,7 @@ void PSGamepad::readGamepad(bool rumbleMotor0, uint8_t rumbleMotor1) {
       break;
     case 0xF3:
       if(_status != PSCS_CONFIGURING) {
-#ifdef PSG_DEBUG
-        Serial.println("unexpected config mode");
-#endif
+        log("unexpected config mode\r\n");
         _status = PSCS_DISCONNECTED;
       }
       break;
@@ -146,9 +158,7 @@ void PSGamepad::readGamepad(bool rumbleMotor0, uint8_t rumbleMotor1) {
       _status = PSCS_PRESSURE;
       break;
     default:
-#ifdef PSG_DEBUG
-      Serial.println("bad result from poll");
-#endif
+      log("bad result from poll\r\n");
       _status = PSCS_DISCONNECTED;
       break;
   }
@@ -209,27 +219,21 @@ bool PSGamepad::setControlMap(bool analog, bool pressure) {
   return result == 0xF3;
 }
 
-
 uint8_t PSGamepad::sendCommand(uint8_t command, uint8_t const * txBuf,
     size_t txLength, uint8_t txPad, uint8_t * rxBuf, size_t rxLength) {
-  SPI.beginTransaction(SPISettings(250000, LSBFIRST, SPI_MODE3));
-  digitalWrite(_attentionPin, 0);
+  _attention.write(0);
 
-  SPI.transfer(0x01);
-  delayMicroseconds(PSG_CTRL_BYTE_DELAY);
+  _spi.write(rev8(0x01));
+  wait_us(PSG_CTRL_BYTE_DELAY);
 
-  uint8_t response = SPI.transfer(command);
-  delayMicroseconds(PSG_CTRL_BYTE_DELAY);
+  uint8_t response = rev8(_spi.write(rev8(command)));
+  wait_us(PSG_CTRL_BYTE_DELAY);
 
-  SPI.transfer(0x00);
-  delayMicroseconds(PSG_CTRL_BYTE_DELAY);
+  _spi.write(rev8(0x00));
+  wait_us(PSG_CTRL_BYTE_DELAY);
 
-#ifdef PSG_DEBUG
-  Serial.print("CMD ");
-  Serial.print(command, HEX);
-  Serial.print('>');
-  Serial.print(response, HEX);
-  Serial.print(':');
+#if defined(LOG_COMMANDS)
+  log("CMD "); log_u8x2(command); log(">"); log_u8x2(response); log(":");
 #endif
 
   if(response != 0xFF) {
@@ -237,27 +241,24 @@ uint8_t PSGamepad::sendCommand(uint8_t command, uint8_t const * txBuf,
     size_t i = 0;
     for (; (i < txLength) || (i < packetSize); ++i) {
       uint8_t txByte = ((txBuf != NULL) && (i < txLength) ? txBuf[i] : txPad);
-      uint8_t rxByte = SPI.transfer(txByte);
-#ifdef PSG_DEBUG
-      Serial.print(' ');
-      Serial.print(txByte, HEX);
-      Serial.print('>');
-      Serial.print(rxByte, HEX);
+      uint8_t rxByte = rev8(_spi.write(rev8(txByte)));
+#if defined(LOG_COMMANDS)
+      log(" "); log_u8x2(txByte); log(">"); log_u8x2(rxByte);
 #endif
       if((rxBuf != NULL) && (i < rxLength)) {
         rxBuf[i] = rxByte;
       }
-      delayMicroseconds(PSG_CTRL_BYTE_DELAY);
+      wait_us(PSG_CTRL_BYTE_DELAY);
     }
   }
 
-#ifdef PSG_DEBUG
-  Serial.println();
+#if defined(LOG_COMMANDS)
+  log("\r\n");
 #endif
-  digitalWrite(_attentionPin, 1);
-  SPI.endTransaction();
+  _attention.write(1);
 
-  delayMicroseconds(PSG_CTRL_BYTE_DELAY);
+  wait_us(PSG_CTRL_BYTE_DELAY);
 
   return response;
 }
+

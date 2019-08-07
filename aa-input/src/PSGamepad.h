@@ -1,7 +1,8 @@
-#ifndef PS2X_lib_h
-#define PS2X_lib_h
+#ifndef PSGAMEPAD_H
+#define PSGAMEPAD_H
 
-#include <Arduino.h>
+#include <mbed.h>
+
 #include <stdint.h>
 
 
@@ -98,19 +99,22 @@ public:
 
   uint8_t getStatus() const { return _status; }
 
-  void begin(uint8_t attentionPin, bool useAnalog = true,
-    bool usePressure = false, bool useRumble = false);
+  PSGamepad(PinName commandPin, PinName dataPin, PinName clockPin,
+    PinName attentionPin);
+  void begin(bool useAnalog = true, bool usePressure = false,
+    bool useRumble = false);
   void end();
   void poll();
   void poll(bool rumbleMotor0, uint8_t rumbleMotor1);
 
 private:
-  uint8_t _attentionPin;
+  SPI _spi;
+  DigitalOut _attention;
   bool _rumbleEnabled;
   bool _analogEnabled;
   bool _pressureEnabled;
-  uint32_t _configureStartMillis;
-  uint32_t _lastReadMillis;
+  Timer _configureStart;
+  Timer _lastRead;
   uint16_t _lastButtons;
   uint16_t _buttons;
   uint8_t _analogData[NUM_ANALOG];

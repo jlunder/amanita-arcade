@@ -179,7 +179,7 @@ namespace aa {
     static size_t const STALK_PAGE_GREEN = 1;
     static size_t const STALK_PAGE_BLUE  = 2;
     static size_t const STALK_PAGE_PINK  = 3;
-    static size_t const SCOREBOARD_PAGES_START = 8;
+    static size_t const SCOREBOARD_PAGES_START = 4;
     static size_t const SCOREBOARD_LIGHTS_PER_PAGE = 120;
     static size_t const SCOREBOARD_PAGES_COUNT =
       (SCOREBOARD_LIGHTS_COUNT + SCOREBOARD_LIGHTS_PER_PAGE - 1) /

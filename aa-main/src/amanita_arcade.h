@@ -2,6 +2,8 @@
 #define AMANITA_ARCADE_H
 
 
+#include <new>
+
 #include <math.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -27,7 +29,7 @@ namespace aa {
     M_COUNT
   };
 
-  #if 0
+#if 0
   static const size_t STALK_HEIGHT_RED   = 12;
   static const size_t STALK_HEIGHT_GREEN = 12;
   static const size_t STALK_HEIGHT_BLUE  = 12;
@@ -38,7 +40,7 @@ namespace aa {
   static const size_t SCOREBOARD_HEIGHT = 8;
   static const float STALK_BRIGHTNESS = 0.25f;
   static const float SCOREBOARD_BRIGHTNESS = 0.25f;
-  #else
+#else
   // Heights are 24, 32, 36, 41
   static const size_t STALK_HEIGHT_RED   = 36;
   static const size_t STALK_HEIGHT_GREEN = 41;
@@ -50,7 +52,7 @@ namespace aa {
   static const size_t SCOREBOARD_HEIGHT = 30;
   static const float STALK_BRIGHTNESS = 1.0f;
   static const float SCOREBOARD_BRIGHTNESS = 0.50f;
-  #endif
+#endif
 
   static const size_t STALK_LIGHTS_COUNT_RED =
     STALK_HEIGHT_RED * STALK_WIDTH;
@@ -151,11 +153,20 @@ namespace aa {
     static void service_watchdog();
 
   private:
-    static void eeprom_i2c_reset();
-    static void eeprom_i2c_start();
-    static void eeprom_i2c_stop();
-    static int eeprom_i2c_write(uint8_t val);
-    static uint8_t eeprom_i2c_read(bool ack);
+    struct EepromWriteOp {
+      uint16_t address;
+      uint16_t size;
+      uint8_t data[16];
+    };
+
+    static const size_t EEPROM_WRITE_QUEUE_SIZE = 4;
+    static EepromWriteOp _eeprom_write_queue[EEPROM_WRITE_QUEUE_SIZE];
+    static size_t _eeprom_write_queue_tail;
+    static size_t _eeprom_write_queue_count;
+
+    static bool eeprom_write_byte(uint16_t addr, uint8_t data);
+    static bool eeprom_write_bytes(uint16_t addr, uint8_t const * data, uint16_t size);
+    static bool eeprom_read_byte(uint16_t addr, uint8_t * val);
   };
 
 }
