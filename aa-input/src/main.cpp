@@ -17,17 +17,17 @@
 #define LOOP_TIMING_EPSILON_US 50
 
 
-PwmOut light_red(PA_6);
-PwmOut light_green(PA_7);
-PwmOut light_blue(PB_0);
-PwmOut light_pink(PB_1);
+PwmOut light_red(PB_1);
+PwmOut light_green(PB_0);
+PwmOut light_blue(PA_7);
+PwmOut light_pink(PA_6);
 
 DigitalOut debug_led(PC_13);
 
-DigitalIn button_red(PB_9);
-DigitalIn button_green(PB_8);
-DigitalIn button_blue(PB_7);
-DigitalIn button_pink(PB_6);
+DigitalIn button_red(PB_6);
+DigitalIn button_green(PB_7);
+DigitalIn button_blue(PB_8);
+DigitalIn button_pink(PB_9);
 
 PSGamepad psg(PB_15, PB_14, PB_13, PB_12);
 Serial serial_comms(PA_9, PA_10, 115200);
