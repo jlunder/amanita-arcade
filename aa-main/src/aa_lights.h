@@ -28,7 +28,7 @@ namespace aa {
       StaticAnimatorPool() : _next(0) { }
 
       void default_init() {
-        Debug::assertf(AA_AUTO_ASSERT(!_initialized));
+        Debug::auto_assert(!_initialized);
         for(size_t i = 0; i < POOL_COUNT; ++i) {
           _animators[i].init();
         }
@@ -37,7 +37,7 @@ namespace aa {
 
       template<typename F>
       void init(F init_func) {
-        Debug::assertf(AA_AUTO_ASSERT(!_initialized));
+        Debug::auto_assert(!_initialized);
         for(size_t i = 0; i < POOL_COUNT; ++i) {
           init_func(&_animators[i]);
         }
@@ -109,7 +109,7 @@ namespace aa {
 
       void init(ShortTimeSpan anim_length,
           EndBehavior end_behavior = EB_STOP) {
-        Debug::assertf(AA_AUTO_ASSERT(_state == AS_RESET));
+        Debug::auto_assert(_state == AS_RESET);
         _end_behavior = end_behavior;
         _anim_length = anim_length;
         _total_time = TimeSpan::zero;

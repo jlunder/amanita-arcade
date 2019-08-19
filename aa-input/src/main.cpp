@@ -281,6 +281,8 @@ void executeCommands() {
       printGamepadValues();
     }
   }
+  //log_x(psg.getButtons() & ~extra_buttons, 4);
+  //log("\r\n");
 }
 
 

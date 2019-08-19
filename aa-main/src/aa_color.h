@@ -159,13 +159,18 @@ namespace aa {
     }
 
     uint32_t AA_OPTIMIZE to_brg_color32() const {
+      float white_part = std::min(std::min(r, g), b);
+      float g_part = g - white_part;
+      float b_part = b - white_part;
+      float bal_g = g_part + white_part * 0.67f;
+      float bal_b = b_part + white_part * 0.67f;
       return
-        (b >= 1.0f ? 0xFF0000 : (b >= 0.0f ?
-          ((uint32_t)(b * 256) << 16) : 0x000000)) |
+        (bal_b >= 1.0f ? 0xFF0000 : (bal_b >= 0.0f ?
+          ((uint32_t)(bal_b * 0.67f * 256) << 16) : 0x000000)) |
         (r >= 1.0f ? 0x00FF00 : (r >= 0.0f ?
           ((uint32_t)(r * 256) << 8) : 0x000000)) |
-        (g >= 1.0f ? 0x0000FF : (g >= 0.0f ?
-          ((uint32_t)(g * 256) << 0) : 0x000000));
+        (bal_g >= 1.0f ? 0x0000FF : (bal_g >= 0.0f ?
+          ((uint32_t)(bal_g * 0.67f * 256) << 0) : 0x000000));
     }
 
     // Takes a normalized float on [0..1] representing apparent brightness and

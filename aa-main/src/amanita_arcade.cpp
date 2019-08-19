@@ -11,7 +11,35 @@
 // AA_FRAME_MICROS must remain >= Lights::update() (currently 6000) + 16000.
 // See comments regarding frame timings in the main() loop! 40fps gives us 3ms
 // of headroom.
-#define AA_FRAME_MICROS 25000
+#define AA_FRAME_MICROS 30000
+
+
+namespace aa {
+  namespace hw {
+    static void debug_ser_init() {
+      static bool initialized = false;
+      if(!initialized) {
+        initialized = true;
+        new(&debug_ser) Serial(PA_2, PA_3, 115200);
+        debug_ser.puts("!DEBUG OUTPUT BEGIN\r\n");
+      }
+    }
+  }
+}
+
+
+namespace mbed
+{
+    FileHandle *mbed_target_override_console(int) {
+      aa::hw::debug_ser_init();
+      return &aa::hw::debug_ser;
+    }
+}
+
+
+void Debug::service_watchdog() {
+  aa::System::service_watchdog();
+}
 
 
 namespace aa {
@@ -22,13 +50,6 @@ namespace aa {
 
 
   namespace {
-    static char const indent_chars[AA_MAX_INDENT] = {
-      ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-      ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-    };
-
-    static char trace_buf[256];
-
     static aa::Timer disconnected_min_pulse_timeout(TimeSpan::from_millis(0), false);
     static aa::Timer heartbeat_cycle(TimeSpan::from_millis(1000));
     static bool was_input_connected;
@@ -64,15 +85,6 @@ namespace aa {
     DigitalIn eeprom_i2c_sda(eeprom_i2c_sda_pin, PullUp);
     DigitalOut eeprom_i2c_vcc(PC_6, 0);
     DigitalOut eeprom_i2c_wp(PC_7, 0);
-
-    static void debug_ser_init() {
-      static bool initialized = false;
-      if(!initialized) {
-        initialized = true;
-        new(&debug_ser) Serial(PA_2, PA_3, 115200);
-        debug_ser.puts("!DEBUG OUTPUT BEGIN\r\n");
-      }
-    }
 
     static bool eeprom_i2c_clear_bus();
     static void eeprom_i2c_shutdown();
@@ -186,166 +198,6 @@ namespace aa {
   }
 
 
-  int32_t Debug::_indent_depth;
-
-
-  void Debug::pause() {
-    // TODO debug breakpoint
-    //__BKPT(0);
-    trace("paused, any input to resume");
-    for(;;) {
-      System::service_watchdog();
-      if(hw::debug_ser.readable()) {
-        hw::debug_ser.getc();
-        break;
-      }
-    }
-  }
-
-
-  void Debug::abort() {
-    // TODO reboot
-    trace("aborting execution");
-    for(;;) {
-      // wait forever -- watchdog will reboot us
-    }
-  }
-
-  void Debug::assert(bool expr, char const * fail_message) {
-    if(!expr) {
-      error(fail_message);
-    }
-  }
-
-
-  void Debug::assertf(bool expr, char const * fail_format, ...) {
-    if(!expr) {
-      va_list va;
-      va_start(va, fail_format);
-      verrorf(fail_format, va);
-      va_end(va);
-    }
-  }
-
-
-  void Debug::vassertf(bool expr, char const * fail_format, va_list va) {
-    if(!expr) {
-      verrorf(fail_format, va);
-    }
-  }
-
-
-  void Debug::trace(char const * message) {
-    hw::debug_ser_init();
-
-    char const * q = message;
-    char const * p;
-    for(;;) {
-      fwrite(indent_chars,
-        _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT, 1,
-        stdout);
-      p = q;
-      if(p == message) {
-        putchar('>');
-      }
-      else {
-        putchar(':');
-      }
-      while(*q != 0 && *q != '\n') {
-        ++q;
-      }
-      fwrite(p, q - p, 1, stdout);
-      fputs("\r\n", stdout);
-      if(*q == 0) {
-        break;
-      }
-      ++q;
-    }
-  }
-
-
-  void Debug::tracef(char const * format, ...) {
-    va_list va;
-    va_start(va, format);
-    vtracef(format, va);
-    va_end(va);
-  }
-
-
-  void Debug::vtracef(char const * format, va_list va) {
-    vsnprintf(trace_buf, sizeof trace_buf, format, va);
-    trace(trace_buf);
-  }
-
-
-  void Debug::error(char const * message) {
-    trace(message);
-    abort();
-  }
-
-
-  void Debug::errorf(char const * format, ...) {
-    va_list va;
-    va_start(va, format);
-    verrorf(format, va);
-    va_end(va);
-  }
-
-
-  void Debug::verrorf(char const * format, va_list va) {
-    vtracef(format, va);
-    abort();
-  }
-
-
-  void Debug::push_context(char const * name) {
-    /*
-    fwrite(indent_chars,
-      _indent_depth < AA_MAX_INDENT ? _indent_depth : AA_MAX_INDENT, 1,
-      stdout);
-    putchar('[');
-    fputs(name, stdout);
-    putchar("]\r\n");
-    */
-    assertf(AA_AUTO_ASSERT(_indent_depth < AA_MAX_INDENT));
-    ++_indent_depth;
-  }
-
-
-  void Debug::pop_context() {
-    assertf(AA_AUTO_ASSERT(_indent_depth > 0));
-    if(_indent_depth > 0) {
-      --_indent_depth;
-    }
-  }
-
-
-  bool Debug::in_available() {
-    hw::debug_ser_init();
-
-    return hw::debug_ser.readable();
-  }
-
-
-  int Debug::in_read_nb() {
-    hw::debug_ser_init();
-
-    if(hw::debug_ser.readable()) {
-      return hw::debug_ser.getc();
-    }
-    else {
-      return -1;
-    }
-  }
-
-
-  char Debug::in_read() {
-    hw::debug_ser_init();
-
-    return hw::debug_ser.getc();
-  }
-
-
   TimeSpan System::uptime() {
     static mbed::Timer timer;
     static bool timer_started = false;
@@ -379,8 +231,10 @@ namespace aa {
       return;
     }
     Debug::trace("Reset complete, bus clear");
+  }
 
-    uint16_t mem_addr = 0x000;
+
+  bool System::write_nv(uint16_t mem_addr, void const * data, size_t size) {
     uint8_t n_wr = 0;
     uint8_t addr0 = 0b10100000 | (((mem_addr >> 8) & 0b11) << 1) | n_wr;
     uint8_t addr1 = (mem_addr >> 0) & 0xFF;
@@ -390,83 +244,86 @@ namespace aa {
 
     if(!hw::eeprom_i2c_write(addr0, &ack)) {
       Debug::trace("EEPROM I2C write device address write bus fault");
-      return;
+      return false;
     }
     if(!ack) {
       Debug::trace("EEPROM I2C write device address write NAK");
-      return;
+      return false;
     }
 
     if(!hw::eeprom_i2c_write(addr1, &ack)) {
       Debug::trace("EEPROM I2C write mem address write bus fault");
-      return;
+      return false;
     }
     if(!ack) {
       Debug::trace("EEPROM I2C write mem address NAK");
-      return;
+      return false;
     }
 
-    if(!hw::eeprom_i2c_write(0x23, &ack)) {
+    if(!hw::eeprom_i2c_write(*(uint8_t const *)data, &ack)) {
       Debug::trace("EEPROM I2C write data bus fault");
-      return;
+      return false;
     }
     if(!ack) {
       Debug::trace("EEPROM I2C write data NAK");
-      return;
+      return false;
     }
 
     hw::eeprom_i2c_stop();
 
     wait_ms(5);
 
+    return true;
+  }
+
+
+  bool System::read_nv(uint16_t mem_addr, void * data, size_t size) {
+    uint8_t n_wr = 0;
+    uint8_t addr0 = 0b10100000 | (((mem_addr >> 8) & 0b11) << 1) | n_wr;
+    uint8_t addr1 = (mem_addr >> 0) & 0xFF;
+    bool ack;
+
     hw::eeprom_i2c_start();
 
     if(!hw::eeprom_i2c_write(addr0, &ack)) {
       Debug::trace("EEPROM I2C read device address write bus fault");
-      return;
+      return false;
     }
     if(!ack) {
       Debug::trace("EEPROM I2C read device address write NAK");
-      return;
+      return false;
     }
 
     if(!hw::eeprom_i2c_write(addr1, &ack)) {
       Debug::trace("EEPROM I2C read mem address write bus fault");
-      return;
+      return false;
     }
     if(!ack) {
       Debug::trace("EEPROM I2C read mem address NAK");
-      return;
+      return false;
     }
 
     hw::eeprom_i2c_start();
 
     if(!hw::eeprom_i2c_write(0b10100001, &ack)) {
       Debug::trace("EEPROM I2C read device address read bus fault");
-      return;
+      return false;
     }
     if(!ack) {
       Debug::trace("EEPROM I2C read device address read NAK");
-      return;
+      return false;
     }
 
     uint8_t val = 0;
     if(!hw::eeprom_i2c_read(&val)) {
       Debug::tracef("EEPROM I2C read data bus fault");
-      return;
+      return false;
     }
     Debug::tracef("EEPROM read 0: 0x%02X", val);
 
     hw::eeprom_i2c_stop();
-  }
 
-
-  void System::write_nv(uint32_t id, void const * data, size_t size) {
-  }
-
-
-  void const * System::read_nv(uint32_t id, size_t * size) {
-    return nullptr;
+    return true;
   }
 
 

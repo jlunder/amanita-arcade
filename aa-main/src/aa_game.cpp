@@ -289,7 +289,7 @@ namespace aa {
           : _text(text), _line_count(line_count), _tex(tex) { }
 
       void init() {
-        _pixel_height = _line_count * 7 + SCOREBOARD_HEIGHT * 2;
+        _pixel_height = _line_count * 7;
         Animator::init(TimeSpan::zero, EB_PAUSE);
       }
 
@@ -666,6 +666,7 @@ namespace aa {
 
         _game_over_lose.set_new_best_score(0);
         _score.set_score(0);
+        _score.set_best_score(0);
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &_neutral_bg,
           SHORT_TRANSITION);
@@ -959,7 +960,7 @@ namespace aa {
         : GameState("play pattern", ShortTimeSpan::from_millis(500)) { }
       virtual void on_enter() {
         vis.play_pattern();
-        Debug::assertf(AA_AUTO_ASSERT(pattern_length > 0));
+        Debug::auto_assert(pattern_length > 0);
         vis.play_color(pattern[0]);
         _pattern_pos = 1;
       }
@@ -984,11 +985,11 @@ namespace aa {
           ShortTimeSpan::from_millis(20000)) { }
       virtual void on_enter() {
         vis.await_press();
-        Debug::assertf(AA_AUTO_ASSERT(pattern_length > 0));
+        Debug::auto_assert(pattern_length > 0);
         _pattern_pos = 0;
       }
       virtual bool on_button(char id) {
-        Debug::assertf(AA_AUTO_ASSERT(_pattern_pos < pattern_length));
+        Debug::auto_assert(_pattern_pos < pattern_length);
         if(id == pattern[_pattern_pos]) {
           vis.press_color(id, true);
           ++_pattern_pos;

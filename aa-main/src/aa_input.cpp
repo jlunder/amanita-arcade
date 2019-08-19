@@ -65,15 +65,7 @@ namespace aa {
       for(int i = 0; i < 10; ++i) {
         while(hw::input_ser.readable()) {
           int c = hw::input_ser.getc();
-          if(c >= 0) {
-            remote_io_isr_parse(c);
-            //hw::input_ser.putc('A' + (char)parser_state);
-          }
-          else {
-            parser_state = IPS_IDLE;
-          }
-          //Debug::tracef("%2d %08X %08X %08X %c", parser_state, parser_micros,
-          //  parser_status, parser_buttons, new_sample_available ? 'T' : 'f');
+          remote_io_isr_parse((char)c);
         }
       }
 
@@ -281,12 +273,11 @@ namespace aa {
     }
     else {
       // Hmmm, input not responding?
-      __disable_irq();
-      remote_io_isr_parse_reset();
-      __enable_irq();
-
+      hw::input_ser.putc('R');
       hw::input_ser.puts("A0M0V00");
+      wait_ms(10);
       hw::input_ser.putc('P');
+
       remote_query_throttle_timeout =
         Timer(TimeSpan::from_millis(100), false);
 
@@ -295,6 +286,8 @@ namespace aa {
       if(remote_read_timeout.is_done()) {
         remote_buttons = 0;
       }
+
+      Debug::tracef("Input not responding, resetting");
     }
     //Debug::tracef("Buttons: %04X %c", _buttons, got_new ? 'N' : ' ');
   }

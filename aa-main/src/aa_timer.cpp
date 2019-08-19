@@ -6,7 +6,7 @@
 namespace aa {
   Timer::Timer(TimeSpan period, bool periodic)
       : _period(period), _current(), _periods(0), _periodic(periodic) {
-    Debug::assertf(AA_AUTO_ASSERT(!periodic || (period > TimeSpan::zero)));
+    Debug::auto_assert(!periodic || (period > TimeSpan::zero));
   }
 
 
@@ -18,7 +18,7 @@ namespace aa {
 
 
   void Timer::update(TimeSpan elapsed) {
-    Debug::assertf(AA_AUTO_ASSERT(elapsed >= TimeSpan(0)));
+    Debug::auto_assert(elapsed >= TimeSpan(0));
 
     if(elapsed < _period - _current) {
       _current += elapsed;

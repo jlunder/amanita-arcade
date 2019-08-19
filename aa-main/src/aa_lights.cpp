@@ -30,15 +30,15 @@ namespace aa {
 
 
   void Lights::Animator::play() {
-    Debug::assertf(AA_AUTO_ASSERT(_state == AS_RESET));
+    Debug::auto_assert(_state == AS_RESET);
     _total_time = ShortTimeSpan::from_micros(0);
     _state = AS_PLAYING;
   }
 
 
   void Lights::Animator::restart() {
-    Debug::assertf(AA_AUTO_ASSERT((_state == AS_PLAYING) ||
-      (_state == AS_TRANSITIONING)));
+    Debug::auto_assert((_state == AS_PLAYING) ||
+      (_state == AS_TRANSITIONING));
     if(_end_behavior != EB_LOOP) {
       _total_time = ShortTimeSpan::from_micros(0);
     }
@@ -47,20 +47,20 @@ namespace aa {
 
 
   void Lights::Animator::transition() {
-    Debug::assertf(AA_AUTO_ASSERT(_state == AS_PLAYING));
+    Debug::auto_assert(_state == AS_PLAYING);
     _state = AS_TRANSITIONING;
   }
 
 
   void Lights::Animator::stop() {
-    Debug::assertf(AA_AUTO_ASSERT((_state == AS_PLAYING) ||
-      (_state == AS_TRANSITIONING)));
+    Debug::auto_assert((_state == AS_PLAYING) ||
+      (_state == AS_TRANSITIONING));
     _state = AS_RESET;
   }
 
 
   bool Lights::Animator::animate(ShortTimeSpan dt) {
-    Debug::assertf(AA_AUTO_ASSERT(_state != AS_RESET));
+    Debug::auto_assert(_state != AS_RESET);
     _total_time += dt;
     if(_total_time < _anim_length) {
       return true;
@@ -107,7 +107,7 @@ namespace aa {
       ShortTimeSpan transition) {
     Layer * layer_struct = &_layers[layer];
 
-    Debug::assertf(AA_AUTO_ASSERT(animator != nullptr));
+    Debug::auto_assert(animator != nullptr);
 
     if(layer_struct->trans_animator == animator) {
       // Swapping back from previous transition: run the transition backwards
@@ -168,7 +168,7 @@ namespace aa {
       // Next, move the current animator into transitioning
       layer_struct->trans_animator = layer_struct->animator;
       layer_struct->animator = nullptr;
-      Debug::assertf(AA_AUTO_ASSERT(layer_struct->trans_animator != nullptr));
+      Debug::auto_assert(layer_struct->trans_animator != nullptr);
       layer_struct->trans_animator->transition();
       layer_struct->trans_time = TimeSpan::zero;
       layer_struct->trans_length = transition;
@@ -176,7 +176,7 @@ namespace aa {
     else {
       // No: just stop the current animator abruptly; don't disturb any
       // in-progress transition
-      Debug::assertf(AA_AUTO_ASSERT(layer_struct->animator != nullptr));
+      Debug::auto_assert(layer_struct->animator != nullptr);
       _layers[layer].animator->stop();
       _layers[layer].animator = nullptr;
     }
@@ -218,7 +218,7 @@ namespace aa {
       // Next, move the current animator into transitioning
       layer_struct->trans_animator = layer_struct->animator;
       layer_struct->animator = nullptr;
-      Debug::assertf(AA_AUTO_ASSERT(layer_struct->trans_animator != nullptr));
+      Debug::auto_assert(layer_struct->trans_animator != nullptr);
       layer_struct->trans_animator->transition();
       layer_struct->trans_time = TimeSpan::zero;
       layer_struct->trans_length = transition;
@@ -226,7 +226,7 @@ namespace aa {
     else {
       // No: just stop the current animator abruptly; don't disturb any
       // in-progress transition
-      Debug::assertf(AA_AUTO_ASSERT(layer_struct->animator != nullptr));
+      Debug::auto_assert(layer_struct->animator != nullptr);
       _layers[layer].animator->stop();
       _layers[layer].animator = nullptr;
     }

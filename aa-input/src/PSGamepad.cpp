@@ -92,6 +92,8 @@ void PSGamepad::poll(bool rumbleMotor0, uint8_t rumbleMotor1) {
       log("timeout on config\r\n");
       _status = PSCS_DISCONNECTED;
     }
+  } else if(_status == PSCS_DISCONNECTED) {
+    // Give up for now
   } else if((_pressureEnabled && _status != PSCS_PRESSURE) ||
       (!_pressureEnabled && _analogEnabled && _status != PSCS_ANALOG) ||
       (!_pressureEnabled && !_analogEnabled && _status != PSCS_DIGITAL)) {
@@ -109,7 +111,11 @@ void PSGamepad::configureGamepad() {
   sendCommand(PSC_GET_CONTROLS, NULL, 0, 0x00, NULL, 0);
 
   bool connected = true;
+  _status = PSCS_DISCONNECTED;
   connected = connected && setConfigMode(true);
+  if(!connected) {
+    return;
+  }
   connected = connected && setAnalogMode(_analogEnabled, true);
   connected = connected && setMotorMap();
   connected = connected && setControlMap(_analogEnabled, _pressureEnabled);
@@ -120,7 +126,6 @@ void PSGamepad::configureGamepad() {
     _configureStart.start();
   } else {
     log("configure didn't all succeed\r\n");
-    _status = PSCS_DISCONNECTED;
   }
 }
 
