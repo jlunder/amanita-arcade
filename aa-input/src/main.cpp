@@ -15,6 +15,7 @@
 #define PWM_BUTTON_ON_PULSE_WIDTH_US 10000
 #define POLL_PERIOD_US 10000
 #define LOOP_TIMING_EPSILON_US 50
+#define WATCHDOG_TIMEOUT_US 50000
 
 
 PwmOut light_red(PB_1);
@@ -62,6 +63,8 @@ bool do_print;
 bool do_reset;
 
 
+void init_watchdog(uint64_t timeout_micros);
+void service_watchdog();
 void do_main_loop();
 void pollGamepad();
 void executeCommands();
@@ -168,9 +171,76 @@ int main() {
 
   psg.begin(use_analog, use_pressure);
 
+  init_watchdog(WATCHDOG_TIMEOUT_US);
+
   debug_led.write(1);
 
   do_main_loop();
+}
+
+
+void init_watchdog(uint64_t timeout_micros) {
+  static uint64_t const lsi_freq = 32768;
+
+  uint16_t prescaler_code;
+  uint16_t prescaler;
+  uint16_t reload_value;
+
+  if ((timeout_micros * (lsi_freq / 4)) < 0x7FF * 1000000LLU) {
+    prescaler_code = IWDG_PRESCALER_4;
+    prescaler = 4;
+  }
+  else if ((timeout_micros * (lsi_freq / 8)) < 0xFF0 * 1000000LLU) {
+    prescaler_code = IWDG_PRESCALER_8;
+    prescaler = 8;
+  }
+  else if ((timeout_micros * (lsi_freq / 16)) < 0xFF0 * 1000000LLU) {
+    prescaler_code = IWDG_PRESCALER_16;
+    prescaler = 16;
+  }
+  else if ((timeout_micros * (lsi_freq / 32)) < 0xFF0 * 1000000LLU) {
+    prescaler_code = IWDG_PRESCALER_32;
+    prescaler = 32;
+  }
+  else if ((timeout_micros * (lsi_freq / 64)) < 0xFF0 * 1000000LLU) {
+    prescaler_code = IWDG_PRESCALER_64;
+    prescaler = 64;
+  }
+  else if ((timeout_micros * (lsi_freq / 128)) < 0xFF0 * 1000000LLU) {
+    prescaler_code = IWDG_PRESCALER_128;
+    prescaler = 128;
+  }
+  else {
+    prescaler_code = IWDG_PRESCALER_256;
+    prescaler = 256;
+  }
+
+  // specifies the IWDG Reload value. This parameter must be a number between 0 and 0x0FFF.
+  reload_value =
+    (uint32_t)((timeout_micros * (lsi_freq / prescaler) + 500000)
+      / 1000000);
+
+  /*
+  uint64_t calculated_timeout_micros =
+    (uint32_t)(((float)(prescaler * reload_value) * 1e6f)
+      / lsi_freq + 0.5f);
+  Debug::tracef(
+    "Set WDT to %dx%d from desired timeout %lluus; actual %lluus",
+    prescaler, reload_value, timeout_micros, calculated_timeout_micros);
+  */
+
+  IWDG->KR = 0x5555; // Disable write protection of IWDG registers
+  IWDG->PR = prescaler_code; // Set PR value
+  IWDG->RLR = reload_value; // Set RLR value
+  IWDG->KR = 0xAAAA; // Reload IWDG
+  IWDG->KR = 0xCCCC; // Start IWDG
+
+  service_watchdog();
+}
+
+
+void service_watchdog() {
+  IWDG->KR = 0xAAAA;
 }
 
 
@@ -186,6 +256,8 @@ void do_main_loop() {
   last_loop_start_us = loop_start_us - POLL_PERIOD_US + 200;
 
   for(;;) {
+    service_watchdog();
+    
     do {
       loop_start_us = loop_timer.read_high_resolution_us();
       time_since_last_poll_us = (loop_start_us - last_loop_start_us);
