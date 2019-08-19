@@ -257,13 +257,13 @@ PS2_CLK
 Text Label 10700 9650 0    50   ~ 0
 PS2_ATT
 Text Label 9100 8750 2    50   ~ 0
-PWM_R
-Text Label 9100 8850 2    50   ~ 0
-PWM_G
-Text Label 9100 8950 2    50   ~ 0
-PWM_B
-Text Label 9100 9050 2    50   ~ 0
 PWM_P
+Text Label 9100 8850 2    50   ~ 0
+PWM_B
+Text Label 9100 8950 2    50   ~ 0
+PWM_G
+Text Label 9100 9050 2    50   ~ 0
+PWM_R
 NoConn ~ 10700 8950
 Text Label 10700 8050 0    50   ~ 0
 BTN_P
