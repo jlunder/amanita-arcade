@@ -41,10 +41,13 @@ namespace aa {
 
     static void read_buttons(ShortTimeSpan dt);
 
+    static void debug_sim_buttons(uint32_t buttons);
+
   private:
     static ShortTimeSpan _remote_dt;
     static uint32_t _last_buttons;
     static uint32_t _buttons;
+    static uint32_t _debug_buttons;
 
     static void read_remote_buttons();
   };

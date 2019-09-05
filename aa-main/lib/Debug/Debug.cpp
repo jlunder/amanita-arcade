@@ -65,6 +65,30 @@ void Debug::vassertf(bool expr, char const * fail_format, va_list va) {
 }
 
 
+void Debug::check(bool expr, char const * fail_message) {
+  if(!expr) {
+    trace(fail_message);
+  }
+}
+
+
+void Debug::checkf(bool expr, char const * fail_format, ...) {
+  if(!expr) {
+    va_list va;
+    va_start(va, fail_format);
+    vtracef(fail_format, va);
+    va_end(va);
+  }
+}
+
+
+void Debug::vcheckf(bool expr, char const * fail_format, va_list va) {
+  if(!expr) {
+    vtracef(fail_format, va);
+  }
+}
+
+
 void Debug::trace(char const * message) {
   char const * q = message;
   char const * p;

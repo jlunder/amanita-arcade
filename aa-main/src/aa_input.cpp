@@ -169,6 +169,7 @@ namespace aa {
   ShortTimeSpan Input::_remote_dt;
   uint32_t Input::_last_buttons;
   uint32_t Input::_buttons;
+  uint32_t Input::_debug_buttons;
 
 
   void Input::init() {
@@ -227,18 +228,12 @@ namespace aa {
 
     _last_buttons = _buttons;
 
-    uint32_t debug_buttons = 0;
-    while(hw::debug_ser.readable()) {
-      char c = hw::debug_ser.getc();
-      switch(c) {
-        case 'r': case 'R': debug_buttons |= B_RED; break;
-        case 'g': case 'G': debug_buttons |= B_GREEN; break;
-        case 'b': case 'B': debug_buttons |= B_BLUE; break;
-        case 'p': case 'P': debug_buttons |= B_PINK; break;
-      }
-    }
+    _buttons = remote_buttons | _debug_buttons;
+    _debug_buttons = 0;
+  }
 
-    _buttons = remote_buttons | debug_buttons;
+  void Input::debug_sim_buttons(uint32_t debug_buttons) {
+    _debug_buttons |= debug_buttons;
   }
 
   void Input::read_remote_buttons()

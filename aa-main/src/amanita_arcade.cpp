@@ -53,7 +53,7 @@ namespace aa {
     static aa::Timer disconnected_min_pulse_timeout(TimeSpan::from_millis(0), false);
     static aa::Timer heartbeat_cycle(TimeSpan::from_millis(1000));
     static bool was_input_connected;
- 
+
     /*
     static __attribute__((section(".text"),aligned(4096)))
       uint8_t nv_data[4096] = { 0xFF, 0xFF, 0xFF, 0xFF, };
@@ -88,7 +88,7 @@ namespace aa {
 
     static bool eeprom_i2c_clear_bus();
     static void eeprom_i2c_shutdown();
-    
+
     static void eeprom_i2c_create()
     {
       eeprom_i2c_is_live = true;
@@ -103,9 +103,10 @@ namespace aa {
 
     static bool eeprom_i2c_init()
     {
-      if(eeprom_i2c_is_live) {
-        eeprom_i2c_shutdown();
-      }
+      // Ensure minimum power-off time is observed, in case we were powered
+      // up and the entire system was reset
+      eeprom_i2c_shutdown();
+
       eeprom_i2c_vcc.write(1);
       eeprom_i2c_wp.write(0);
       wait_us(eeprom_i2c_reset_power_on_us);
@@ -225,9 +226,8 @@ namespace aa {
     Debug::push_context("EEPROM Init");
 
     Debug::trace("Hardware reset");
-    hw::eeprom_i2c_init();
-    if(!hw::eeprom_i2c_clear_bus()) {
-      Debug::trace("Bus locked, aborting");
+    if(!hw::eeprom_i2c_init()) {
+      Debug::trace("Init failed");
       return;
     }
     Debug::trace("Reset complete, bus clear");
@@ -240,7 +240,14 @@ namespace aa {
     uint8_t addr1 = (mem_addr >> 0) & 0xFF;
     bool ack;
 
+    Debug::tracef("Write to EEPROM at %04X, %d bytes", (int)mem_addr, (int)size);
+
     hw::eeprom_i2c_start();
+
+    if(!hw::eeprom_i2c_write(addr0, &ack)) {
+      hw::eeprom_i2c_clear_bus();
+      hw::eeprom_i2c_start();
+    }
 
     if(!hw::eeprom_i2c_write(addr0, &ack)) {
       Debug::trace("EEPROM I2C write device address write bus fault");
@@ -283,7 +290,14 @@ namespace aa {
     uint8_t addr1 = (mem_addr >> 0) & 0xFF;
     bool ack;
 
+    Debug::tracef("Read from EEPROM at %04X, %d bytes", (int)mem_addr, (int)size);
+
     hw::eeprom_i2c_start();
+
+    if(!hw::eeprom_i2c_write(addr0, &ack)) {
+      hw::eeprom_i2c_clear_bus();
+      hw::eeprom_i2c_start();
+    }
 
     if(!hw::eeprom_i2c_write(addr0, &ack)) {
       Debug::trace("EEPROM I2C read device address write bus fault");
@@ -314,14 +328,18 @@ namespace aa {
       return false;
     }
 
-    uint8_t val = 0;
-    if(!hw::eeprom_i2c_read(&val)) {
-      Debug::tracef("EEPROM I2C read data bus fault");
-      return false;
+    for(size_t i = 0; i < size; ++i) {
+      uint8_t val = 0;
+      if(!hw::eeprom_i2c_read(&val)) {
+        Debug::tracef("EEPROM I2C read data bus fault");
+        return false;
+      }
+      ((uint8_t *)data)[i] = val;
     }
-    Debug::tracef("EEPROM read 0: 0x%02X", val);
 
     hw::eeprom_i2c_stop();
+
+    wait_us(1);
 
     return true;
   }
