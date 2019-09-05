@@ -8,33 +8,20 @@
 
 namespace aa {
   namespace {
-    static_assert(sizeof (HiScoreEntry) == 20);
+    static_assert(sizeof (HiScoreEntry) == 16);
 
-    struct __packed NvHiScoreEntry {
-      union {
-        uint8_t struct_pad[32];
-        struct __packed {
-          uint8_t check0;
-          uint8_t pad0[3];
-          uint32_t seq;
-          HiScoreEntry data;
-          uint8_t pad1[3];
-          uint8_t check1;
-        };
-      };
-    };
+    typedef HiScoreEntry NvHiScoreEntry;
 
     struct __packed NvHiScoreMetadata {
       HiScoreSettings settings;
-      uint8_t pad0[22];
+      uint8_t pad0[2+8];
     };
 
-    static_assert(sizeof (NvHiScoreEntry) == 32);
-    static_assert(sizeof (NvHiScoreMetadata) == 32);
+    static_assert(sizeof (NvHiScoreEntry) == 16);
+    static_assert(sizeof (NvHiScoreMetadata) == 16);
 
 
-    static size_t const NUM_NV_HI_SCORE_ENTRIES =
-      HiScore::ENTRIES_PER_LIST * HiScore::NUM_LISTS;
+    static size_t const NUM_NV_HI_SCORE_ENTRIES = 16;
     static_assert((NUM_NV_HI_SCORE_ENTRIES * sizeof (NvHiScoreEntry)
       + sizeof (NvHiScoreMetadata)) <= NV_HI_SCORES_SIZE);
     static NvHiScoreEntry nv_hi_scores[NUM_NV_HI_SCORE_ENTRIES];
@@ -72,13 +59,13 @@ namespace aa {
           || (entry->check0 != entry->check1)) {
         return false;
       }
-      if(entry->data.score > HiScore::MAX_SCORE) {
+      if(entry->score > HiScore::MAX_SCORE) {
         return false;
       }
-      if((entry->data.name[0] < 32) || (entry->data.name[0] >= 128)) {
+      if((entry->name[0] < 32) || (entry->name[0] >= 128)) {
         return false;
       }
-      if((entry->data.event[0] < 32) || (entry->data.event[0] >= 128)) {
+      if((entry->event[0] < 32) || (entry->event[0] >= 128)) {
         return false;
       }
       return true;
@@ -157,8 +144,8 @@ namespace aa {
           if(!b_valid) return false;
           bool a_valid = nv_hi_score_entry_valid(&nv_hi_scores[a]);
           if(!a_valid) return true;
-          HiScoreEntry const * a_entry = &nv_hi_scores[a].data;
-          HiScoreEntry const * b_entry = &nv_hi_scores[b].data;
+          HiScoreEntry const * a_entry = &nv_hi_scores[a];
+          HiScoreEntry const * b_entry = &nv_hi_scores[b];
           if(a_entry->score < b_entry->score) return true;
           if(a_entry->score > b_entry->score) return false;
           int event_cmp = strncmp(a_entry->event, b_entry->event,
@@ -200,7 +187,7 @@ namespace aa {
           ++i) {
         NvHiScoreEntry const * entry = &nv_hi_scores[hi_score_order[i]];
         if(nv_hi_score_entry_valid(entry)) {
-          combined_list[j++] = &entry->data;
+          combined_list[j++] = entry;
         }
       }
       for(; j < NUM_NV_HI_SCORE_ENTRIES; ++j) {
@@ -213,7 +200,7 @@ namespace aa {
           ++i) {
         NvHiScoreEntry const * entry = &nv_hi_scores[hi_score_order[i]];
         if(nv_hi_score_entry_valid(entry)) {
-          all_time_list[j++] = &entry->data;
+          all_time_list[j++] = entry;
         }
       }
       for(; j < HiScore::ENTRIES_PER_LIST; ++j) {
@@ -226,10 +213,10 @@ namespace aa {
           ++i) {
         NvHiScoreEntry const * entry = &nv_hi_scores[hi_score_order[i]];
         if(nv_hi_score_entry_valid(entry)
-            && (strncmp(entry->data.event,
+            && (strncmp(entry->event,
               nv_hi_score_metadata.settings.event,
               HI_SCORE_EVENT_MAX) == 0)) {
-          event_list[j++] = &entry->data;
+          event_list[j++] = entry;
         }
       }
       for(; j < HiScore::ENTRIES_PER_LIST; ++j) {
@@ -242,8 +229,11 @@ namespace aa {
           ++i) {
         NvHiScoreEntry const * entry = &nv_hi_scores[hi_score_order[i]];
         if(nv_hi_score_entry_valid(entry)
-            && (entry->data.day == nv_hi_score_metadata.settings.today)) {
-          todays_list[j++] = &entry->data;
+            && (strncmp(entry->event,
+              nv_hi_score_metadata.settings.event,
+              HI_SCORE_EVENT_MAX) == 0)
+            && (entry->day == nv_hi_score_metadata.settings.today)) {
+          todays_list[j++] = entry;
         }
       }
       for(; j < HiScore::ENTRIES_PER_LIST; ++j) {
@@ -268,17 +258,18 @@ namespace aa {
       for(size_t i = 0; i < NUM_NV_HI_SCORE_ENTRIES; ++i) {
         hi_score_order[i] = i;
       }
+      // will sort implicitly
       nv_hi_scores_store_all();
-      nv_hi_scores_sort();
     }
 
 
     void nv_hi_scores_store_all() {
-      if(!nv_available) {
+      if(nv_available) {
         System::write_nv(NV_HI_SCORES_ADDR, &nv_hi_scores,
           sizeof nv_hi_scores);
-        nv_hi_scores_store_metadata();
       }
+      // will sort implicitly
+      nv_hi_scores_store_metadata();
     }
 
 
@@ -287,15 +278,15 @@ namespace aa {
       Debug::auto_assert(i < NUM_NV_HI_SCORE_ENTRIES);
       NvHiScoreEntry * least_score = &nv_hi_scores[i];
       if(nv_hi_score_entry_valid(least_score)
-          && (least_score->data.score > entry.score)) {
+          && (least_score->score > entry.score)) {
         // The worst score in the list is still better than this one, sorry
         return SIZE_MAX;
       }
 
       uint8_t check = nv_hi_score_entry_new_check(least_score);
+      *least_score = entry;
       least_score->check0 = check;
       least_score->seq = seq++;
-      least_score->data = entry;
       least_score->check1 = check;
       if(nv_available) {
         System::write_nv(NV_HI_SCORES_ADDR + i * sizeof (NvHiScoreEntry),
@@ -312,6 +303,7 @@ namespace aa {
             - sizeof (NvHiScoreMetadata), &nv_hi_score_metadata,
           sizeof (NvHiScoreMetadata));
       }
+      nv_hi_scores_sort();
     }
 
 
@@ -334,7 +326,7 @@ namespace aa {
       }
       // Is seq implausibly large? Probably this is due to garbage, let's
       // re-sequence all the data so we don't wrap around
-      if(seq > (INT32_MAX / 2)) {
+      if(seq > (INT16_MAX / 2)) {
         seq = 0;
         for(size_t i = NUM_NV_HI_SCORE_ENTRIES; i-- > 0; ) {
           Debug::auto_assert(hi_score_order[i] < NUM_NV_HI_SCORE_ENTRIES);
@@ -423,7 +415,7 @@ namespace aa {
   void HiScore::clear_score(HiScoreEntry const * entry) {
     size_t i;
     for(i = 0; i < NUM_NV_HI_SCORE_ENTRIES; ++i) {
-      if(&nv_hi_scores[i].data == entry) {
+      if(&nv_hi_scores[i] == entry) {
         break;
       }
     }

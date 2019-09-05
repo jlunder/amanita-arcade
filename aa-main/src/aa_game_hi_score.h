@@ -8,25 +8,27 @@
 
 
 namespace aa {
-  static size_t const HI_SCORE_NAME_MAX = 8;
-  static size_t const HI_SCORE_EVENT_MAX = 8;
-  static size_t const SCORES_PER_LIST = 8;
+  static size_t const HI_SCORE_NAME_MAX = 5;
+  static size_t const HI_SCORE_EVENT_MAX = 5;
 
   struct __packed HiScoreEntry {
-    uint16_t score;
-    uint16_t day;
+    uint8_t check0;
+    uint8_t score;
+    uint16_t seq;
+    uint8_t day;
     char name[HI_SCORE_NAME_MAX];
     char event[HI_SCORE_EVENT_MAX];
+    uint8_t check1;
   };
 
   struct __packed HiScoreSettings {
     char event[HI_SCORE_EVENT_MAX];
-    uint16_t today;
+    uint8_t today;
   };
 
   class HiScore {
   public:
-    static uint16_t const MAX_SCORE = 99;
+    static uint8_t const MAX_SCORE = 99;
 
     static uint16_t const RATING_ON_ANY_LIST = 0x0001;
     static uint16_t const RATING_ON_TODAYS_LIST = 0x0010;
@@ -40,8 +42,7 @@ namespace aa {
     static size_t const LIST_TODAYS = 1;
     static size_t const LIST_EVENT = 2;
     static size_t const LIST_ALL_TIME = 3;
-    static size_t const NUM_LISTS = 3;
-    static size_t const ENTRIES_PER_LIST = 10;
+    static size_t const ENTRIES_PER_LIST = 5;
 
     static constexpr char const * DEFAULT_EVENT = "-";
     static constexpr char const * DEFAULT_NAME = "AA";

@@ -310,27 +310,24 @@ namespace aa {
     public:
       void init() {
         Animator::init(TimeSpan::zero, EB_PAUSE);
+        _pos = 0;
         _score = 0;
       }
 
+      void set_pos(int32_t pos) { _pos = pos; }
       void set_score(int32_t score) { _score = score; }
 
     protected:
+      int32_t _pos;
       int32_t _score;
 
       void render(ShortTimeSpan t, float a, Texture2D * dest) const override {
-        HiScoreEntry const * todays_hi =
-          HiScore::get_scores(HiScore::LIST_TODAYS)[0];
-        uint16_t hi_score = 0;
-        if(todays_hi != nullptr) {
-          hi_score = todays_hi->score;
-        }
         char buf[7];
-        snprintf(buf, sizeof buf, "%d", (int)_score);
+        snprintf(buf, sizeof buf, "%d", (int)_pos);
         dest->char_10x15_set(scoreboard_center(buf, 10), 2, buf,
           Color::white);
         dest->box_lerp(0, 22, 30, 7, Color::black, 0.5f);
-        snprintf(buf, sizeof buf, "%d", (int)hi_score);
+        snprintf(buf, sizeof buf, "%d", (int)_score);
         dest->char_5x5_set(scoreboard_center(buf, 5), 23, buf,
           &orange_5x5_grad_tex);
       }
@@ -651,6 +648,7 @@ namespace aa {
         _state = AS_NONE;
 
         _game_over_lose.set_new_hi_score(0);
+        _score.set_pos(0);
         _score.set_score(0);
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &_neutral_bg,
@@ -664,7 +662,7 @@ namespace aa {
 
       void play_pattern() override {
         _pattern_count = 0;
-        _score.set_score(_pattern_count);
+        _score.set_pos(_pattern_count);
 
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND, &_neutral_bg,
@@ -679,7 +677,7 @@ namespace aa {
 
       void play_color(char id) override {
         ++_pattern_count;
-        _score.set_score(_pattern_count);
+        _score.set_pos(_pattern_count);
 
         switch(id) {
         case 'R':
@@ -708,15 +706,22 @@ namespace aa {
       void await_press() override {
         int32_t last_pattern_count = _pattern_count;
         play_pattern();
-        _score.set_score(last_pattern_count);
+        _score.set_pos(last_pattern_count);
       }
 
       void press_color(char id, bool correct) override {
         play_color(id);
       }
 
+      void score_change(int32_t score) override {
+        _score.set_score(score);
+      }
+
       void game_over(int32_t final_score, uint16_t rating, bool win)
           override {
+        if(rating & HiScore::RATING_TODAYS_BEST) {
+          _game_over_lose.set_new_hi_score(final_score);
+        }
         Lights::start_animator(
           Lights::LAYER_SB_START + Lights::LAYER_SB_BACKGROUND,
           &_neutral_bg, SHORT_TRANSITION);

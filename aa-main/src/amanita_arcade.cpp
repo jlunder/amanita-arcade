@@ -235,74 +235,87 @@ namespace aa {
 
 
   bool System::write_nv(uint16_t mem_addr, void const * data, size_t size) {
-    uint8_t n_wr = 0;
-    uint8_t addr0 = 0b10100000 | (((mem_addr >> 8) & 0b11) << 1) | n_wr;
-    uint8_t addr1 = (mem_addr >> 0) & 0xFF;
+    static size_t const page_size = 16;
     bool ack;
+    size_t page_end;
 
-    Debug::tracef("Write to EEPROM at %04X, %d bytes", (int)mem_addr, (int)size);
+    for(size_t page_addr = mem_addr; page_addr < (mem_addr + size);
+        page_addr = page_end) {
+      uint8_t const * page_data = ((uint8_t const *)data) + (page_addr - mem_addr);
+      page_end = (page_addr & ~(page_size - 1)) + page_size;
+      //Debug::tracef("Write to EEPROM at %04X, %d bytes", (int)page_addr,
+      //  (int)(page_end - page_addr));
 
-    hw::eeprom_i2c_start();
-
-    if(!hw::eeprom_i2c_write(addr0, &ack)) {
-      hw::eeprom_i2c_clear_bus();
+      uint8_t addr0 = 0b10100000 | (((page_addr >> 8) & 0b11) << 1) | 0;
+      uint8_t addr1 = (page_addr >> 0) & 0xFF;
       hw::eeprom_i2c_start();
-    }
 
-    if(!hw::eeprom_i2c_write(addr0, &ack)) {
-      Debug::trace("EEPROM I2C write device address write bus fault");
-      return false;
-    }
-    if(!ack) {
-      Debug::trace("EEPROM I2C write device address write NAK");
-      return false;
-    }
+      mbed::Timer write_timer;
+      write_timer.start();
+      do {
+        if(!hw::eeprom_i2c_write(addr0, &ack)) {
+          hw::eeprom_i2c_clear_bus();
+          hw::eeprom_i2c_start();
+          if(!hw::eeprom_i2c_write(addr0, &ack)) {
+            Debug::trace("EEPROM I2C write device address write bus fault");
+            return false;
+          }
+        }
+      } while(!ack && (write_timer.read_ms() < 10));
+      if(!ack) {
+        Debug::trace("EEPROM I2C write device address write NAK");
+        return false;
+      }
 
-    if(!hw::eeprom_i2c_write(addr1, &ack)) {
-      Debug::trace("EEPROM I2C write mem address write bus fault");
-      return false;
-    }
-    if(!ack) {
-      Debug::trace("EEPROM I2C write mem address NAK");
-      return false;
-    }
+      if(!hw::eeprom_i2c_write(addr1, &ack)) {
+        Debug::trace("EEPROM I2C write mem address write bus fault");
+        return false;
+      }
+      if(!ack) {
+        Debug::trace("EEPROM I2C write mem address NAK");
+        return false;
+      }
 
-    if(!hw::eeprom_i2c_write(*(uint8_t const *)data, &ack)) {
-      Debug::trace("EEPROM I2C write data bus fault");
-      return false;
-    }
-    if(!ack) {
-      Debug::trace("EEPROM I2C write data NAK");
-      return false;
-    }
+      for(size_t i = 0; i < (page_end - page_addr); ++i) {
+        //Debug::tracef("byte %02X", page_data[i]);
+        if(!hw::eeprom_i2c_write(page_data[i], &ack)) {
+          Debug::trace("EEPROM I2C write data bus fault");
+          return false;
+        }
+        if(!ack) {
+          Debug::trace("EEPROM I2C write data NAK");
+          return false;
+        }
+      }
 
-    hw::eeprom_i2c_stop();
-
-    wait_ms(5);
+      hw::eeprom_i2c_stop();
+    }
 
     return true;
   }
 
 
   bool System::read_nv(uint16_t mem_addr, void * data, size_t size) {
-    uint8_t n_wr = 0;
-    uint8_t addr0 = 0b10100000 | (((mem_addr >> 8) & 0b11) << 1) | n_wr;
+    uint8_t addr0 = 0b10100000 | (((mem_addr >> 8) & 0b11) << 1);
     uint8_t addr1 = (mem_addr >> 0) & 0xFF;
     bool ack;
 
-    Debug::tracef("Read from EEPROM at %04X, %d bytes", (int)mem_addr, (int)size);
+    //Debug::tracef("Read from EEPROM at %04X, %d bytes", (int)mem_addr, (int)size);
 
     hw::eeprom_i2c_start();
 
-    if(!hw::eeprom_i2c_write(addr0, &ack)) {
-      hw::eeprom_i2c_clear_bus();
-      hw::eeprom_i2c_start();
-    }
-
-    if(!hw::eeprom_i2c_write(addr0, &ack)) {
-      Debug::trace("EEPROM I2C read device address write bus fault");
-      return false;
-    }
+    mbed::Timer write_timer;
+    write_timer.start();
+    do {
+      if(!hw::eeprom_i2c_write(addr0, &ack)) {
+        hw::eeprom_i2c_clear_bus();
+        hw::eeprom_i2c_start();
+        if(!hw::eeprom_i2c_write(addr0, &ack)) {
+          Debug::trace("EEPROM I2C read device address write bus fault");
+          return false;
+        }
+      }
+    } while(!ack && (write_timer.read_ms() < 10));
     if(!ack) {
       Debug::trace("EEPROM I2C read device address write NAK");
       return false;
@@ -319,7 +332,8 @@ namespace aa {
 
     hw::eeprom_i2c_start();
 
-    if(!hw::eeprom_i2c_write(0b10100001, &ack)) {
+    if(!hw::eeprom_i2c_write(addr0 | 1,
+        &ack)) {
       Debug::trace("EEPROM I2C read device address read bus fault");
       return false;
     }
@@ -338,8 +352,6 @@ namespace aa {
     }
 
     hw::eeprom_i2c_stop();
-
-    wait_us(1);
 
     return true;
   }

@@ -66,10 +66,10 @@ namespace aa {
   static const size_t SCOREBOARD_LIGHTS_COUNT =
     SCOREBOARD_WIDTH * SCOREBOARD_HEIGHT;
 
-  static const size_t NV_SIZE = 0x2000;
+  static const size_t NV_SIZE = 0x0400;
   static const size_t NV_HI_SCORES_ADDR = 0x0000;
-  static const size_t NV_HI_SCORES_SIZE = 0x0400;
-  static const size_t NV_DEBUG_ADDR = 0x1000;
+  static const size_t NV_HI_SCORES_SIZE = 0x0200;
+  static const size_t NV_DEBUG_ADDR = 0x0200;
   static const size_t NV_DEBUG_SIZE = NV_SIZE - NV_DEBUG_ADDR;
 
   namespace hw {

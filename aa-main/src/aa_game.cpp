@@ -262,13 +262,21 @@ namespace aa {
     static void debug_values();
 
     static bool debug_read_bool(char const * prompt, bool * val);
-    static bool debug_read_int(char const * prompt, uint16_t * val,
-      uint16_t min, uint16_t max);
-    static bool debug_read_int(char const * prompt, size_t * val,
-      size_t min, size_t max);
     static bool debug_read_int(char const * prompt, int64_t * val,
       int64_t min, int64_t max);
     static bool debug_read_str(char const * prompt, char * val, size_t len);
+
+    template<typename T>
+    static bool debug_read_int(char const * prompt, T * val,
+        T min, T max) {
+      int64_t val64 = *val;
+      if(debug_read_int(prompt, &val64, min, max)) {
+        *val = (T)val64;
+        return true;
+      } else {
+        return false;
+      }
+    }
 
 
     void debug_update(TimeSpan dt) {
@@ -318,7 +326,7 @@ namespace aa {
     void debug_setup() {
       hw::debug_ser.puts("Setup:\r\n");
       HiScoreSettings settings = *HiScore::get_settings();
-      debug_read_int("day", &settings.today, 0, UINT16_MAX);
+      debug_read_int<uint8_t>("day", &settings.today, 0, UINT8_MAX);
       debug_read_str("event", settings.event, sizeof settings.event);
       HiScore::set_settings(settings);
     }
@@ -330,11 +338,10 @@ namespace aa {
       for(HiScoreEntry const * const * entry =
             HiScore::get_scores(HiScore::LIST_COMBINED);
           *entry != nullptr; ++entry) {
-        static_assert(sizeof (*entry)->name == 8);
-        static_assert(sizeof (*entry)->event == 8);
-        hw::debug_ser.printf("%2d. %8.8s: %2d - %8.8s %d\r\n", (int)i++,
-          (*entry)->name, (int)(*entry)->score, (*entry)->event,
-          (int)(*entry)->day);
+        hw::debug_ser.printf("%2d. %*.*s: %2d - %*.*s %d\r\n", (int)i++,
+          HI_SCORE_NAME_MAX, HI_SCORE_NAME_MAX, (*entry)->name,
+          (int)(*entry)->score, HI_SCORE_EVENT_MAX, HI_SCORE_EVENT_MAX,
+          (*entry)->event, (int)(*entry)->day);
       }
     }
 
@@ -342,11 +349,13 @@ namespace aa {
     void debug_add_score() {
       hw::debug_ser.puts("Add score:\r\n");
       HiScoreSettings settings = *HiScore::get_settings();
-      HiScoreEntry entry = {.score = 1, .day = settings.today };
+      HiScoreEntry entry;
+      entry.score = 1;
+      entry.day = settings.today;
       strncpy(entry.event, settings.event, sizeof entry.event);
       strncpy(entry.name, HiScore::DEFAULT_NAME, sizeof entry.name);
-      if(debug_read_int("score", &entry.score, 0, HiScore::MAX_SCORE)
-          && debug_read_int("day", &entry.day, 0, UINT16_MAX)
+      if(debug_read_int<uint8_t>("score", &entry.score, 0, HiScore::MAX_SCORE)
+          && debug_read_int<uint8_t>("day", &entry.day, 0, UINT8_MAX)
           && debug_read_str("name", entry.name, sizeof entry.name)
           && debug_read_str("event", entry.event, sizeof entry.event)) {
         HiScore::add_score(entry);
@@ -361,16 +370,15 @@ namespace aa {
         HiScore::get_scores(HiScore::LIST_COMBINED);
       for(HiScoreEntry const * const * entry = list;
           *entry != nullptr; ++entry) {
-        static_assert(sizeof (*entry)->name == 8);
-        static_assert(sizeof (*entry)->event == 8);
-        hw::debug_ser.printf("%2d. %8.8s: %2d - %8.8s %d\r\n",
-          (int)num_entries + 1, (*entry)->name, (int)(*entry)->score,
-          (*entry)->event, (int)(*entry)->day);
+        hw::debug_ser.printf("%2d. %*.*s: %2d - %*.*s %d\r\n",
+          (int)num_entries + 1, HI_SCORE_NAME_MAX, HI_SCORE_NAME_MAX,
+          (*entry)->name, (int)(*entry)->score, HI_SCORE_EVENT_MAX,
+          HI_SCORE_EVENT_MAX, (*entry)->event, (int)(*entry)->day);
         ++num_entries;
       }
-      uint16_t score_num = 0;
+      uint8_t score_num = 0;
       bool confirm = false;
-      if(debug_read_int("entry number (0 for all)", &score_num, 0,
+      if(debug_read_int<uint8_t>("entry number (0 for all)", &score_num, 0,
           num_entries)
           && debug_read_bool("really clear this entry", &confirm)
           && confirm) {
@@ -388,10 +396,11 @@ namespace aa {
       hw::debug_ser.puts("Dump EEPROM:\r\n");
       size_t dump_start = 0;
       size_t dump_size = NV_SIZE;
-      if(!debug_read_int("start address", &dump_start, 0, NV_SIZE)) {
+      if(!debug_read_int<size_t>("start address", &dump_start, 0, NV_SIZE)) {
         return;
       }
-      if(!debug_read_int("size", &dump_size, 0, NV_SIZE - dump_start)) {
+      if(!debug_read_int<size_t>("size", &dump_size, 0,
+          NV_SIZE - dump_start)) {
         return;
       }
       size_t dump_end = dump_start + dump_size;
@@ -475,30 +484,6 @@ namespace aa {
             "or esc to cancel\r\n");
           break;
         }
-      }
-    }
-
-
-    bool debug_read_int(char const * prompt, uint16_t * val,
-        uint16_t min, uint16_t max) {
-      int64_t val64 = *val;
-      if(debug_read_int(prompt, &val64, min, max)) {
-        *val = (uint16_t)val64;
-        return true;
-      } else {
-        return false;
-      }
-    }
-
-
-    bool debug_read_int(char const * prompt, size_t * val,
-        size_t min, size_t max) {
-      int64_t val64 = *val;
-      if(debug_read_int(prompt, &val64, min, max)) {
-        *val = (size_t)val64;
-        return true;
-      } else {
-        return false;
       }
     }
 
