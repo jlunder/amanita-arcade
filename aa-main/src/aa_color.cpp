@@ -4,13 +4,13 @@
 
 
 namespace aa {
-  Color const Color::black = { 0.0f, 0.0f, 0.0f, 1.0f };
-  Color const Color::white = { 1.0f, 1.0f, 1.0f, 1.0f };
-  Color const Color::red = { 1.0f, 0.0f, 0.0f, 1.0f };
-  Color const Color::green = { 0.0f, 1.0f, 0.0f, 1.0f };
-  Color const Color::blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-  Color const Color::pink = { 1.0f, 0.4f, 0.4f, 1.0f };
-  Color const Color::transparent = { 0.0f, 0.0f, 0.0f, 0.0f };
+  Color const Color::black = Color::make(0.0f, 0.0f, 0.0f, 1.0f);
+  Color const Color::white = Color::make(1.0f, 1.0f, 1.0f, 1.0f);
+  Color const Color::red = Color::make(1.0f, 0.0f, 0.0f, 1.0f);
+  Color const Color::green = Color::make(0.0f, 1.0f, 0.0f, 1.0f);
+  Color const Color::blue = Color::make(0.0f, 0.0f, 1.0f, 1.0f);
+  Color const Color::pink = Color::make(1.0f, 0.4f, 0.4f, 1.0f);
+  Color const Color::transparent = Color::make(0.0f, 0.0f, 0.0f, 0.0f);
 
   float const cie_table[CIE_TABLE_SIZE] = {
     0.0f,

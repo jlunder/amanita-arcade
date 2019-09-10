@@ -22,7 +22,7 @@ namespace aa {
       Color cx0y1;
       Color cx1y1;
     };
-    
+
     Texture2D() : _width(), _height(), _data() { }
 
     void init(size_t width, size_t height, Color * data) {
@@ -67,6 +67,8 @@ namespace aa {
       OpenGradient const & grad);
     void box_set(int32_t x, int32_t y, int32_t w, int32_t h,
       Texture2D const * tex);
+    void box_set(int32_t x, int32_t y, int32_t w, int32_t h,
+      Texture2D const * tex, size_t x_ofs, size_t y_ofs);
     void box_lerp(int32_t x, int32_t y, int32_t w, int32_t h,
       Color const & c, float a);
     void fill_set(Color const & c);

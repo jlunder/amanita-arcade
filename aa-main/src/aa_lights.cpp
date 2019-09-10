@@ -274,6 +274,8 @@ namespace aa {
             !_layers[i].trans_animator->animate(dt)) {
           _layers[i].trans_animator->stop();
           _layers[i].trans_animator = nullptr;
+          _layers[i].trans_length = TimeSpan::zero;
+          _layers[i].trans_time = TimeSpan::zero;
         }
       }
 
@@ -286,7 +288,7 @@ namespace aa {
     }
   }
 
-
+//#define DEBUG_COMPOSITOR
   void Lights::update_composite_layers_to_composite_tex(size_t layer_start,
       size_t layer_count) {
     Debug::assertf(_layers[layer_start].width * _layers[layer_start].height
@@ -295,26 +297,79 @@ namespace aa {
     _composite_tex.init(_layers[layer_start].width,
       _layers[layer_start].height, _composite_tex_data);
     _composite_tex.fill_set(Color::white);
+    _transition_tex.init(_composite_tex.get_width(),
+      _composite_tex.get_height(), _transition_tex_data);
+
+#ifdef DEBUG_COMPOSITOR
+    static Color original_data[900];
+    static Color temp_composite_data[900];
+    Texture2D original_tex, temp_composite_tex;
+    original_tex.init(
+      _composite_tex.get_width(), _composite_tex.get_height(),
+      original_data);
+    temp_composite_tex.init(
+      _composite_tex.get_width(), _composite_tex.get_height(),
+      temp_composite_data);
+    temp_composite_tex.fill_set(&_composite_tex);
+#endif
 
     for(size_t i = layer_start; i < layer_start + layer_count; ++i) {
       bool do_transition = (_layers[i].trans_time < _layers[i].trans_length);
       if(do_transition) {
-        _transition_tex.init(_composite_tex.get_width(),
-          _composite_tex.get_height(), _transition_tex_data);
+#ifdef DEBUG_COMPOSITOR
+        _transition_tex.fill_set(&temp_composite_tex);
+#else
         _transition_tex.fill_set(&_composite_tex);
+#endif
       }
+#ifdef DEBUG_COMPOSITOR
+      original_tex.fill_set(Color::white);
+#endif
       if(_layers[i].animator != nullptr) {
+#ifdef DEBUG_COMPOSITOR
+        _layers[i].animator->render(&temp_composite_tex);
+        _layers[i].animator->render(&original_tex);
+#else
         _layers[i].animator->render(&_composite_tex);
+#endif
       }
+#ifdef DEBUG_COMPOSITOR
+      size_t x0 =
+        (i - layer_start) * _composite_tex.get_width() / layer_count;
+      size_t x1 =
+        (i - layer_start + 1) * _composite_tex.get_width() / layer_count;
+      size_t y0 = 0;
+      size_t y2 = _composite_tex.get_height() / 2;
+      size_t y3 = _composite_tex.get_height();
+#endif
       if(do_transition) {
+        // _transition_tex was init'ed earlier with a copy of whatever was in
+        // _composite_tex before, so if there's no trans_animator here to
+        // mutate that, we'll just use it straight
         if(_layers[i].trans_animator != nullptr) {
           _layers[i].trans_animator->render(&_transition_tex);
         }
-        // Otherwise, _transition_tex just gets whatever was in _composite_tex
-        _composite_tex.fill_lerp(&_transition_tex,
+        float trans_a =
           1.0f - static_cast<float>(_layers[i].trans_time.to_micros()) /
-            static_cast<float>(_layers[i].trans_length.to_micros()));
+          static_cast<float>(_layers[i].trans_length.to_micros());
+#ifdef DEBUG_COMPOSITOR
+        size_t y1 = (1.0f - trans_a) * y2;
+        _composite_tex.box_set(x0, y0, x1 - x0, y1 - y0,
+          &temp_composite_tex, x0, y0);
+        _composite_tex.box_set(x0, y1, x1 - x0, y2 - y1,
+          &_transition_tex, x0, y1);
+        temp_composite_tex.fill_lerp(&_transition_tex, trans_a);
+      } else {
+        _composite_tex.box_set(x0, y0, x1 - x0, y2 - y0,
+          &temp_composite_tex, x0, y0);
+#else
+        _composite_tex.fill_lerp(&_transition_tex, trans_a);
+#endif
       }
+#ifdef DEBUG_COMPOSITOR
+      _composite_tex.box_set(x0, y2, x1 - x0, y3 - y2,
+        &original_tex, x0, y2);
+#endif
     }
   }
 

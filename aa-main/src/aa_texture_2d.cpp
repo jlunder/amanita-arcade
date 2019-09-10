@@ -112,16 +112,47 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Texture2D::box_lerp(int32_t x, int32_t y,
-      int32_t w, int32_t h, Color const & c, float a) {
+  void AA_OPTIMIZE Texture2D::box_set(
+      int32_t x, int32_t y, int32_t w, int32_t h,
+      Texture2D const * tex, size_t x_ofs, size_t y_ofs) {
     if((w < 0) || (h < 0)) {
-      Debug::error("Texture2D::box_set() with negative size not implemented");
+      Debug::auto_error("negative size not implemented");
       // swap colors, correct x/y,
       return;
     }
     if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
         (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
-      Debug::error("Texture2D::box_set() with clipping not implemented");
+      Debug::auto_error("clipping not implemented");
+      return;
+    }
+    if((((size_t)w + x_ofs) > tex->get_width())
+        || (((size_t)h + y_ofs) > tex->get_height())) {
+      Debug::error("Texture2D::box_set() with clamping not implemented");
+      return;
+    }
+
+    size_t dest_stride = get_stride();
+    Color * dest_data = _data + dest_stride * y + x;
+    size_t tex_stride = tex->get_stride();
+    Color const * tex_data = tex->get_data() + tex_stride * y_ofs + x_ofs;
+    for(size_t yi = 0; yi < (size_t)h; ++yi) {
+      memcpy(dest_data, tex_data, w * sizeof (Color));
+      dest_data += dest_stride;
+      tex_data += tex_stride;
+    }
+  }
+
+
+  void AA_OPTIMIZE Texture2D::box_lerp(int32_t x, int32_t y,
+      int32_t w, int32_t h, Color const & c, float a) {
+    if((w < 0) || (h < 0)) {
+      Debug::auto_error("negative size not implemented");
+      // swap colors, correct x/y,
+      return;
+    }
+    if((x < 0) || ((size_t)w > _width) || ((size_t)(x + w) > _width) ||
+        (y < 0) || ((size_t)h > _height) || ((size_t)(y + h) > _height)) {
+      Debug::auto_error("clipping not implemented");
       return;
     }
 
@@ -146,7 +177,7 @@ namespace aa {
       size_t y_ofs) {
     if((_width + x_ofs > src->_width) || (_height + y_ofs > src->_height)) {
       // with clipping
-      Debug::error("Texture2D::fill_set() with clipping not implemented");
+      Debug::error("Texture2D::fill_set() with clamping not implemented");
       return;
     }
 

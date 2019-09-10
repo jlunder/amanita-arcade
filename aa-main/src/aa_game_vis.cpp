@@ -69,22 +69,22 @@ namespace aa {
       }
 
       static const Texture2D::ClosedGradient orange_grad = {
-        .cx0y0 = { 1.00f, 0.50f, 0.00f, 1.0f },
-        .cx1y0 = { 0.75f, 0.25f, 0.00f, 1.0f },
-        .cx0y1 = { 0.75f, 0.25f, 0.00f, 1.0f },
-        .cx1y1 = { 0.50f, 0.00f, 0.00f, 1.0f },
+        .cx0y0 = Color::make(1.00f, 0.50f, 0.00f, 1.0f),
+        .cx1y0 = Color::make(0.75f, 0.25f, 0.00f, 1.0f),
+        .cx0y1 = Color::make(0.75f, 0.25f, 0.00f, 1.0f),
+        .cx1y1 = Color::make(0.50f, 0.00f, 0.00f, 1.0f),
       };
       static const Texture2D::ClosedGradient bright_orange_grad = {
-        .cx0y0 = { 1.00f, 0.75f, 0.25f, 1.0f },
-        .cx1y0 = { 0.75f, 0.50f, 0.18f, 1.0f },
-        .cx0y1 = { 0.75f, 0.50f, 0.18f, 1.0f },
-        .cx1y1 = { 0.50f, 0.25f, 0.12f, 1.0f },
+        .cx0y0 = Color::make(1.00f, 0.75f, 0.25f, 1.0f),
+        .cx1y0 = Color::make(0.75f, 0.50f, 0.18f, 1.0f),
+        .cx0y1 = Color::make(0.75f, 0.50f, 0.18f, 1.0f),
+        .cx1y1 = Color::make(0.50f, 0.25f, 0.12f, 1.0f),
       };
       static const Texture2D::ClosedGradient aqua_grad = {
-        .cx0y0 = { 0.00f, 0.50f, 1.00f, 1.0f },
-        .cx1y0 = { 0.00f, 0.25f, 0.75f, 1.0f },
-        .cx0y1 = { 0.00f, 0.25f, 0.75f, 1.0f },
-        .cx1y1 = { 0.00f, 0.00f, 0.50f, 1.0f },
+        .cx0y0 = Color::make(0.00f, 0.50f, 1.00f, 1.0f),
+        .cx1y0 = Color::make(0.00f, 0.25f, 0.75f, 1.0f),
+        .cx0y1 = Color::make(0.00f, 0.25f, 0.75f, 1.0f),
+        .cx1y1 = Color::make(0.00f, 0.00f, 0.50f, 1.0f),
       };
 
       orange_5x5_grad_tex.box_set(0, 0, 5, 5, orange_grad);
