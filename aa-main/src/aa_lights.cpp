@@ -514,6 +514,6 @@ namespace aa {
       "DMA transfer start failed");
     __HAL_TIM_ENABLE(&lights_dma_tim);
     uint32_t micros = tm.read_us();
-    Debug::tracef("lights output %luus", (unsigned long)micros);
+    //Debug::tracef("lights output %luus", (unsigned long)micros);
   }
 }

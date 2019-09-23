@@ -8,10 +8,8 @@
 
 
 #define AA_MAX_INDENT 16
-// AA_FRAME_MICROS must remain >= Lights::update() (currently 6000) + 16000.
-// See comments regarding frame timings in the main() loop! 40fps gives us 3ms
-// of headroom.
-#define AA_FRAME_MICROS 30000
+// 40 FPS
+#define AA_FRAME_MICROS 25000
 
 
 namespace aa {
@@ -475,28 +473,16 @@ namespace aa {
 
       ShortTimeSpan dt = ShortTimeSpan::from_micros(delta);
 
-      // Frame timing is somewhat subtle: Lights::output() disables
-      // interrupts for a long period (~5ms as of this writing), while it is
-      // engaged in bit-banging that is timing sensitive at the 100ns level;
-      // however, Input::read_buttons() depends on the longest wait between
-      // interrupt service being no more than one full serial character at
-      // 115.2kbps, or ~87us.
-      // These two timing contraints are obviously incompatible in the
-      // general case! However, we can get away with fudging this, knowing a
-      // little about the particular controller hooked up to the Input
-      // serial input.
+      // Frame timing is somewhat subtle: Input::read_buttons() depends on the
+      // longest wait between interrupt service being no more than one full
+      // serial character at 115.2kbps, or ~87us. This means we can't disable
+      // interrupts for very long at all.
       // Input::read_buttons() sends a request to poll the controller, and it
       // is guaranteed to respond within ~10ms. The request consists of a
       // single character, and the response varies but is not more than
       // 60. That means worst case we will need approximately 16ms to
       // complete the entire round-trip -- after that, serial communications
-      // from the controller should be silent, and it won't matter if
-      // interrupts are disabled because none should be raised!
-      //
-      // So the general strategy here is to put Input::read_buttons()
-      // immediately after Lights::output() to give it maximum clearance
-      // before the next Lights::output(). As long as AA_FRAME_MICROS >=
-      // Lights::update time + 16000, i.e. ~22000, we should be fine.
+      // from the controller should be silent.
       Lights::output();
       Input::read_buttons(dt);
       Game::update(dt);
