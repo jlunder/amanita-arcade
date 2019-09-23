@@ -1,11 +1,83 @@
 #include "amanita_arcade.h"
 
+#include <stm32f4xx.h>
+#include <stm32f4xx_hal.h>
+
 #include "aa_lights.h"
 
 #include "aa_input.h"
 
 
 namespace aa {
+  namespace {
+    // There's some inconsistency in the timing of the first DMA transfer to
+    // the GPIOs, so we add an extra word which should just repeat the previous
+    // state to hide the jitter. This has the nice side effect of guaranteeing
+    // that the bus is low before the first low-to-high transition.
+    static uint16_t lights_dma_buf[Lights::PAGE_SIZE * 24 * 3 + 1];
+    static TIM_HandleTypeDef lights_dma_tim; // TIM1
+    static DMA_HandleTypeDef lights_dma; // DMA2 stream 5
+
+    static void lights_dma_init() {
+      __HAL_RCC_TIM1_CLK_ENABLE();
+      __HAL_RCC_DMA2_CLK_ENABLE();
+
+      lights_dma_tim.Instance = TIM1;
+
+      lights_dma_tim.Init.Prescaler = 0;
+      lights_dma_tim.Init.CounterMode = TIM_COUNTERMODE_UP;
+      lights_dma_tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+      lights_dma_tim.Init.RepetitionCounter = 0;
+      lights_dma_tim.Init.Period = SystemCoreClock / 4000000UL - 1; // 4MHz = 250ns
+
+      TIM_ClockConfigTypeDef tim_clock;
+      tim_clock.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+
+      TIM_MasterConfigTypeDef tim_master;
+      tim_master.MasterOutputTrigger = TIM_TRGO_RESET;
+      tim_master.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+
+      lights_dma.Instance = DMA2_Stream5;
+
+      lights_dma.Init.Channel = DMA_CHANNEL_6;
+      lights_dma.Init.Direction = DMA_MEMORY_TO_PERIPH;
+      lights_dma.Init.PeriphInc = DMA_PINC_DISABLE;
+      lights_dma.Init.MemInc = DMA_MINC_ENABLE;
+      lights_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+      lights_dma.Init.MemDataAlignment = DMA_PDATAALIGN_HALFWORD;
+      lights_dma.Init.Mode = DMA_NORMAL;
+      lights_dma.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+      lights_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+      lights_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+      lights_dma.Init.MemBurst = DMA_MBURST_SINGLE;
+      lights_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
+
+      Debug::assert(HAL_TIM_Base_Init(&lights_dma_tim) == HAL_OK,
+        "Timer init failed");
+      Debug::assert(
+        HAL_TIM_ConfigClockSource(&lights_dma_tim, &tim_clock) == HAL_OK,
+        "Timer clock source config failed");
+      Debug::assert(
+        HAL_TIMEx_MasterConfigSynchronization(&lights_dma_tim, &tim_master)
+          == HAL_OK,
+        "Timer master sync config failed");
+      Debug::assert(HAL_DMA_Init(&lights_dma) == HAL_OK, "DMA init failed");
+      __HAL_LINKDMA(&lights_dma_tim, hdma[TIM_DMA_ID_UPDATE], lights_dma);
+      __HAL_TIM_ENABLE_DMA(&lights_dma_tim, TIM_DMA_UPDATE);
+      __HAL_TIM_ENABLE(&lights_dma_tim);
+
+      static uint32_t const set = 0b1111111111111111;
+      static uint32_t const reset = 0b0000000000000000;
+      size_t n = 0;
+      lights_dma_buf[n++] = reset;
+      while(n + 3 <= (sizeof lights_dma_buf / sizeof *lights_dma_buf)) {
+        lights_dma_buf[n++] = set;
+        lights_dma_buf[n++] = reset;
+        lights_dma_buf[n++] = reset;
+      }
+    }
+  }
+
   Lights::Layer Lights::_layers[LAYER_COUNT] = {
     { .width = STALK_HEIGHT_RED, .height = STALK_WIDTH },
     { .width = STALK_HEIGHT_RED, .height = STALK_WIDTH },
@@ -100,6 +172,8 @@ namespace aa {
         _output_buf[i][j] = c;
       }
     }
+
+    lights_dma_init();
   }
 
 
@@ -395,93 +469,51 @@ namespace aa {
   }
 
 
-  void __attribute__((optimize("O4"))) Lights::output() {
-    static uint32_t const set = 0b1111111111111111;
-    static uint32_t const reset = 0b0000000000000000;
-
+  void AA_OPTIMIZE Lights::output() {
     mbed::Timer tm;
 
-    uint32_t colors_buf[2][PAGE_COUNT];
-    uint32_t * colors;
-    uint32_t * colors_next = colors_buf[0];
-    uint_fast16_t data[24];
-    uint_fast16_t data_next;
+    uint32_t colors[PAGE_COUNT];
 
     tm.start();
 
-    // Warm up the pipeline
-    for(size_t j = 0; j < PAGE_COUNT; ++j) {
-      colors_next[j] = _output_buf[j][0];
-    }
+    size_t n = 1;
 
-    // Second stage warmup
-    colors = colors_next;
-    colors_next = colors_buf[1];
-    for(size_t j = 0; j < 24; ++j) {
-      data_next = 0;
-      for(size_t k = 0; k < PAGE_COUNT; ++k) {
-        // shift out MSB first
-        uint32_t c = colors[k];
-        colors[k] = c << 1;
-        data_next |= (c & (1 << 23)) >> (23 - k);
+    for(size_t i = 0; i < PAGE_SIZE; ++i) {
+      for(size_t j = 0; j < PAGE_COUNT; ++j) {
+        colors[j] = _output_buf[j][i];
       }
-      data[j] = data_next;
-      if(j < PAGE_COUNT) {
-        colors_next[j] = _output_buf[j][1];
-      }
-    }
-
-    // This method is tuned for the STM32F407 DISCOVERY board, running at
-    // 168MHz. If it's ported to any other board, it should be retuned.
-    __disable_irq();
-    hw::debug_lights_sync = 1;
-    for(size_t i = 0; i < PAGE_SIZE - 1; ++i) {
-      colors = colors_next;
-      colors_next = colors_buf[i & 1];
 
       for(size_t j = 0; j < 24; ++j) {
-        data_next = 0;
-
-        __sync_synchronize();
-        hw::lights_ws2812_port = set;
-        __sync_synchronize();
-        // Do work to make up ~350ns (200ns < t < 500ns) (no __NOP() needed)
-        for(size_t k = 0; k < 6; ++k) {
+        uint_fast16_t data = 0;
+        for(size_t k = 0; k < PAGE_COUNT; ++k) {
           // shift out MSB first
           uint32_t c = colors[k];
           colors[k] = c << 1;
-          data_next |= (c & (1 << 23)) >> (23 - k);
+          data |= (c & (1 << 23)) >> (23 - k);
         }
-        __sync_synchronize();
-        hw::lights_ws2812_port = data[j];
-        __sync_synchronize();
-        // Do work to make up >300ns (max 5000ns)
-        for(size_t k = 6; k < 12; ++k) {
-          // shift out MSB first
-          uint32_t c = colors[k];
-          colors[k] = c << 1;
-          data_next |= (c & (1 << 23)) >> (23 - k);
-        }
-        __sync_synchronize();
-        hw::lights_ws2812_port = reset;
-        __sync_synchronize();
-        // Do work to make up >250ns (max 5000ns)
-        for(size_t k = 12; k < PAGE_COUNT; ++k) {
-          // shift out MSB first
-          uint32_t c = colors[k];
-          colors[k] = c << 1;
-          data_next |= (c & (1 << 23)) >> (23 - k);
-        }
-        data[j] = data_next;
-        if(j < PAGE_COUNT) {
-          colors_next[j] = _output_buf[j][i + 2];
-        }
+        Debug::dev_auto_assert(
+          n + 3 <= sizeof lights_dma_buf / sizeof *lights_dma_buf);
+        n++;
+        lights_dma_buf[n++] = data;
+        n++;
       }
     }
-    hw::debug_lights_sync = 0;
-    __enable_irq();
 
-    tm.stop();
-    //Debug::tracef("Lights output %uus", tm.read_us());
+    //for(size_t i = 0; i < (sizeof dma_buf / sizeof *dma_buf); ++i) {
+    //  aa::hw::lights_ws2812_port.write(dma_buf[i]);
+    //}
+
+    HAL_DMA_PollForTransfer(&lights_dma, HAL_DMA_FULL_TRANSFER, 10);
+    __HAL_TIM_DISABLE(&lights_dma_tim);
+    __HAL_TIM_SET_COUNTER(&lights_dma_tim, 0);
+    Debug::assert(
+      HAL_DMA_Start(&lights_dma, (uint32_t)lights_dma_buf,
+          (uint32_t)&GPIOE->ODR,
+          sizeof lights_dma_buf / sizeof *lights_dma_buf)
+        == HAL_OK,
+      "DMA transfer start failed");
+    __HAL_TIM_ENABLE(&lights_dma_tim);
+    uint32_t micros = tm.read_us();
+    Debug::tracef("lights output %luus", (unsigned long)micros);
   }
 }

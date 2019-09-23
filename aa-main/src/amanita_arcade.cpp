@@ -68,8 +68,8 @@ namespace aa {
 
     __attribute__((aligned(4))) uint8_t debug_ser_alloc[sizeof (Serial)];
     Serial & debug_ser = *(Serial *)debug_ser_alloc; // PA_2, PA_3: USART2
-    Serial input_ser(PB_10, PB_11); // USART3 -- USART1 doesn't work?
-    PortOut lights_ws2812_port(PortE, 0xFFFF);
+    Serial input_ser(PA_9, PA_10); // USART1
+    PortOut lights_ws2812_port(PortE);
     DigitalOut debug_amber_led(LED3);
     DigitalOut debug_green_led(LED4);
     DigitalOut debug_red_led(LED5);
@@ -510,8 +510,7 @@ namespace aa {
           disconnected_min_pulse_timeout = Timer(TimeSpan::from_millis(200), false);
         }
         was_input_connected = false;
-      }
-      else {
+      } else {
         if(disconnected_min_pulse_timeout.is_done()) {
           hw::debug_amber_led.write(0);
         }
