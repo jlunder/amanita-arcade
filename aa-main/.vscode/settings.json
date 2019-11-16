@@ -12,7 +12,7 @@
         "typeinfo": "cpp"
     },
     "terminal.integrated.env.linux": {
-        "PATH": "/home/joseph/.platformio/penv/bin:/home/joseph/.platformio/penv:/home/joseph/.cargo/bin:/home/joseph/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:~/.platformio/penv/bin",
+        "PATH": "/home/jlunder/.platformio/penv/bin:/home/jlunder/.platformio/penv:/home/jlunder/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
         "PLATFORMIO_CALLER": "vscode"
     }
 }

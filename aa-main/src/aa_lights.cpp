@@ -28,7 +28,7 @@ namespace aa {
       lights_dma_tim.Init.CounterMode = TIM_COUNTERMODE_UP;
       lights_dma_tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
       lights_dma_tim.Init.RepetitionCounter = 0;
-      lights_dma_tim.Init.Period = SystemCoreClock / 4000000UL - 1; // 4MHz = 250ns
+      lights_dma_tim.Init.Period = SystemCoreClock / 3200000UL - 1; // 4MHz = 250ns
 
       TIM_ClockConfigTypeDef tim_clock;
       tim_clock.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
