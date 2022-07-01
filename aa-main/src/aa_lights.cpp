@@ -14,7 +14,7 @@ namespace aa {
     // the GPIOs, so we add an extra word which should just repeat the previous
     // state to hide the jitter. This has the nice side effect of guaranteeing
     // that the bus is low before the first low-to-high transition.
-    static uint16_t lights_dma_buf[Lights::PAGE_SIZE * 24 * 3 + 1];
+    static uint16_t lights_dma_buf[Lights::PAGE_SIZE * 24 * 5 + 1];
     static TIM_HandleTypeDef lights_dma_tim; // TIM1
     static DMA_HandleTypeDef lights_dma; // DMA2 stream 5
 
@@ -70,8 +70,10 @@ namespace aa {
       static uint32_t const reset = 0b0000000000000000;
       size_t n = 0;
       lights_dma_buf[n++] = reset;
-      while(n + 3 <= (sizeof lights_dma_buf / sizeof *lights_dma_buf)) {
+      while(n + 4 <= (sizeof lights_dma_buf / sizeof *lights_dma_buf)) {
         lights_dma_buf[n++] = set;
+        lights_dma_buf[n++] = reset;
+        lights_dma_buf[n++] = reset;
         lights_dma_buf[n++] = reset;
         lights_dma_buf[n++] = reset;
       }
@@ -335,8 +337,8 @@ namespace aa {
     update_composite_layers_to_composite_tex(LAYER_SB_START, LAYER_SB_COUNT);
     // LEDs can't handle more than 25% brightness, oy
     _composite_tex.fill_lerp(Color::black, 0.875f);
-    update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START, 4,
-      &_composite_tex);
+    update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START,
+      SCOREBOARD_PAGES_COUNT, SCOREBOARD_LINES_PER_PAGE, &_composite_tex);
   }
 
 
@@ -456,9 +458,10 @@ namespace aa {
 
 
   void Lights::update_encode_scoreboard_texture_to_output(size_t page_start,
-      size_t lines_per_page, Texture2D const * tex) {
-    size_t page = page_start;
-    for(size_t y = 0; y < tex->get_height(); ++page, y += lines_per_page) {
+      size_t page_count, size_t lines_per_page, Texture2D const * tex) {
+    size_t y = 0;
+    for(size_t page = page_start; page < (page_start + page_count);
+        ++page, y += lines_per_page) {
       size_t h = lines_per_page;
       if((y + h) > tex->get_height()) {
         h = tex->get_height() - y;
@@ -492,9 +495,11 @@ namespace aa {
           data |= (c & (1 << 23)) >> (23 - k);
         }
         Debug::dev_auto_assert(
-          n + 3 <= sizeof lights_dma_buf / sizeof *lights_dma_buf);
+          n + 5 <= sizeof lights_dma_buf / sizeof *lights_dma_buf);
         n++;
         lights_dma_buf[n++] = data;
+        lights_dma_buf[n++] = data;
+        n++;
         n++;
       }
     }
@@ -513,7 +518,7 @@ namespace aa {
         == HAL_OK,
       "DMA transfer start failed");
     __HAL_TIM_ENABLE(&lights_dma_tim);
-    uint32_t micros = tm.read_us();
+    //uint32_t micros = tm.read_us();
     //Debug::tracef("lights output %luus", (unsigned long)micros);
   }
 }

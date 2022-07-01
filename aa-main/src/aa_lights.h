@@ -181,6 +181,8 @@ namespace aa {
     static size_t const STALK_PAGE_PINK  = 3;
     static size_t const SCOREBOARD_PAGES_START = 4;
     static size_t const SCOREBOARD_LIGHTS_PER_PAGE = 120;
+    static size_t const SCOREBOARD_LINES_PER_PAGE =
+      SCOREBOARD_LIGHTS_PER_PAGE / SCOREBOARD_WIDTH;
     static size_t const SCOREBOARD_PAGES_COUNT =
       (SCOREBOARD_LIGHTS_COUNT + SCOREBOARD_LIGHTS_PER_PAGE - 1) /
         SCOREBOARD_LIGHTS_PER_PAGE; // = 8 pages as of this writing
@@ -200,7 +202,7 @@ namespace aa {
     static void update_encode_stalk_texture_to_output(size_t page,
       Texture2D const * tex);
     static void update_encode_scoreboard_texture_to_output(size_t page_start,
-      size_t lines_per_page, Texture2D const * tex);
+      size_t page_count, size_t lines_per_page, Texture2D const * tex);
   };
 }
 
