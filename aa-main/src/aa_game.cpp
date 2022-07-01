@@ -460,7 +460,7 @@ namespace aa {
         hw::debug_ser.printf("%s (y/n) [%c]: ", prompt, *val ? 'y' : 'n');
         while(!hw::debug_ser.readable()) {
           // busy-wait
-          wait_ms(10);
+          wait_us(10000);
         }
         char c = (char)hw::debug_ser.getc();
         switch(c) {
@@ -527,7 +527,7 @@ namespace aa {
       for(;;) {
         while(!hw::debug_ser.readable()) {
           System::service_watchdog();
-          wait_ms(10);
+          wait_us(10000);
         }
         System::service_watchdog();
         char c = (char)hw::debug_ser.getc();

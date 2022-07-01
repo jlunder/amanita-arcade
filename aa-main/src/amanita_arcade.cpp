@@ -436,7 +436,7 @@ namespace aa {
     System::init_nv();
 
     // Give external hardware time to wake up... some of it is sloooow
-    wait_ms(500);
+    wait_us(500000UL);
     System::service_watchdog();
 
     hw::debug_amber_led.write(1);

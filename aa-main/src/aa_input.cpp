@@ -186,12 +186,12 @@ namespace aa {
 
     for(int i = 0; !alive && i < 20; ++i) {
       hw::input_ser.puts("A0M0V00");
-      wait_ms(100);
+      wait_us(100000);
       System::service_watchdog();
 
       for(int j = 0; !alive && j < 20; ++j) {
         hw::input_ser.putc('P');
-        wait_ms(10);
+        wait_us(10000);
         System::service_watchdog();
         if(new_sample_available) {
           alive = true;
@@ -270,7 +270,7 @@ namespace aa {
       // Hmmm, input not responding?
       hw::input_ser.putc('R');
       hw::input_ser.puts("A0M0V00");
-      wait_ms(10);
+      wait_us(10000);
       hw::input_ser.putc('P');
 
       remote_query_throttle_timeout =
