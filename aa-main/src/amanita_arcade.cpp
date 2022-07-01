@@ -66,7 +66,7 @@ namespace aa {
 
     __attribute__((aligned(4))) uint8_t debug_ser_alloc[sizeof (Serial)];
     Serial & debug_ser = *(Serial *)debug_ser_alloc; // PA_2, PA_3: USART2
-    Serial input_ser(PA_9, PA_10); // USART1
+    Serial input_ser(PB_10, PB_11); // USART3
     PortOut lights_ws2812_port(PortE);
     DigitalOut debug_amber_led(LED3);
     DigitalOut debug_green_led(LED4);
