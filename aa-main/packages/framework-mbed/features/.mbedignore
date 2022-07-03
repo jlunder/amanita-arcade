@@ -1,0 +1,13 @@
+cellular/*
+cryptocell/*
+device_key/*
+FEATURE_BLE/*
+frameworks/*
+lorawan/*
+lwipstack/*
+mbedtls/*
+nanostack/*
+netsocket/*
+nfc/*
+storage/*
+unsupported/*
