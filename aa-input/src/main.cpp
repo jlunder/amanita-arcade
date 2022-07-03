@@ -1,11 +1,4 @@
-#include <stdint.h>
-#include <inttypes.h>
-#include <stdlib.h>
-
-#include <new>
-
-#include <mbed.h>
-
+#include "aa_input.h"
 #include "PSGamepad.h"
 
 
@@ -31,7 +24,7 @@ DigitalIn button_blue(PB_8);
 DigitalIn button_pink(PB_9);
 
 PSGamepad psg(PB_15, PB_14, PB_13, PB_12);
-Serial serial_comms(PA_9, PA_10, 115200);
+UARTSerial serial_comms(PA_9, PA_10, 115200);
 
 
 enum ParserState {
@@ -75,73 +68,11 @@ uint8_t parseHexDigit(uint8_t digit);
 void printGamepadValues();
 
 
-static char const hexDigits[16] = {
-  '0', '1', '2', '3', '4', '5', '6', '7',
-  '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-};
-
-
-static inline void print(FILE * f, char const * message) { fputs(message, f); }
-static void print_d(FILE * f, int32_t val);
-static void print_u(FILE * f, uint32_t val);
-static void print_x(FILE * f, uint32_t val, int digits);
-
-static inline void log(char const * message) { print(stderr, message); }
-static inline void log_d(int32_t val) { print_d(stderr, val); }
-static inline void log_u(uint32_t val) { print_u(stderr, val); }
-static inline void log_x(uint32_t val, int digits) { print_x(stderr, val, digits); }
-
-
-void print_d(FILE * f, int32_t val) {
-  bool negative = val < 0;
-  if(negative) {
-    // If val == -0x80000000, -val == val; but the cast to uint32_t still
-    // gives us the right thing
-    fputc('-', f);
-  }
-  print_u(f, (uint32_t)(negative ? -val : val));
-}
-
-
-void print_u(FILE * f, uint32_t val) {
-  char conversion[10];
-  uint32_t conv_val = val;
-  size_t i = sizeof conversion;
-  conversion[--i] = 0;
-  if(conv_val == 0) {
-    conversion[--i] = '0';
-  } else {
-    while((conv_val > 0) && (i > 0)) {
-      conversion[--i] = (conv_val % 10) + '0';
-      conv_val /= 10;
-    }
-  }
-  fputs(conversion + i, f);
-}
-
-
-void print_x(FILE * f, uint32_t val, int digits) {
-  if(digits > 8) {
-    digits = 8;
-  }
-  char conversion[9];
-  size_t i = digits;
-  uint32_t conv_val = val;
-  conversion[i] = 0;
-  while(i > 0) {
-    --i;
-    conversion[i] = hexDigits[conv_val & 0xF];
-    conv_val = conv_val >> 4;
-  }
-  fputs(conversion, f);
-}
-
-
 namespace mbed
 {
     FileHandle *mbed_target_override_console(int) {
       // PB_10, PB_11: USART3
-      static Serial debug_out(PB_10, PB_11, 115200);
+      static UARTSerial debug_out(PB_10, PB_11, 115200);
       static bool configured = false;
       if(!configured) {
         configured = true;
@@ -152,10 +83,24 @@ namespace mbed
 }
 
 
+void logp(char const * fmt, ...) {
+  char buf[200];
+
+  va_list va;
+  va_start(va, fmt);
+  int len = vsnprintf(buf, sizeof buf, fmt, va);
+  if(len > 0) {
+    mbed::mbed_target_override_console(1)->write(buf, len);
+  }
+  va_end(va);
+}
+
+
+
 int main() {
   debug_led.write(0);
-  fputs("Amanita Arcade 2019 input controller initializing\r\n", stdout);
-  wait_ms(500);
+  logp("Amanita Arcade 2019 input controller initializing\r\n");
+  wait_us(500000);
 
   serial_comms.set_blocking(true);
 
@@ -245,7 +190,7 @@ void service_watchdog() {
 
 
 void do_main_loop() {
-  log("Beginning main loop\r\n");
+  printf("Beginning main loop\r\n");
 
   Timer loop_timer;
   us_timestamp_t loop_start_us;
@@ -269,19 +214,14 @@ void do_main_loop() {
         break;
       }
 
-      if(wait_left_us > 2000) {
-        wait_ms((wait_left_us - 200) / 1000);
-      } else if(wait_left_us > 50) {
-        wait_us(wait_left_us - 50);
-      }
       // otherwise just busy-wait
     } while(time_since_last_poll_us < POLL_PERIOD_US);
 
     last_loop_start_us += POLL_PERIOD_US;
     int32_t loop_start_error = (int32_t)(loop_timer.read_high_resolution_us() - last_loop_start_us);
     if(abs(loop_start_error) > LOOP_TIMING_EPSILON_US) {
-      log("Excessive drift in loop start time of "); log_d(loop_start_error);
-        log("us\r\n");
+      logp("Excessive drift in loop start time of %luus\r\n",
+        (unsigned long)loop_start_error);
       if(loop_start_error >= POLL_PERIOD_US / 2) {
         // Catch up, we're falling behind
         last_loop_start_us = loop_start_us;
@@ -334,27 +274,27 @@ void pollGamepad() {
 
 
 void executeCommands() {
-  do_print = false;
-  do_reset = false;
-
   while(serial_comms.readable()) {
-    int c = serial_comms.getc();
-    parseCommand((uint8_t)c);
-  }
-
-  if(do_reset) {
-    auto_poll = false;
-    rumble_motor_0 = false;
-    rumble_motor_1 = 0;
-    psg.end();
-    psg.begin(use_analog, use_pressure, true);
-  } else {
-    if(do_print || auto_poll) {
-      printGamepadValues();
+    uint8_t c;
+    serial_comms.read(&c, 1);
+    parseCommand(c);
+    if(do_reset) {
+      logp("Reset\r\n");
+      auto_poll = false;
+      rumble_motor_0 = false;
+      rumble_motor_1 = 0;
+      psg.end();
+      psg.begin(use_analog, use_pressure, true);
+      do_reset = false;
     }
   }
+
+  if(do_print || auto_poll) {
+    printGamepadValues();
+  }
+  do_print = false;
   //log_x(psg.getButtons() & ~extra_buttons, 4);
-  //log("\r\n");
+  //logp("\r\n");
 }
 
 
@@ -407,24 +347,33 @@ void parseCommand(uint8_t command) {
 void parseIdleCommand(uint8_t command) {
   switch(command) {
     case 'a': case 'A':
+      logp("Got 'A'\r\n");
       parser_state = PS_AUTO_PARAM;
       auto_poll = false;
       break;
     case 'm': case 'M':
+      logp("Got 'M'\r\n");
       parser_state = PS_MODE_PARAM;
       break;
     case 'p': case 'P':
+      logp("Got 'P'\r\n");
       do_print = true;
       break;
     case 'r': case 'R':
+      logp("Got 'R'\r\n");
       do_reset = true;
       break;
     case 'v': case 'V':
+      logp("Got 'V'\r\n");
       parser_state = PS_RUMBLE_PARAM_0;
       rumble_motor_0_staging = false;
       rumble_motor_1_staging = 0;
       break;
     default:
+      logp("Bad command '%c'\r\n", (char)command);
+      break;
+    case '\r':
+    case '\n':
       break;
   }
 }
@@ -466,38 +415,60 @@ uint8_t parseHexDigit(uint8_t digit) {
 
 
 void printGamepadValues() {
-  print(serial_comms, "P ");
-  print_x(serial_comms, (uint32_t)last_loop_start_us, 8);
-#if 0
-  print(serial_comms, "/");
-  print_x(serial_comms, (uint32_t)last_read_work_us, 4);
-  print(serial_comms, ",");
-  print_x(serial_comms, (uint32_t)last_loop_work_us, 4);
-#endif
-  print(serial_comms, ":");
-  uint8_t status = psg.getStatus();
-  print_x(serial_comms, status, 2);
-  print(serial_comms, ":");
-  print_x(serial_comms, psg.getButtons() & ~extra_buttons, 4);
-  if(status == PSCS_ANALOG || status == PSCS_PRESSURE) {
-    print(serial_comms, "/");
-    print_x(serial_comms, psg.getAnalog(PSS_LX), 2);
-    print(serial_comms, ",");
-    print_x(serial_comms, psg.getAnalog(PSS_LY), 2);
-    print(serial_comms, ";");
-    print_x(serial_comms, psg.getAnalog(PSS_RX), 2);
-    print(serial_comms, ",");
-    print_x(serial_comms, psg.getAnalog(PSS_RY), 2);
-  }
-  if(status == PSCS_PRESSURE) {
-    print(serial_comms, "/");
-    print_x(serial_comms, psg.getAnalog(PSAB_PAD_RIGHT), 2);
-    for(uint8_t i = 1; i < 12; ++i) {
-      print(serial_comms, ",");
-      print_x(serial_comms, psg.getAnalog(i + PSAB_PAD_RIGHT), 2);
-    }
-  }
-  print(serial_comms, "\r\n");
-}
+  char buf[100];
+  int32_t len;
 
+  logp("State: ");
+  len = snprintf(buf, sizeof buf, "P %08lX",
+    (unsigned long)last_loop_start_us);
+  logp("%s", buf);
+  serial_comms.write(buf, len);
+
+#if 0
+  len = snprintf(buf, sizeof buf, "/%08lX,%08lX",
+    (unsigned long)last_read_work_us, (unsigned long)last_loop_work_us);
+  logp(buf);
+  serial_comms.write(buf, len);
+#endif
+
+  uint8_t status = psg.getStatus();
+
+  len = snprintf(buf, sizeof buf, ":%02X:%04X",
+    (unsigned int)status,
+    (unsigned int)(psg.getButtons() & ~extra_buttons));
+  logp("%s", buf);
+  serial_comms.write(buf, len);
+
+  if(status == PSCS_ANALOG || status == PSCS_PRESSURE) {
+    len = snprintf(buf, sizeof buf, "/%02X,%02X;%02X,%02X",
+      (unsigned int)psg.getAnalog(PSS_LX),
+      (unsigned int)psg.getAnalog(PSS_LY),
+      (unsigned int)psg.getAnalog(PSS_RX),
+      (unsigned int)psg.getAnalog(PSS_RY));
+    logp("%s", buf);
+    serial_comms.write(buf, len);
+  }
+
+  if(status == PSCS_PRESSURE) {
+    len = snprintf(buf, sizeof buf,
+      "/%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X",
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 0),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 1),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 2),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 3),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 4),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 5),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 6),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 7),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 8),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 9),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 10),
+      (unsigned int)psg.getAnalog(PSAB_PAD_RIGHT + 11));
+    logp("%s", buf);
+    serial_comms.write(buf, len);
+  }
+
+  logp("\r\n", buf);
+  serial_comms.write("\r\n", 2);
+}
 

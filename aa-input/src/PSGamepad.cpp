@@ -1,7 +1,5 @@
 #include "PSGamepad.h"
 
-#include <stdlib.h>
-
 //#define LOG_COMMANDS
 
 #define PSG_CTRL_BYTE_DELAY 20
@@ -15,21 +13,8 @@
 #define PSC_SET_CONTROL_MAP 0x4F
 
 
-static char const hex_digits[16] = {
-  '0', '1', '2', '3', '4', '5', '6', '7',
-  '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-};
-
-
 static inline uint8_t rev8(uint8_t x) {
   return __RBIT(x) >> 24;
-}
-
-
-static inline void log(char const * message) { fputs(message, stderr); }
-static inline void log_u8x2(uint8_t val) {
-  fputc(hex_digits[(val >> 4) & 0xF], stderr);
-  fputc(hex_digits[(val >> 0) & 0xF], stderr);
 }
 
 
@@ -89,7 +74,7 @@ void PSGamepad::poll(bool rumbleMotor0, uint8_t rumbleMotor1) {
   if(_status == PSCS_CONFIGURING) {
     if(_configureStart.read_ms() > 500) {
       // Something is wrong, trigger a reconfig next poll
-      log("timeout on config\r\n");
+      logp("timeout on config\r\n");
       _status = PSCS_DISCONNECTED;
     }
   } else if(_status == PSCS_DISCONNECTED) {
@@ -98,7 +83,7 @@ void PSGamepad::poll(bool rumbleMotor0, uint8_t rumbleMotor1) {
       (!_pressureEnabled && _analogEnabled && _status != PSCS_ANALOG) ||
       (!_pressureEnabled && !_analogEnabled && _status != PSCS_DIGITAL)) {
     // Controller is not in the right mode, force it there
-    log("controller in weird state\r\n");
+    logp("controller in weird state\r\n");
     _status = PSCS_DISCONNECTED;
   }
 
@@ -125,7 +110,7 @@ void PSGamepad::configureGamepad() {
     _configureStart.reset();
     _configureStart.start();
   } else {
-    log("configure didn't all succeed\r\n");
+    logp("configure didn't all succeed\r\n");
   }
 }
 
@@ -155,7 +140,7 @@ void PSGamepad::readGamepad(bool rumbleMotor0, uint8_t rumbleMotor1) {
       break;
     case 0xF3:
       if(_status != PSCS_CONFIGURING) {
-        log("unexpected config mode\r\n");
+        logp("unexpected config mode\r\n");
         _status = PSCS_DISCONNECTED;
       }
       break;
@@ -163,7 +148,7 @@ void PSGamepad::readGamepad(bool rumbleMotor0, uint8_t rumbleMotor1) {
       _status = PSCS_PRESSURE;
       break;
     default:
-      log("bad result from poll\r\n");
+      logp("bad result from poll\r\n");
       _status = PSCS_DISCONNECTED;
       break;
   }
@@ -238,7 +223,7 @@ uint8_t PSGamepad::sendCommand(uint8_t command, uint8_t const * txBuf,
   wait_us(PSG_CTRL_BYTE_DELAY);
 
 #if defined(LOG_COMMANDS)
-  log("CMD "); log_u8x2(command); log(">"); log_u8x2(response); log(":");
+  logp("CMD "); log_u8x2(command); logp(">"); log_u8x2(response); logp(":");
 #endif
 
   if(response != 0xFF) {
@@ -248,7 +233,7 @@ uint8_t PSGamepad::sendCommand(uint8_t command, uint8_t const * txBuf,
       uint8_t txByte = ((txBuf != NULL) && (i < txLength) ? txBuf[i] : txPad);
       uint8_t rxByte = rev8(_spi.write(rev8(txByte)));
 #if defined(LOG_COMMANDS)
-      log(" "); log_u8x2(txByte); log(">"); log_u8x2(rxByte);
+      logp(" "); log_u8x2(txByte); logp(">"); log_u8x2(rxByte);
 #endif
       if((rxBuf != NULL) && (i < rxLength)) {
         rxBuf[i] = rxByte;
@@ -258,7 +243,7 @@ uint8_t PSGamepad::sendCommand(uint8_t command, uint8_t const * txBuf,
   }
 
 #if defined(LOG_COMMANDS)
-  log("\r\n");
+  logp("\r\n");
 #endif
   _attention.write(1);
 
