@@ -510,7 +510,8 @@ namespace aa {
           Lights::start_animator(
             _layer_start + Lights::LAYER_STALK_OVERLAY, &_game_over_win,
             ShortTimeSpan::from_millis(2000));
-        } else {
+        }
+        else {
           Lights::start_animator(
             _layer_start + Lights::LAYER_STALK_OVERLAY, &_game_over_lose,
             ShortTimeSpan::from_millis(2000));
@@ -729,7 +730,8 @@ namespace aa {
           Lights::start_animator(
             Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN, &_game_over_win,
             SHORT_TRANSITION);
-        } else {
+        }
+        else {
           Lights::start_animator(
             Lights::LAYER_SB_START + Lights::LAYER_SB_MAIN, &_game_over_lose,
             SHORT_TRANSITION);

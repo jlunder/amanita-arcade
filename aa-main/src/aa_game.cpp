@@ -17,11 +17,58 @@
 
 namespace aa {
   namespace {
+    class Xoshiro256ss {
+    public:
+      Xoshiro256ss()
+          : _s{ 0x10203040, 0x50607080, 0x90A0B0C0, 0xD0E0F000 } {
+      }
+
+      void init(uint64_t const iv[4]) {
+        memcpy(_s, iv, sizeof _s);
+      }
+
+      void init_rand() {
+        for(size_t n = 0; n < std::size(_s); ++n) {
+          _s[n] = (static_cast<uint64_t>(rand()) << 48)
+            ^ (static_cast<uint64_t>(rand()) << 32)
+            ^ (static_cast<uint64_t>(rand()) << 16)
+            ^ (static_cast<uint64_t>(rand()) << 0);
+        }
+      }
+
+      uint64_t next() {
+        uint64_t const result = rol64(_s[1] * 5, 7) * 9;
+        uint64_t const t = _s[1] << 17;
+
+        _s[2] ^= _s[0];
+        _s[3] ^= _s[1];
+        _s[1] ^= _s[2];
+        _s[0] ^= _s[3];
+
+        _s[2] ^= t;
+        _s[3] = rol64(_s[3], 45);
+
+        return result;
+      }
+
+    private:
+      uint64_t _s[4];
+
+      static constexpr uint64_t rol64(uint64_t x, int k)
+      {
+        return (x << k) | (x >> (64 - k));
+      }
+    };
+
+
     size_t const MAX_PATTERN_LENGTH = HiScore::MAX_SCORE;
 
 
+    Xoshiro256ss rng;
+
+
     char get_random_button() {
-      switch(rand() % 4) {
+      switch(rng.next() % 4) {
       case 0: return 'R';
       case 1: return 'G';
       case 2: return 'B';
@@ -273,7 +320,8 @@ namespace aa {
       if(debug_read_int(prompt, &val64, min, max)) {
         *val = (T)val64;
         return true;
-      } else {
+      }
+      else {
         return false;
       }
     }
@@ -282,7 +330,8 @@ namespace aa {
     void debug_update(TimeSpan dt) {
       uint32_t debug_buttons = 0;
       while(hw::debug_ser.readable()) {
-        char c = hw::debug_ser.getc();
+        char c;
+        hw::debug_ser.read(&c, 1);
         switch(c) {
           case 'r': case 'R': debug_buttons |= Input::B_RED; break;
           case 'g': case 'G': debug_buttons |= Input::B_GREEN; break;
@@ -298,7 +347,7 @@ namespace aa {
           case 'd': case 'D': debug_dump_nv(); break;
           case 'f': case 'F': debug_fill_nv(); break;
           case 'v': case 'V': debug_values(); break;
-          case CTRL('C'): hw::debug_ser.puts("^cancel\r\n"); break;
+          case CTRL('C'): fputs("^cancel\r\n", stdout); break;
           case CTRL('R'): Debug::abort(); break;
         }
       }
@@ -307,7 +356,7 @@ namespace aa {
 
 
     void debug_help() {
-      hw::debug_ser.puts(
+      fputs(
         "Debug help:\r\n"
         "rgbp - simulate red, green, blue, pink button\r\n"
         "h    - help (print this message)\r\n"
@@ -318,13 +367,13 @@ namespace aa {
         "d    - dump EEPROM to console (backup)\r\n"
         "f    - fill EEPROM from console (restore)\r\n"
         "v    - values (print internal state)\r\n"
-        "^R   - reset\r\n"
-        );
+        "^R   - reset\r\n",
+        stdout);
     }
 
 
     void debug_setup() {
-      hw::debug_ser.puts("Setup:\r\n");
+      fputs("Setup:\r\n", stdout);
       HiScoreSettings settings = *HiScore::get_settings();
       debug_read_int<uint8_t>("day", &settings.today, 0, UINT8_MAX);
       debug_read_str("event", settings.event, sizeof settings.event);
@@ -333,12 +382,12 @@ namespace aa {
 
 
     void debug_list_scores() {
-      hw::debug_ser.puts("List scores:\r\n");
+      fputs("List scores:\r\n", stdout);
       size_t i = 1;
       for(HiScoreEntry const * const * entry =
             HiScore::get_scores(HiScore::LIST_COMBINED);
           *entry != nullptr; ++entry) {
-        hw::debug_ser.printf("%2d. %*.*s: %2d - %*.*s %d\r\n", (int)i++,
+        fprintf(stdout, "%2d. %*.*s: %2d - %*.*s %d\r\n", (int)i++,
           HI_SCORE_NAME_MAX, HI_SCORE_NAME_MAX, (*entry)->name,
           (int)(*entry)->score, HI_SCORE_EVENT_MAX, HI_SCORE_EVENT_MAX,
           (*entry)->event, (int)(*entry)->day);
@@ -347,7 +396,7 @@ namespace aa {
 
 
     void debug_add_score() {
-      hw::debug_ser.puts("Add score:\r\n");
+      fputs("Add score:\r\n", stdout);
       HiScoreSettings settings = *HiScore::get_settings();
       HiScoreEntry entry;
       entry.score = 1;
@@ -364,13 +413,13 @@ namespace aa {
 
 
     void debug_clear_score() {
-      hw::debug_ser.puts("Clear score:\r\n");
+      fputs("Clear score:\r\n", stdout);
       size_t num_entries = 0;
       HiScoreEntry const * const * list =
         HiScore::get_scores(HiScore::LIST_COMBINED);
       for(HiScoreEntry const * const * entry = list;
           *entry != nullptr; ++entry) {
-        hw::debug_ser.printf("%2d. %*.*s: %2d - %*.*s %d\r\n",
+        fprintf(stdout, "%2d. %*.*s: %2d - %*.*s %d\r\n",
           (int)num_entries + 1, HI_SCORE_NAME_MAX, HI_SCORE_NAME_MAX,
           (*entry)->name, (int)(*entry)->score, HI_SCORE_EVENT_MAX,
           HI_SCORE_EVENT_MAX, (*entry)->event, (int)(*entry)->day);
@@ -384,7 +433,8 @@ namespace aa {
           && confirm) {
         if(score_num > 0) {
           HiScore::clear_score(list[score_num - 1]);
-        } else {
+        }
+        else {
           HiScore::clear_all_scores();
         }
       }
@@ -393,7 +443,7 @@ namespace aa {
 
     void debug_dump_nv() {
       static size_t const PAGE_SIZE = 16;
-      hw::debug_ser.puts("Dump EEPROM:\r\n");
+      fputs("Dump EEPROM:\r\n", stdout);
       size_t dump_start = 0;
       size_t dump_size = NV_SIZE;
       if(!debug_read_int<size_t>("start address", &dump_start, 0, NV_SIZE)) {
@@ -410,78 +460,83 @@ namespace aa {
         if(!System::read_nv(i, data, PAGE_SIZE)) {
           return;
         }
-        hw::debug_ser.printf("%04X: ", i);
+        fprintf(stdout, "%04X: ", i);
         size_t j = 0;
         if((i + j) < dump_start) {
-          hw::debug_ser.printf("%*c", (dump_start - (i + j)) * 3, ' ');
+          fprintf(stdout, "%*c", (dump_start - (i + j)) * 3, ' ');
           j = dump_start - i;
         }
         for(; (j < PAGE_SIZE) && ((i + j) < dump_end); ++j) {
-          hw::debug_ser.printf("%02X ", data[j]);
+          fprintf(stdout, "%02X ", data[j]);
         }
         if(j < PAGE_SIZE) {
-          hw::debug_ser.printf("%*c", (PAGE_SIZE - j) * 3, ' ');
+          fprintf(stdout, "%*c", (PAGE_SIZE - j) * 3, ' ');
         }
-        hw::debug_ser.putc('|');
+        fputc('|', stdout);
         j = 0;
         if((i + j) < dump_start) {
-          hw::debug_ser.printf("%*c", (dump_start - (i + j)), ' ');
+          fprintf(stdout, "%*c", (dump_start - (i + j)), ' ');
           j = dump_start - i;
         }
         for(; (j < PAGE_SIZE) && ((i + j) < dump_end); ++j) {
           char c = (char)data[j];
-          hw::debug_ser.putc((c >= 32) && (c < 127) ? c : '.');
+          fputc((c >= 32) && (c < 127) ? c : '.', stdout);
         }
         if(j < PAGE_SIZE) {
-          hw::debug_ser.printf("%*c", (PAGE_SIZE - j), ' ');
+          fprintf(stdout, "%*c", (PAGE_SIZE - j), ' ');
         }
-        hw::debug_ser.puts("|\r\n");
-        if(hw::debug_ser.readable() && (hw::debug_ser.getc() == CTRL('C'))) {
-          hw::debug_ser.puts("^cancel\r\n");
-          return;
+        fputs("|\r\n", stdout);
+        if(hw::debug_ser.readable()) {
+          char c;
+          hw::debug_ser.read(&c, 1);
+          if(c == CTRL('C')) {
+            fputs("^cancel\r\n", stdout);
+            return;
+          }
         }
       }
     }
 
 
     void debug_fill_nv() {
-      hw::debug_ser.puts("Fill EEPROM:\r\n");
+      fputs("Fill EEPROM:\r\n", stdout);
     }
 
 
     void debug_values() {
-      hw::debug_ser.puts("Values:\r\n");
+      fputs("Values:\r\n", stdout);
     }
 
 
     bool debug_read_bool(char const * prompt, bool * val) {
       for(;;) {
         System::service_watchdog();
-        hw::debug_ser.printf("%s (y/n) [%c]: ", prompt, *val ? 'y' : 'n');
+        fprintf(stdout, "%s (y/n) [%c]: ", prompt, *val ? 'y' : 'n');
         while(!hw::debug_ser.readable()) {
           // busy-wait
           wait_us(10000);
         }
-        char c = (char)hw::debug_ser.getc();
+        char c;
+        hw::debug_ser.read(&c, 1);
         switch(c) {
         case 'y': case 'Y':
-          hw::debug_ser.puts("y\r\n");
+          fputs("y\r\n", stdout);
           *val = true;
           return true;
         case 'n': case 'N':
-          hw::debug_ser.puts("n\r\n");
+          fputs("n\r\n", stdout);
           *val = false;
           return true;
         case '\r': case '\n':
           // Leave default
-          hw::debug_ser.puts(*val ? "y\r\n" : "n\r\n");
+          fputs(*val ? "y\r\n" : "n\r\n", stdout);
           return true;
         case CTRL('C'): case '\x1B':
-          hw::debug_ser.puts("^cancel\r\n");
+          fputs("^cancel\r\n", stdout);
           return false;
         default:
-          hw::debug_ser.puts("Please answer either 'y' or 'n', or use ctrl+C "
-            "or esc to cancel\r\n");
+          fputs("Please answer either 'y' or 'n', or use ctrl+C "
+            "or esc to cancel\r\n", stdout);
           break;
         }
       }
@@ -508,11 +563,12 @@ namespace aa {
         if((endp == nullptr) || (endp >= str_val + sizeof str_val)
             || (endp == str_val) || (*endp != 0)
             || (llval < min) || (llval > max)) {
-          hw::debug_ser.printf(
+          fprintf(stdout,
             "Please enter a number between %lld and %lld, or use ctrl+C "
             "or esc to cancel\r\n",
             (long long)min, (long long)max);
-        } else {
+        }
+        else {
           *val = llval;
           return true;
         }
@@ -521,7 +577,8 @@ namespace aa {
 
 
     bool debug_read_str(char const * prompt, char * val, size_t len) {
-      hw::debug_ser.printf("%s [%.*s]: ", prompt, len, val);
+      fprintf(stdout, "%s [%.*s]: ", prompt, len, val);
+      fflush(stdout);
       size_t pos = 0;
       bool has_input = false;
       for(;;) {
@@ -530,36 +587,41 @@ namespace aa {
           wait_us(10000);
         }
         System::service_watchdog();
-        char c = (char)hw::debug_ser.getc();
+        char c;
+        hw::debug_ser.read(&c, 1);
         switch(c) {
         case CTRL('C'): case '\x1B':
-          hw::debug_ser.puts("^cancel\r\n");
+          fputs("^cancel\r\n", stdout);
           return false;
         case '\b': case '\x7F':
           if(pos > 0) {
-            hw::debug_ser.puts("\b \b");
+            fputs("\b \b", stdout);
             --pos;
-          } else {
+          }
+          else {
             // Maybe beeps when you backspace past the beginning are obnoxious
-            // hw::debug_ser.putc('\a');
+            // fputc('\a', stdout);
           }
           has_input = true;
           break;
-        case '\r': case '\n':
+        case '\r':
+          break;
+        case '\n':
           Debug::auto_assert(has_input || (pos == 0));
           if(has_input) {
             while(pos < len) {
               val[pos++] = 0;
             }
           }
-          hw::debug_ser.puts("\r\n");
+          fputs("\r\n", stdout);
           return true;
         default:
           if((pos < len) && (c >= 32) && (c < 127)) {
-            hw::debug_ser.putc(c);
+            fputc(c, stdout);
             val[pos++] = c;
-          } else {
-            hw::debug_ser.putc('\a');
+          } 
+          else {
+            fputc('\a', stdout);
           }
           has_input = true;
           break;
@@ -572,6 +634,7 @@ namespace aa {
   void Game::init() {
     HiScore::init();
     Vis::vis().init();
+    rng.init_rand();
 
     current_state = initial_state;
     current_state->reset();

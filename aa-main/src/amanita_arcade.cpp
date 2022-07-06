@@ -8,8 +8,10 @@
 
 
 #define AA_MAX_INDENT 16
-// 40 FPS
-#define AA_FRAME_MICROS 25000
+// 50 FPS
+// This is limited mostly by comms with the input board, could go to 100FPS
+// comfortably if that code were properly async
+#define AA_FRAME_MICROS 20000
 
 
 namespace aa {
@@ -18,8 +20,10 @@ namespace aa {
       static bool initialized = false;
       if(!initialized) {
         initialized = true;
-        new(&debug_ser) Serial(PA_2, PA_3, 115200);
-        debug_ser.puts("!DEBUG OUTPUT BEGIN\r\n");
+        new(&debug_ser) UARTSerial(PA_2, PA_3, 115200);
+        debug_ser.set_blocking(true);
+        char const * initial_msg = "!DEBUG OUTPUT BEGIN\r\n";
+        debug_ser.write(initial_msg, strlen(initial_msg));
       }
     }
   }
@@ -64,9 +68,9 @@ namespace aa {
     static const uint32_t eeprom_i2c_reset_power_off_us = 1200; // 1ms min
     static const uint32_t eeprom_i2c_reset_power_on_us = 200; // 100us min
 
-    __attribute__((aligned(4))) uint8_t debug_ser_alloc[sizeof (Serial)];
-    Serial & debug_ser = *(Serial *)debug_ser_alloc; // PA_2, PA_3: USART2
-    Serial input_ser(PB_10, PB_11); // USART3
+    __attribute__((aligned(4))) uint8_t debug_ser_alloc[sizeof (UARTSerial)];
+    UARTSerial & debug_ser = *(UARTSerial *)debug_ser_alloc; // PA_2, PA_3: USART2
+    UARTSerial input_ser(PB_10, PB_11, 115200); // USART3
     PortOut lights_ws2812_port(PortE);
     DigitalOut debug_amber_led(LED3);
     DigitalOut debug_green_led(LED4);
@@ -496,7 +500,8 @@ namespace aa {
           disconnected_min_pulse_timeout = Timer(TimeSpan::from_millis(200), false);
         }
         was_input_connected = false;
-      } else {
+      }
+      else {
         if(disconnected_min_pulse_timeout.is_done()) {
           hw::debug_amber_led.write(0);
         }

@@ -160,7 +160,7 @@ namespace aa {
       ShortTimeSpan transition = ShortTimeSpan::from_micros(0));
 
     static void update(ShortTimeSpan dt);
-    // BEWARE, output() will disable interrupts for approximately 5ms!
+    static void prepare_output(); // called internally by update()
     static void output();
 
   private:

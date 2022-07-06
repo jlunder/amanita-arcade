@@ -10,7 +10,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <mbed.h>
+#include "mbed.h"
+#include "rtos.h"
 
 #include <Debug.h>
 
@@ -73,8 +74,8 @@ namespace aa {
   static const size_t NV_DEBUG_SIZE = NV_SIZE - NV_DEBUG_ADDR;
 
   namespace hw {
-    extern Serial & debug_ser;
-    extern Serial input_ser;
+    extern UARTSerial & debug_ser;
+    extern UARTSerial input_ser;
     extern PortOut lights_ws2812_port;
     extern DigitalOut debug_amber_led;
     extern DigitalOut debug_green_led;

@@ -14,7 +14,9 @@ namespace aa {
     // the GPIOs, so we add an extra word which should just repeat the previous
     // state to hide the jitter. This has the nice side effect of guaranteeing
     // that the bus is low before the first low-to-high transition.
-    static uint16_t lights_dma_buf[Lights::PAGE_SIZE * 24 * 5 + 1];
+    static constexpr size_t lights_dma_words = Lights::PAGE_SIZE * 24 * 5 + 1;
+    static uint16_t lights_dma_buf[2][lights_dma_words];
+    static size_t lights_dma_cur = 0;
     static TIM_HandleTypeDef lights_dma_tim; // TIM1
     static DMA_HandleTypeDef lights_dma; // DMA2 stream 5
 
@@ -68,14 +70,16 @@ namespace aa {
 
       static uint32_t const set = 0b1111111111111111;
       static uint32_t const reset = 0b0000000000000000;
-      size_t n = 0;
-      lights_dma_buf[n++] = reset;
-      while(n + 4 <= (sizeof lights_dma_buf / sizeof *lights_dma_buf)) {
-        lights_dma_buf[n++] = set;
-        lights_dma_buf[n++] = reset;
-        lights_dma_buf[n++] = reset;
-        lights_dma_buf[n++] = reset;
-        lights_dma_buf[n++] = reset;
+      for(size_t buf = 0; buf < 2; ++buf) {
+        size_t n = 0;
+        lights_dma_buf[buf][n++] = reset;
+        while(n + 5 <= lights_dma_words) {
+          lights_dma_buf[buf][n++] = set;
+          lights_dma_buf[buf][n++] = reset;
+          lights_dma_buf[buf][n++] = reset;
+          lights_dma_buf[buf][n++] = reset;
+          lights_dma_buf[buf][n++] = reset;
+        }
       }
     }
   }
@@ -339,6 +343,8 @@ namespace aa {
     _composite_tex.fill_lerp(Color::black, 0.875f);
     update_encode_scoreboard_texture_to_output(SCOREBOARD_PAGES_START,
       SCOREBOARD_PAGES_COUNT, SCOREBOARD_LINES_PER_PAGE, &_composite_tex);
+    
+    prepare_output();
   }
 
 
@@ -435,7 +441,8 @@ namespace aa {
         _composite_tex.box_set(x0, y1, x1 - x0, y2 - y1,
           &_transition_tex, x0, y1);
         temp_composite_tex.fill_lerp(&_transition_tex, trans_a);
-      } else {
+      }
+      else {
         _composite_tex.box_set(x0, y0, x1 - x0, y2 - y0,
           &temp_composite_tex, x0, y0);
 #else
@@ -472,14 +479,10 @@ namespace aa {
   }
 
 
-  void AA_OPTIMIZE Lights::output() {
-    mbed::Timer tm;
-
+  void AA_OPTIMIZE Lights::prepare_output() {
     uint32_t colors[PAGE_COUNT];
 
-    tm.start();
-
-    size_t n = 1;
+    size_t n = 1; // skip the first entry
 
     for(size_t i = 0; i < PAGE_SIZE; ++i) {
       for(size_t j = 0; j < PAGE_COUNT; ++j) {
@@ -494,30 +497,32 @@ namespace aa {
           colors[k] = c << 1;
           data |= (c & (1 << 23)) >> (23 - k);
         }
-        Debug::dev_auto_assert(
-          n + 5 <= sizeof lights_dma_buf / sizeof *lights_dma_buf);
+        Debug::dev_auto_assert(n + 5 <= lights_dma_words);
         n++;
-        lights_dma_buf[n++] = data;
-        lights_dma_buf[n++] = data;
+        lights_dma_buf[lights_dma_cur][n++] = data;
+        lights_dma_buf[lights_dma_cur][n++] = data;
         n++;
         n++;
       }
     }
+  }
 
-    //for(size_t i = 0; i < (sizeof dma_buf / sizeof *dma_buf); ++i) {
-    //  aa::hw::lights_ws2812_port.write(dma_buf[i]);
+
+  void Lights::output() {
+    //for(size_t i = 0; i < lights_dma_words; ++i) {
+    //  aa::hw::lights_ws2812_port.write(lights_dma_buf[lights_dma_cur][i]);
     //}
 
     HAL_DMA_PollForTransfer(&lights_dma, HAL_DMA_FULL_TRANSFER, 10);
     __HAL_TIM_DISABLE(&lights_dma_tim);
     __HAL_TIM_SET_COUNTER(&lights_dma_tim, 0);
     Debug::assert(
-      HAL_DMA_Start(&lights_dma, (uint32_t)lights_dma_buf,
-          (uint32_t)&GPIOE->ODR,
-          sizeof lights_dma_buf / sizeof *lights_dma_buf)
+      HAL_DMA_Start(&lights_dma, (uint32_t)&lights_dma_buf[lights_dma_cur],
+          (uint32_t)&GPIOE->ODR, lights_dma_words)
         == HAL_OK,
       "DMA transfer start failed");
     __HAL_TIM_ENABLE(&lights_dma_tim);
+    lights_dma_cur = !lights_dma_cur;
     //uint32_t micros = tm.read_us();
     //Debug::tracef("lights output %luus", (unsigned long)micros);
   }

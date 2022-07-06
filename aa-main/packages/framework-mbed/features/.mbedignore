@@ -9,5 +9,9 @@ mbedtls/*
 nanostack/*
 netsocket/*
 nfc/*
-storage/*
+storage/filesystem/*
+storage/kvstore/*
+storage/nvstore/*
+storage/system_storage/*
+storage/TESTS/*
 unsupported/*
