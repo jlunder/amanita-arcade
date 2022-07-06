@@ -1,7 +1,7 @@
 #ifndef PSGAMEPAD_H
 #define PSGAMEPAD_H
 
-#include "aa_input.h"
+#include "aa_input_controller.h"
 
 
 #define PSB_SELECT      0x0001
